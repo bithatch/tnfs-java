@@ -86,7 +86,7 @@
 			<dependency>
 				<groupId>com.sshtools</groupId>
 				<artifactId>jini-config</artifactId>
-				<version>0.5.1-SNAPSHOT</version>
+				<version>0.6.0</version>
 			</dependency>
 			<dependency>
 				<groupId>info.picocli</groupId>
