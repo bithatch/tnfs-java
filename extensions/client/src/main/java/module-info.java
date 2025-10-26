@@ -1,5 +1,5 @@
 /*
- * Copyright © 2025 Bithatch (bithatch@bithatch.co.uk)
+ * Copyright © 2025 Bithatch (brett@bithatch.co.uk)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the “Software”), to deal in the Software
@@ -18,7 +18,6 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
 import uk.co.bithatch.tnfs.client.TNFSClientExtension;
 import uk.co.bithatch.tnfs.client.TNFSMountExtension;
 import uk.co.bithatch.tnfs.client.extensions.Copy;
