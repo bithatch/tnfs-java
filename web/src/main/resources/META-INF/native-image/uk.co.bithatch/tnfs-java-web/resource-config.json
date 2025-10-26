@@ -1,0 +1,10 @@
+{
+	"resources": [
+		{
+			"pattern": "web/.*"
+		},
+		{
+			"pattern": "uk/co/bithatch/tnfs/web/.*"
+		}
+	]
+}

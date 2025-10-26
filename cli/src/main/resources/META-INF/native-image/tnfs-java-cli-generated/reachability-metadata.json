@@ -1,0 +1,384 @@
+{
+  "reflection": [
+    {
+      "type": "groovy.lang.Closure"
+    },
+    {
+      "type": "java.io.Console",
+      "methods": [
+        {
+          "name": "isTerminal",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Object",
+      "allDeclaredFields": true
+    },
+    {
+      "type": "java.lang.ProcessBuilder$RedirectPipeImpl"
+    },
+    {
+      "type": "java.lang.ProcessHandle",
+      "methods": [
+        {
+          "name": "current",
+          "parameterTypes": []
+        },
+        {
+          "name": "info",
+          "parameterTypes": []
+        },
+        {
+          "name": "parent",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.ProcessHandle$Info",
+      "methods": [
+        {
+          "name": "command",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.System",
+      "methods": [
+        {
+          "name": "console",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.nio.file.Path"
+    },
+    {
+      "type": "java.nio.file.Paths"
+    },
+    {
+      "type": "java.sql.Connection"
+    },
+    {
+      "type": "java.sql.Driver"
+    },
+    {
+      "type": "java.sql.Time"
+    },
+    {
+      "type": "java.sql.Timestamp"
+    },
+    {
+      "type": "java.time.Duration"
+    },
+    {
+      "type": "java.time.Instant"
+    },
+    {
+      "type": "java.time.LocalDate"
+    },
+    {
+      "type": "java.time.LocalDateTime"
+    },
+    {
+      "type": "java.time.LocalTime"
+    },
+    {
+      "type": "java.time.MonthDay"
+    },
+    {
+      "type": "java.time.OffsetDateTime"
+    },
+    {
+      "type": "java.time.OffsetTime"
+    },
+    {
+      "type": "java.time.Period"
+    },
+    {
+      "type": "java.time.Year"
+    },
+    {
+      "type": "java.time.YearMonth"
+    },
+    {
+      "type": "java.time.ZoneId"
+    },
+    {
+      "type": "java.time.ZoneOffset"
+    },
+    {
+      "type": "java.time.ZonedDateTime"
+    },
+    {
+      "type": "java.util.Optional",
+      "methods": [
+        {
+          "name": "empty",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.jline.terminal.impl.exec.ExecTerminalProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.slf4j.simple.SimpleServiceProvider"
+    },
+    {
+      "type": "picocli.CommandLine$AutoHelpMixin",
+      "allDeclaredFields": true
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.AbstractTNFSCommand",
+      "allDeclaredFields": true
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.AbstractTNFSFilesCommand",
+      "allDeclaredFields": true
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.InteractiveConsole",
+      "allDeclaredFields": true
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.TNFSTP",
+      "allDeclaredFields": true
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.commands.Bye",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.commands.Cd",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.commands.Df",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.commands.Get",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.commands.Help",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.commands.Lcd",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.commands.Lpwd",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.commands.Ls",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.commands.Mkdir",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.commands.Mv",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.commands.Put",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.commands.Pwd",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.commands.Rm",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.commands.Rmdir",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "uk.co.bithatch.tnfs.cli.commands.TNFSTPCommand",
+      "allDeclaredFields": true
+    }
+  ],
+  "resources": [
+    {
+      "glob": "META-INF/maven/org.jline/jline-native/pom.properties"
+    },
+    {
+      "glob": "META-INF/services/java.lang.System$LoggerFinder"
+    },
+    {
+      "glob": "META-INF/services/java.net.spi.InetAddressResolverProvider"
+    },
+    {
+      "glob": "META-INF/services/java.nio.channels.spi.SelectorProvider"
+    },
+    {
+      "glob": "META-INF/services/java.nio.charset.spi.CharsetProvider"
+    },
+    {
+      "glob": "META-INF/services/java.time.zone.ZoneRulesProvider"
+    },
+    {
+      "glob": "META-INF/services/org.slf4j.spi.SLF4JServiceProvider"
+    },
+    {
+      "glob": "META-INF/services/org/jline/terminal/provider/exec"
+    },
+    {
+      "glob": "META-INF/services/org/jline/terminal/provider/ffm"
+    },
+    {
+      "glob": "META-INF/services/org/jline/terminal/provider/jansi"
+    },
+    {
+      "glob": "META-INF/services/org/jline/terminal/provider/jna"
+    },
+    {
+      "glob": "META-INF/services/org/jline/terminal/provider/jni"
+    },
+    {
+      "glob": "org/jline/nativ/Linux/x86_64/libjlinenative.so"
+    },
+    {
+      "glob": "simplelogger.properties"
+    },
+    {
+      "module": "java.base",
+      "glob": "sun/text/resources/LineBreakIteratorData"
+    },
+    {
+      "module": "java.logging",
+      "glob": "sun/util/logging/resources/logging_en.properties"
+    },
+    {
+      "module": "java.logging",
+      "glob": "sun/util/logging/resources/logging_en_GB.properties"
+    },
+    {
+      "module": "org.jline.terminal",
+      "glob": "org/jline/utils/capabilities.txt"
+    },
+    {
+      "module": "org.jline.terminal",
+      "glob": "org/jline/utils/dumb.caps"
+    }
+  ],
+  "bundles": [],
+  "jni": [
+    {
+      "type": "java.lang.ProcessBuilder$RedirectPipeImpl",
+      "fields": [
+        {
+          "name": "fd"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    }
+  ]
+}

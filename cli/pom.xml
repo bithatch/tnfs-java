@@ -1,0 +1,363 @@
+<!--
+
+    Copyright © 2025 Bithatch (brett@bithatch.co.uk)
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of this
+    software and associated documentation files (the “Software”), to deal in the Software
+    without restriction, including without limitation the rights to use, copy, modify,
+    merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+    permit persons to whom the Software is furnished to do so, subject to the following
+    conditions:
+
+    The above copyright notice and this permission notice shall be included in all copies
+    or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+    INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+    PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+    HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+    OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<parent>
+		<groupId>uk.co.bithatch</groupId>
+		<artifactId>tnfs-java</artifactId> 
+		<version>0.9.0-SNAPSHOT</version>
+		<relativePath>../</relativePath>
+	</parent>
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>tnfs-java-cli</artifactId>
+	<name>Java TNFS - CLI tools</name>
+	<description>Commands for accessing TNFS file systems.
+
+tnfscp - Copy files
+tnfstp - FTP/SFTP like client for TNFS
+tnfsfuse - Mount TNFS resource to local file system</description>
+	<url>${scmWebRoot}/${project.artifactId}/</url>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<release>22</release>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>info.picocli</groupId>
+							<artifactId>picocli-codegen</artifactId>
+			    			<version>4.7.7</version>	
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<configuration>
+				     <archive>
+						 <manifestEntries>
+						 	<Enable-Native-Access>ALL-UNNAMED</Enable-Native-Access>
+						 </manifestEntries>
+				     </archive>
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>3.1.1</version>
+				<groupId>org.apache.maven.plugins</groupId>
+				<inherited>false</inherited>
+				<executions>
+					<execution>
+						<id>make-assembly-tnfscp</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<configuration>
+							<finalName>tnfscp</finalName>
+							<archive>
+								<manifest>
+									<mainClass>uk.co.bithatch.tnfs.cli.TNFSCP</mainClass>
+								</manifest>
+								 <manifestEntries>
+								 	<Enable-Native-Access>ALL-UNNAMED</Enable-Native-Access>
+								 </manifestEntries>
+							</archive>
+							<appendAssemblyId>false</appendAssemblyId>
+							<descriptorRefs>
+								<descriptorRef>jar-with-dependencies</descriptorRef>
+							</descriptorRefs>
+						</configuration>
+					</execution>
+					<execution>
+						<id>make-assembly-tnfstp</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<configuration>
+							<finalName>tnfstp</finalName>
+							<archive>
+								<manifest>
+									<mainClass>uk.co.bithatch.tnfs.cli.TNFSTP</mainClass>
+								</manifest>
+								 <manifestEntries>
+								 	<Enable-Native-Access>ALL-UNNAMED</Enable-Native-Access>
+								 </manifestEntries>
+							</archive>
+							<appendAssemblyId>false</appendAssemblyId>
+							<descriptorRefs>
+								<descriptorRef>jar-with-dependencies</descriptorRef>
+							</descriptorRefs>
+						</configuration>
+					</execution>
+					<execution>
+						<id>make-assembly-tnfsfuse</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<configuration>
+							<finalName>tnfsfuse</finalName>
+							<archive>
+								<manifest>
+									<mainClass>uk.co.bithatch.tnfs.cli.TNFSFUSE</mainClass>
+								</manifest>
+								 <manifestEntries>
+								 	<Enable-Native-Access>ALL-UNNAMED</Enable-Native-Access>
+								 </manifestEntries>
+							</archive>
+							<appendAssemblyId>false</appendAssemblyId>
+							<descriptorRefs>
+								<descriptorRef>jar-with-dependencies</descriptorRef>
+							</descriptorRefs>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<configuration>
+					<includeProjectDependencies>true</includeProjectDependencies>
+					<includePluginDependencies>true</includePluginDependencies>
+					<mainClass>picocli.codegen.docgen.manpage.ManPageGenerator</mainClass>
+					<arguments>
+						<argument>--outdir=${project.build.directory}/generated-picocli-docs</argument>
+						<argument>uk.co.bithatch.tnfs.cli.TNFSTP</argument>
+						<argument>uk.co.bithatch.tnfs.cli.TNFSCP</argument>
+						<argument>uk.co.bithatch.tnfs.cli.TNFSFUSE</argument>
+					</arguments>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.asciidoctor</groupId>
+				<artifactId>asciidoctor-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+	<dependencies>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>tnfs-java-client</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>tnfs-java-client-extensions</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>tnfs-java-fuse</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>info.picocli</groupId>
+			<artifactId>picocli</artifactId>
+		</dependency>
+		<dependency>
+		    <groupId>org.jline</groupId>
+		    <artifactId>jline-reader</artifactId>
+		</dependency>
+		<dependency>
+		    <groupId>org.jline</groupId>
+		    <artifactId>jline-console</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>info.picocli</groupId>
+		    <artifactId>picocli-shell-jline3</artifactId>
+		</dependency>
+		<dependency>
+		    <groupId>me.tongfei</groupId>
+		    <artifactId>progressbar</artifactId>
+		</dependency>
+	</dependencies>
+
+	<profiles>
+
+		<profile>
+			<id>windows</id>
+			<activation>
+				<os>
+					<family>windows</family>
+				</os>
+			</activation>
+			<dependencies>
+				<dependency>
+					<groupId>org.jline</groupId>
+					<artifactId>jline-terminal-jni</artifactId>
+					<version>3.30.1</version>
+					<scope>compile</scope>
+				</dependency>
+			</dependencies>
+		</profile>
+		
+		<!-- Graal Native Image -->
+
+		<profile>
+			<id>native-image</id>
+			<activation>
+			 	<property>
+			 	 	<name>build.native.cli</name>
+			 	 	<value>true</value>
+			 	</property>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.graalvm.buildtools</groupId>
+						<artifactId>native-maven-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>tnfscp-native-image</id>
+								<goals>
+									<goal>build</goal>
+								</goals>
+								<phase>package</phase>
+								<configuration>
+									<mainClass>uk.co.bithatch.tnfs.cli.TNFSCP</mainClass>
+									<skip>false</skip>
+									<imageName>tnfscp</imageName>
+									<buildArgs>
+									    <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
+										<buildArg>--install-exit-handlers</buildArg>
+                                        <buildArg>-march=compatibility</buildArg>
+									</buildArgs>
+								</configuration>
+							</execution>
+							<execution>
+								<id>tnfstp-native-image</id>
+								<goals>
+									<goal>build</goal>
+								</goals>
+								<phase>package</phase>
+								<configuration>
+									<mainClass>uk.co.bithatch.tnfs.cli.TNFSTP</mainClass>
+									<skip>false</skip>
+									<imageName>tnfstp</imageName>
+									<buildArgs>
+									    <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
+										<buildArg>--install-exit-handlers</buildArg>
+                                        <buildArg>-march=compatibility</buildArg>
+									</buildArgs>
+								</configuration>
+							</execution>
+							<execution>
+								<id>tnfsfuse-native-image</id>
+								<goals>
+									<goal>build</goal>
+								</goals>
+								<phase>package</phase>
+								<configuration>
+									<mainClass>uk.co.bithatch.tnfs.cli.TNFSFUSE</mainClass>
+									<skip>false</skip>
+									<imageName>tnfsfuse</imageName>
+									<buildArgs>
+										<buildArg>-H:+ForeignAPISupport</buildArg>
+									    <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
+										<buildArg>--install-exit-handlers</buildArg>
+                                        <buildArg>-march=compatibility</buildArg>
+									</buildArgs>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<!-- tnfscp -->
+		<profile>
+			<id>tnfscp</id>
+			<activation>
+				<property>
+					<name>tnfscp</name>
+				</property>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>exec-maven-plugin</artifactId>
+						<configuration>
+							<mainClass>uk.co.bithatch.tnfs.cli.TNFSCP</mainClass>
+							<commandlineArgs>${args}</commandlineArgs>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		
+		<profile>
+			<id>tnfstp</id>
+			<activation>
+				<property>
+					<name>tnfstp</name>
+				</property>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>exec-maven-plugin</artifactId>
+						<configuration>
+							<mainClass>uk.co.bithatch.tnfs.cli.TNFSTP</mainClass>
+							<commandlineArgs>${args}</commandlineArgs>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		
+		<profile>
+			<id>tnfsfuse</id>
+			<activation>
+				<property>
+					<name>tnfsfuse</name>
+				</property>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>exec-maven-plugin</artifactId>
+						<configuration>
+							<mainClass>uk.co.bithatch.tnfs.cli.TNFSTP</mainClass>
+							<commandlineArgs>${args}</commandlineArgs>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+</project>
