@@ -8,8 +8,13 @@ public class DefaultFileTypeDetector implements Detector<String> {
 	@Override
 	public String detect(String path) throws IOException {
 		var guessedType = URLConnection.guessContentTypeFromName(path);
-		if(guessedType == null && path.endsWith(".cjs")) {
-			return "application/javascript";
+		if(guessedType == null) {
+			if(path.endsWith(".cjs")) {
+				return "application/javascript";
+			}
+			else {
+				return "application/octet-stream";
+			}
 		}
 		return guessedType;
 	}

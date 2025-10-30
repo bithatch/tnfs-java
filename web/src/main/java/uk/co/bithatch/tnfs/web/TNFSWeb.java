@@ -110,9 +110,10 @@ public final class TNFSWeb implements Callable<Integer> {
 					var clnt = new TNFSClient.Builder().withAddress(hostname, port).build();
 					var tnfsmnt = clnt.mount(path).build();
 					var vol = new TNFSMountVolume(tnfsmnt, name);
-	
-					bldr.addVolumes(new DefaultVolumeRef(name, vol));
-					log.info("Mounted {} to {} @ {}", name, hostname, path);
+					var ref = new DefaultVolumeRef( String.valueOf(Integer.toUnsignedLong(name.hashCode())), vol);
+					
+					bldr.addVolumes(ref);
+					log.info("Mounted {} [{}] to {} @ {}", name, ref.getId(), hostname, path);
 					mountCount.addAndGet(1);
 	
 				} catch (IOException ioe) {
@@ -153,9 +154,10 @@ public final class TNFSWeb implements Callable<Integer> {
 								
 								for(var path : parseArray(srv.getPropertyString("path"))) {
 									try {
+										var name = path + " on " + addr;
+										log.info("Mounting {} to {} @ {}", name, addr, path);
 										var tnfsmnt = clnt.mount(path).build();
 										var vol = new TNFSMountVolume(tnfsmnt, srv.getName());
-										var name = path + " on " + addr;
 										bldr.addVolumes(new DefaultVolumeRef(name, vol));
 										log.info("Mounted {} to {} @ {}", name, addr, path);
 										mountCount.addAndGet(1);	
@@ -310,7 +312,7 @@ public final class TNFSWeb implements Callable<Integer> {
 					}
 				});
 				httpd.httpsPort().ifPresent(p -> {
-					log.info("Registering mDNS for HTTPSon {}", p);
+					log.info("Registering mDNS for HTTPS on {}", p);
 					try {
 						d.registerService( ServiceInfo.create("_https._tcp.local.", "TNFS Web", p, "path=index.html"));
 					} catch (IOException e) {

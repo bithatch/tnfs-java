@@ -488,13 +488,13 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 		var session = sessions.get(message.connectionId());
 		if(session == null && nh.needsSession()) {
 			LOG.error("No session {}", message.connectionId());
-			write(outBuffer, Message.of(message.seq(), message.command(), new HeaderOnlyResult(ResultCode.INVALID)), channel, addr);
+			write(outBuffer, Message.of(message.command(), new HeaderOnlyResult(ResultCode.INVALID)), channel, addr);
 			return;
 		}
 		
 		if(session != null && nh.needsAuthentication() && !session.authenticated()) {
 			LOG.error("Session {} not authenticated for message {}.", message.connectionId(), message.command().name());
-			write(outBuffer, Message.of(message.seq(), message.command(), new HeaderOnlyResult(ResultCode.INVALID)), channel, addr);
+			write(outBuffer, Message.of(message.command(), new HeaderOnlyResult(ResultCode.INVALID)), channel, addr);
 			return;
 		}
 

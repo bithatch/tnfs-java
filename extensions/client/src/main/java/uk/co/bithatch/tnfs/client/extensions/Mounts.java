@@ -35,7 +35,7 @@ public class Mounts extends AbstractTNFSClientExtension {
 		return ReadDirIterator.stream(
 				client,
 				0, 
-				client.sendMessage(Extensions.MOUNTS, Message.of(client.nextSeq(), 0, Extensions.MOUNTS, new Extensions.Mounts())), 
+				client.sendMessage(Extensions.MOUNTS, Message.of(0, Extensions.MOUNTS, new Extensions.Mounts())), 
 				Optional.empty()
 			);
 	}

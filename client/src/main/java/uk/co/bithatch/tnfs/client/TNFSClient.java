@@ -93,8 +93,9 @@ public final class TNFSClient implements Closeable {
 	private final InetSocketAddress address;
 	private final Protocol protocol;
 	private final Optional<Duration> timeout;
-	private byte seq;
+	private byte seq = 0;
 	private final Map<Class<? extends TNFSClientExtension>, TNFSClientExtension> extensions;
+	private Object lock = new Object();
 
 	private TNFSClient(Optional<Integer> port, Optional<Integer> messageSize, Protocol protocol,
 			Optional<String> hostname, Optional<Duration> timeout)  throws  IOException {
@@ -137,8 +138,15 @@ public final class TNFSClient implements Closeable {
 		return (EXT)ext;
 	}
 
-	public int nextSeq() {
-		return Byte.toUnsignedInt(seq++);
+	private int nextSeq() {
+		try {
+			return Byte.toUnsignedInt(seq);
+		}
+		finally {
+			seq++;
+			if(seq > 250)
+				seq = 0;
+		}
 	}
 
 	public <RESULT extends Result> RESULT sendMessage(Command<?, RESULT> op, Message pkt) throws IOException {
@@ -159,49 +167,52 @@ public final class TNFSClient implements Closeable {
 	
 	public <RESULT extends Result> MessageResult<RESULT> send(Command<?, RESULT> op, Message pkt, Optional<String> path) throws IOException {
 //		System.out.println("MG: " + op.name());
-		var reply = write(pkt);
-		RESULT res = reply.resultPayload();
-		if(res.result().isOk()) {
-			return new MessageResult<>(reply, res);
+		synchronized(lock) {
+			pkt = pkt.withSeq(nextSeq());
+			var reply = write(pkt);
+			RESULT res = reply.resultPayload();
+			if(res.result().isOk()) {
+				return new MessageResult<>(reply, res);
+			}
+			else if(res.result() == ResultCode.EOF) {
+				throw new EOFException();
+			}
+			else if(res.result() == ResultCode.IO) {
+				throw new IOException(path.map( s-> "I/O Error on " + s).orElse("I/O Error."));
+			}
+			else if(res.result() == ResultCode.NOENT) {
+				throw new FileNotFoundException(path.orElse("Path Unknown"));
+			}
+			else if(res.result() == ResultCode.EXIST) {
+				throw new FileAlreadyExistsException(path.orElse("Path Unknown"));
+			}
+			else if(res.result() == ResultCode.INVAL) {
+				throw new IllegalArgumentException("Invalid argument");
+			}
+			else if(res.result() == ResultCode.NOBUFS) {
+				throw new BufferUnderflowException();
+			}
+			else if(res.result() == ResultCode.LOOP) {
+				throw new FileSystemLoopException(path.orElse("Path Unknown"));
+			}
+			else if(res.result() == ResultCode.ACCESS) {
+				throw new AccessDeniedException(path.orElse("Path Unknown"));
+			}
+			else if(res.result() == ResultCode.NOMEM) {
+				throw new OutOfMemoryError("Server reported out of memory.");
+			}
+			else if(res.result() == ResultCode.ROFS) {
+				throw new ReadOnlyFileSystemException();
+			}
+			else if(res.result() == ResultCode.NOTDIR) {
+				throw new NotDirectoryException(path.orElse("Path Unknown"));
+			}
+			else if(res.result() == ResultCode.NOSYS) {
+				throw new UnsupportedOperationException("The server does not implement this function.");
+			}
+			else
+				throw new TNFSException(res.result(), String.format("Unexpected result code 0x%04x (%d) [%s].", res.result().value(), res.result().value(), res.result().name()));
 		}
-		else if(res.result() == ResultCode.EOF) {
-			throw new EOFException();
-		}
-		else if(res.result() == ResultCode.IO) {
-			throw new IOException(path.map( s-> "I/O Error on " + s).orElse("I/O Error."));
-		}
-		else if(res.result() == ResultCode.NOENT) {
-			throw new FileNotFoundException(path.orElse("Path Unknown"));
-		}
-		else if(res.result() == ResultCode.EXIST) {
-			throw new FileAlreadyExistsException(path.orElse("Path Unknown"));
-		}
-		else if(res.result() == ResultCode.INVAL) {
-			throw new IllegalArgumentException();
-		}
-		else if(res.result() == ResultCode.NOBUFS) {
-			throw new BufferUnderflowException();
-		}
-		else if(res.result() == ResultCode.LOOP) {
-			throw new FileSystemLoopException(path.orElse("Path Unknown"));
-		}
-		else if(res.result() == ResultCode.ACCESS) {
-			throw new AccessDeniedException(path.orElse("Path Unknown"));
-		}
-		else if(res.result() == ResultCode.NOMEM) {
-			throw new OutOfMemoryError("Server reported out of memory.");
-		}
-		else if(res.result() == ResultCode.ROFS) {
-			throw new ReadOnlyFileSystemException();
-		}
-		else if(res.result() == ResultCode.NOTDIR) {
-			throw new NotDirectoryException(path.orElse("Path Unknown"));
-		}
-		else if(res.result() == ResultCode.NOSYS) {
-			throw new UnsupportedOperationException("The server does not implement this function.");
-		}
-		else
-			throw new TNFSException(res.result(), String.format("Unexpected result code 0x%04x (%d) [%s].", res.result().value(), res.result().value(), res.result().name()));
 	}
 
 	Message write(Message pkt) throws IOException, EOFException {

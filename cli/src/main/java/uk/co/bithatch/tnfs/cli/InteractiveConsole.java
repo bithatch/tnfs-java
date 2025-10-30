@@ -46,13 +46,14 @@ import uk.co.bithatch.tnfs.cli.commands.Put;
 import uk.co.bithatch.tnfs.cli.commands.Pwd;
 import uk.co.bithatch.tnfs.cli.commands.Rm;
 import uk.co.bithatch.tnfs.cli.commands.Rmdir;
+import uk.co.bithatch.tnfs.cli.commands.Stat;
 import uk.co.bithatch.tnfs.client.TNFSClient;
 import uk.co.bithatch.tnfs.client.TNFSMount;
 
 @Command(name = "tnfsfp-interactive", mixinStandardHelpOptions = false, description = "Interactive shell.", subcommands = {
 		Ls.class, Cd.class, Pwd.class, Lcd.class, Lpwd.class, Mkdir.class, Rmdir.class, Mv.class, Rm.class,
 		Get.class, Put.class, Bye.class, Df.class, Cp.class, ChkSum.class, Mounts.class, Mount.class, 
-		Help.class })
+		Stat.class, Help.class })
 public class InteractiveConsole implements Runnable, TNFSContainer {
 	private final TNFSTP cntr;
 

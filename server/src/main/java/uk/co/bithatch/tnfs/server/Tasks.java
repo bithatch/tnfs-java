@@ -83,8 +83,8 @@ public class Tasks {
 			LOG.error("ELOOP. ", e);
 			return (T)func.apply(ResultCode.LOOP);
 		} catch (AccessDeniedException e) {
-			LOG.error("ENOTDIR. ", e);
-			return (T)func.apply(ResultCode.NOTDIR);
+			LOG.error("EACCESS. ", e);
+			return (T)func.apply(ResultCode.ACCESS);
 		} catch (FileNotFoundException | NoSuchFileException e) {
 			if(LOG.isTraceEnabled())
 				LOG.debug("ENOENT. ", e);

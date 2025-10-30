@@ -55,7 +55,7 @@ public final class DefaultTNFSMount extends AbstractTNFSMount {
 
 	private DefaultTNFSMount(Builder bldr) throws IOException {
 		super(bldr); 
-		var rep = client.send(Command.MOUNT, Message.of(client.nextSeq(), Command.MOUNT, new Command.Mount(bldr.path, username, password)));
+		var rep = client.send(Command.MOUNT, Message.of(Command.MOUNT, new Command.Mount(bldr.path, username, password)));
 		sessionId = rep.mesage().connectionId();
 	}
 

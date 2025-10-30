@@ -309,7 +309,7 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 					tcpSrvr.run();
 				}
 			}
-			else if(protocols.get(0) == Protocol.TCP) {
+			else if(protocols.get(0) == Protocol.UDP) {
 
 				gateway.ifPresent(gw -> gw.map(port, UPnP.Protocol.UDP));
 				registerMDNS(tnfsMounts, mDNS, Protocol.UDP);

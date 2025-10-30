@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.Channels;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.NotDirectoryException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -312,7 +314,12 @@ public class TNFSMountVolume implements Volume {
 
 	@Override
 	public boolean hasChildFolder(Target target) throws IOException {
-		return Arrays.asList(listChildren(target)).stream().filter(t -> isFolder(t)).findFirst().isPresent();
+		try {
+			return Arrays.asList(listChildren(target)).stream().filter(t -> isFolder(t)).findFirst().isPresent();
+		}
+		catch(NotDirectoryException | AccessDeniedException nde) {
+			return false;
+		}
 	}
 
 	@Override
@@ -328,7 +335,9 @@ public class TNFSMountVolume implements Volume {
 	@Override
 	public Target[] listChildren(Target target) throws IOException {
 		try(var dir = mount.directory(0, ((TNFSTarget)target).getPath(), "", new DirOptionFlag[] { DirOptionFlag.NO_SKIPHIDDEN }, new DirSortFlag[] {})) {
-			return dir.stream().map(f -> new EntryTNFSTarget(this, (TNFSTarget)target, f)).toList().toArray(new Target[0]);	
+			return dir.stream().
+					filter(f -> !f.name().equals(".") && !f.name().equals("..")).
+					map(f -> new EntryTNFSTarget(this, (TNFSTarget)target, f)).toList().toArray(new Target[0]);	
 		}
 	}
 

@@ -34,9 +34,13 @@ public final class Message {
 		private Command<? extends Encodeable, ?> command;
 		private Optional<ByteBuffer> payload = Optional.empty();
 		private Optional<Encodeable> encodeable = Optional.empty();
+
+		public Builder() {
+			seq = -1;
+		}
 		
-		public Builder(int seq) {
-			this.seq = seq % 250;
+		private Builder(int seq) {
+			this.seq = seq;
 		}
 		
 		public Builder withSessionId(int connectionId) {
@@ -91,11 +95,21 @@ public final class Message {
 		this.connectionId = bldr.connectionId;
 	}
 	
+	Message(Message message, int seq) {
+		this.command = message.command;
+		this.payload = message.payload;
+		this.encodeable = message.encodeable;
+		this.connectionId = message.connectionId;
+		this.seq = seq;
+	}
+
 	public int connectionId() {
 		return connectionId;
 	}
 	
 	public int seq() {
+		if(seq == -1)
+			throw new IllegalStateException("No sequece number yet.");
 		return seq;
 	}
 
@@ -178,11 +192,15 @@ public final class Message {
 		return bbuf;
 	}
 
-	public static <E extends Encodeable> Message of(int seq, Command<?, ?> op, E enc) {
-		return new Builder(seq).
+	public static <E extends Encodeable> Message of(Command<?, ?> op, E enc) {
+		return new Builder().
 				withCommand(op).
 				withPayload(enc).
 				build();
+	}
+	
+	public static <E extends Encodeable> Message of(int sessionId, Command<?, ?> op, E enc) {
+		return of(-1, sessionId, op, enc);
 	}
 
 	public static <E extends Encodeable> Message of(int seq, int sessionId, Command<?, ?> op, E enc) {
@@ -191,6 +209,10 @@ public final class Message {
 				withSessionId(sessionId).
 				withPayload(enc).
 				build();
+	}
+
+	public Message withSeq(int nextSeq) {
+		return new Message(this, nextSeq);
 	}
 	
 

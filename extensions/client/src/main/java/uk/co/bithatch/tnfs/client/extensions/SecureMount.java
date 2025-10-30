@@ -91,7 +91,7 @@ public class SecureMount extends AbstractTNFSClientExtension {
 			 * we can advertise to actually use, and the server key for
 			 * potential channel binding
 			 */
-			var capsRes = client.send(Extensions.SRVRCAPS, Message.of(client.nextSeq(), Extensions.SRVRCAPS, new Extensions.ServerCaps()));
+			var capsRes = client.send(Extensions.SRVRCAPS, Message.of(Extensions.SRVRCAPS, new Extensions.ServerCaps()));
 			var caps = capsRes.result();
 			
 			System.out.println("HA : " + Arrays.asList(caps.hashAlgos()));
@@ -107,7 +107,7 @@ public class SecureMount extends AbstractTNFSClientExtension {
 			System.out.println("CFIR: " + clientFirstMsg.toString());
 
 
-			var srvRes = client.send(Extensions.CLNTFRST, Message.of(client.nextSeq(), Extensions.CLNTFRST, new Extensions.ClientFirst(path, clientFirstMsg.toString())));;
+			var srvRes = client.send(Extensions.CLNTFRST, Message.of(Extensions.CLNTFRST, new Extensions.ClientFirst(mountPath, clientFirstMsg.toString())));;
 			var res = srvRes.result();
 			
 			try {
@@ -117,7 +117,7 @@ public class SecureMount extends AbstractTNFSClientExtension {
 				var clientFinalMsg = scramClient.clientFinalMessage();
 
 				System.out.println("CFIN: " + clientFinalMsg.toString());
-				ServerFinal finRes = client.sendMessage(Extensions.CLNTFINL, Message.of(client.nextSeq(), sessionId, Extensions.CLNTFINL, new Extensions.ClientFinal(clientFinalMsg.toString())));
+				ServerFinal finRes = client.sendMessage(Extensions.CLNTFINL, Message.of(sessionId, Extensions.CLNTFINL, new Extensions.ClientFinal(clientFinalMsg.toString())));
 				var serverFinal = scramClient.serverFinalMessage(finRes.serverFinalMessage());
 				System.out.println("SFIN: " + serverFinal.toString());
 			}

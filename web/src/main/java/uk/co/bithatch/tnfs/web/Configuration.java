@@ -49,7 +49,7 @@ public final class Configuration {
 	public Configuration(Monitor monitor) {
 		var bldr =  new INISet.Builder("tnfs-web").
 				withApp("tnfs-web").
-				withCreateDefaults(CreateDefaultsMode.valueOf(System.getProperty("tnfs-web.create-defauls-mode", "NONE"))).
+				withCreateDefaults(CreateDefaultsMode.valueOf(System.getProperty("tnfs-web.create-defaults-mode", "NONE"))).
 				withSchema(Configuration.class);
 		
 		var config = System.getProperty("tnfs-web.configuration", 

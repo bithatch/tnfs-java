@@ -75,6 +75,7 @@ import uk.co.bithatch.tnfs.cli.commands.Put;
 import uk.co.bithatch.tnfs.cli.commands.Pwd;
 import uk.co.bithatch.tnfs.cli.commands.Rm;
 import uk.co.bithatch.tnfs.cli.commands.Rmdir;
+import uk.co.bithatch.tnfs.cli.commands.Stat;
 import uk.co.bithatch.tnfs.cli.commands.TNFSTPCommand;
 import uk.co.bithatch.tnfs.client.TNFSClient;
 import uk.co.bithatch.tnfs.client.TNFSMount;
@@ -88,7 +89,7 @@ import uk.co.bithatch.tnfs.lib.Util;
 @Command(name = "tnfstp", mixinStandardHelpOptions = true, description = "Trivial Network File System Transfer Program.", subcommands = {
 		Ls.class, Cd.class, Pwd.class, Lcd.class, Lpwd.class, Mkdir.class, Rmdir.class, Mv.class, Rm.class,
 		Get.class, Put.class, Bye.class, Df.class, Cp.class, ChkSum.class, Mounts.class, Mount.class, 
-		Help.class })
+		Stat.class, Help.class })
 public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<Integer>, TNFSContainer {
 
 	public enum PathsMode {

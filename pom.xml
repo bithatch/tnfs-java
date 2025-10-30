@@ -57,6 +57,7 @@
 		<module>web</module>
 		<module>extensions</module>
 		<module>sdk</module>
+		<module>installer</module>
 	</modules>
 	<inceptionYear>2025</inceptionYear>
 	<url>https://github.com/bithatch/tnfs-java</url>
@@ -86,7 +87,7 @@
 			<dependency>
 				<groupId>com.sshtools</groupId>
 				<artifactId>jini-config</artifactId>
-				<version>0.6.0</version>
+				<version>0.6.2-SNAPSHOT</version>
 			</dependency>
 			<dependency>
 				<groupId>info.picocli</groupId>
