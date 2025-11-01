@@ -22,14 +22,15 @@ package uk.co.bithatch.tnfs.web;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.InetAddress;
 import java.nio.file.Paths;
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceInfo;
 
 import org.slf4j.Logger;
@@ -46,6 +47,8 @@ import com.sshtools.uhttpd.UHTTPD.Status;
 import com.sshtools.uhttpd.UHTTPD.Transaction;
 
 import uk.co.bithatch.tnfs.client.TNFSClient;
+import uk.co.bithatch.tnfs.daemonlib.MDNS;
+import uk.co.bithatch.tnfs.lib.Net;
 import uk.co.bithatch.tnfs.lib.TNFS;
 import uk.co.bithatch.tnfs.lib.TNFSException;
 import uk.co.bithatch.tnfs.web.elfinder.ElFinderConstants;
@@ -73,7 +76,7 @@ public final class TNFSWeb implements Callable<Integer> {
 	private final ServiceCommandFactory commandFactory;
 	private final DefaultElfinderStorageFactory storageFactory;
 	private final Configuration configuration;
-	private final Optional<JmDNS> mdns;
+	private final Optional<MDNS> mdns;
 	private final Logger log;
 
 	public TNFSWeb() {
@@ -113,23 +116,48 @@ public final class TNFSWeb implements Callable<Integer> {
 					var ref = new DefaultVolumeRef( String.valueOf(Integer.toUnsignedLong(name.hashCode())), vol);
 					
 					bldr.addVolumes(ref);
-					log.info("Mounted {} [{}] to {} @ {}", name, ref.getId(), hostname, path);
+					log.info("Mounted {} [{}] to {} @ {}", name, ref.getId(), path, hostname);
 					mountCount.addAndGet(1);
 	
 				} catch (IOException ioe) {
-					log.error("Failed to mount TNFS resource.", ioe);
+					if(log.isDebugEnabled())
+						log.error(MessageFormat.format("Failed to mount TNFS resource {0} @ {1}.", hostname, path), ioe);
+					else
+						log.error(MessageFormat.format("Failed to mount TNFS resource {0} @ {1}. {2}", hostname, path, ioe.getMessage()));
 				}
 			});
 			
 			/* Setup mDNS if needed */
 			
 			if(configuration.mountConfiguration().getBoolean(Constants.DISCOVER_KEY) ||
-			   configuration.mountConfiguration().getBoolean(Constants.ANNOUNCE_KEY)) {
+			   configuration.mdns().getBoolean(Constants.ANNOUNCE_KEY)) {
 				try {
-	//				var addr = Net.firstIpv4LANAddress().get();
-	//				log.info("mDNS using address {}", addr);
-	//				mdns = Optional.of(JmDNS.create(addr, "blue.local"));
-					mdns = Optional.of(JmDNS.create(/* "blue" */));
+					
+					var mdnsAddress = configuration.mdns().getOr(Constants.ADDRESS_KEY).map(a -> Net.parseAddress(a, "localhost")).orElseGet(() -> {
+						var http = configuration.http();
+						var https = configuration.https();
+						var httpOn = http.getInt(Constants.PORT_KEY, 0) > 0;
+						var httpsOn = https.getInt(Constants.PORT_KEY, 0) > 0;
+						var httpAddr =  http.get(Constants.ADDRESS_KEY, "127.0.0.1");
+						var httpsAddr =  https.get(Constants.ADDRESS_KEY, "127.0.0.1");
+						
+						if(httpOn  && httpsOn && !httpAddr.equals(httpsAddr)) {
+							return Net.parseAddress("*");
+						}
+						else {
+							if(httpsOn) {
+								return Net.parseAddress(httpsAddr);
+							}
+							else if(httpOn) {
+								return Net.parseAddress(httpAddr);
+							}
+							else {
+								return null;
+							}
+						}	
+					});
+					mdns = Optional.of(new MDNS(mdnsAddress));
+					
 				} catch (IOException e) {
 					throw new UncheckedIOException(e);
 				}
@@ -176,7 +204,7 @@ public final class TNFSWeb implements Callable<Integer> {
 				}
 		
 				if (mountCount.get() == 0)
-					throw new IllegalStateException("No mounts defined in configuration.");
+					throw new IllegalStateException("No valid mounts defined in configuration.");
 		
 				var storage = bldr.build();
 		
@@ -207,7 +235,7 @@ public final class TNFSWeb implements Callable<Integer> {
 		SLF4JBridgeHandler.removeHandlersForRootLogger();
 		SLF4JBridgeHandler.install();
 
-		if (configuration.server().getBoolean(Constants.ANNOUNCE_KEY)) {
+		if (configuration.mdns().getBoolean(Constants.ANNOUNCE_KEY)) {
 
 			var deregistered = new AtomicBoolean();
 			try {
@@ -232,7 +260,7 @@ public final class TNFSWeb implements Callable<Integer> {
 		return 0;
 	}
 
-	private void runServer(Optional<JmDNS> mdns) throws IOException {
+	private void runServer(Optional<MDNS> mdns) throws IOException {
 
 		if (configuration.server().getBoolean(Constants.UPNP_KEY)) {
 			runServer(mdns, UPnP.gateway());
@@ -242,7 +270,7 @@ public final class TNFSWeb implements Callable<Integer> {
 
 	}
 
-	private void runServer(Optional<JmDNS> mdns, Optional<Gateway> gateway) throws IOException {
+	private void runServer(Optional<MDNS> mdns, Optional<Gateway> gateway) throws IOException {
 		var bldr = UHTTPD.server()
 				.get("/api/(.*)", this::api)
 				.get("/index.html", UHTTPD.classpathResource("web/ui/index.html"))
@@ -255,13 +283,13 @@ public final class TNFSWeb implements Callable<Integer> {
 		var httpPort = http.getInt(Constants.PORT_KEY);
 		if(httpPort > 0)
 			bldr.withHttp(httpPort);
-		bldr.withHttpAddress(http.get(Constants.ADDRESS_KEY));
+		bldr.withHttpAddress(Net.parseAddress(http.get(Constants.ADDRESS_KEY), "localhost"));
 		
 		var https = configuration.https();
 		var httpsPort = https.getInt(Constants.PORT_KEY);
 		if(httpsPort > 0)
 			bldr.withHttps(httpsPort);
-		bldr.withHttpsAddress(https.get(Constants.ADDRESS_KEY));
+		bldr.withHttpsAddress(Net.parseAddress(https.get(Constants.ADDRESS_KEY), "localhost"));
 		https.getOr(Constants.KEY_PASSWORD_KEY).ifPresent(kp -> bldr.withKeyPassword(kp.toCharArray()));
 		https.getOr(Constants.KEYSTORE_FILE_KEY).ifPresent(ks -> bldr.withKeyStoreFile(Paths.get(ks)));
 		https.getOr(Constants.KEYSTORE_PASSWORD_KEY).ifPresent(kp -> bldr.withKeyPassword(kp.toCharArray()));
@@ -306,7 +334,7 @@ public final class TNFSWeb implements Callable<Integer> {
 				httpd.httpPort().ifPresent(p -> {
 					log.info("Registering mDNS for HTTP on {}", p);
 					try {
-						d.registerService( ServiceInfo.create("_http._tcp.local.", "TNFS Web", p, "path=index.html"));
+						d.registerService( ServiceInfo.create("_http._tcp.local.", "TNFSJ Web", p, "path=index.html"));
 					} catch (IOException e) {
 						throw new UncheckedIOException(e);
 					}
@@ -314,7 +342,7 @@ public final class TNFSWeb implements Callable<Integer> {
 				httpd.httpsPort().ifPresent(p -> {
 					log.info("Registering mDNS for HTTPS on {}", p);
 					try {
-						d.registerService( ServiceInfo.create("_https._tcp.local.", "TNFS Web", p, "path=index.html"));
+						d.registerService( ServiceInfo.create("_https._tcp.local.", "TNFSJ Web", p, "path=index.html"));
 					} catch (IOException e) {
 						throw new UncheckedIOException(e);
 					}

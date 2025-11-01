@@ -18,14 +18,17 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-open module uk.co.bithatch.tnfs.daemon {
-	requires info.picocli;
-	requires transitive uk.co.bithatch.tnfs.server;
-	requires transitive uk.co.bithatch.tnfs.server.extensions;
-	requires transitive uk.co.bithatch.tnfs.daemonlib;
-	requires org.slf4j.simple;
-	requires org.slf4j;
-	requires com.sshtools.porter;
-	requires com.sshtools.jini.config;
-	requires com.ongres.scram.common;
+package uk.co.bithatch.tnfs.server;
+
+import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
+
+public interface TNFSFileSystem extends TNFSFileAccess {
+
+	/**
+	 * Get if the whole file system is read only.
+	 * 
+	 * @return read Only
+	 */
+	boolean readOnly();
+
 }

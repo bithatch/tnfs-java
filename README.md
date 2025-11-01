@@ -11,8 +11,8 @@ I started this to help me understand the TNFS protocol, as I intend to implement
  * `tnfscp` or *TNFS Copy*. A `cp` like tool for simple copies of files and directories from the command line and scripts.
  * `tnfstp` or *TNFS Transfer Program*. An `ftp` like tool, but with advanced command line completion, highlighting and more. 
  * `tnfs-fuse`. Mount TNFS resources to your file system and access them easily in any program. Makes use of [libfuse](https://github.com/libfuse/libfuse).
- * `tnfsd`. An alternative server implementation with extra features such as mDNS support, UPnP support, and enhanced file systemm and security features, particularly when used with *TNFS Java* client tools.
- * `tnfs-web`. An alternative web front-end based on [elFinder](https://github.com/Studio-42/elFinder).
+ * `tnfsjd`. An alternative server implementation with extra features such as mDNS support, UPnP support, and enhanced file systemm and security features, particularly when used with *TNFS Java* client tools.
+ * `tnfsjd-web`. An alternative web front-end based on [elFinder](https://github.com/Studio-42/elFinder).
  * All server tools have a `Dockerfile` to build your own docker containers. 
  
 See [Releases](releases) for downloads. 

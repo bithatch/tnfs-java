@@ -1,6 +1,6 @@
 # tnfs-java-daemon
 
-A ready-to-go TNFS server, `tnfsd`.
+A ready-to-go TNFS server, `tnfsjd`.
 
  * UDP and TCP connections.
  * [TNFS Java Extensions](../extensions).
@@ -17,7 +17,7 @@ There are a few different ways to run the daemon. See `--help` option for more i
 The are self-contained, pre-built binaries for a few platforms. If yours is one supported, just download the executables and run.
 
 ```
-/path/to/tnfsd --help
+/path/to/tnfsjd --help
 ```
 
 ### Download Cross Platform Jars
@@ -25,7 +25,7 @@ The are self-contained, pre-built binaries for a few platforms. If yours is one 
 If you have a JDK installed, you can just download the `.jar` builds and run them.
 
 ```
-java -jar /path/to/tnfsd.jar --help
+java -jar /path/to/tnfsjd.jar --help
 ```
 
 ### Run From Source
@@ -39,7 +39,7 @@ You probably only want to do this if you are working on tnfs-java itself. You wi
 The run the application by choosing the appropriate profile and supplying the `args` property.
 
 ```
-mvn exec:run -P tnfsd -Dargs="--help"
+mvn exec:run -P tnfsjd -Dargs="--help"
 ```
 
 ### Docker
@@ -78,12 +78,12 @@ By default, the daemon and it's tools expect configuration files to be in certai
 
 | OS | User | Location |
 | --- | --- | --- |
-| Linux | root / server | /etc/tnfsd |
-| Linux | standard users | $HOME/.configuration/tnfsd |
-| Windows | administrator / service | C:\\Program Files\\Common Files\\tnfsd |
-| Windows | standard users | %HOME%/AppData/Roaming\\tnfsd |
-| Other | administrator / service | /etc/tnfsd |
-| Other | standard users | $HOME/.tnfsd |
+| Linux | root / server | /etc/tnfsjd |
+| Linux | standard users | $HOME/.configuration/tnfsjd |
+| Windows | administrator / service | C:\\Program Files\\Common Files\\tnfsjd |
+| Windows | standard users | %HOME%/AppData/Roaming\\tnfsjd |
+| Other | administrator / service | /etc/tnfsjd |
+| Other | standard users | $HOME/.tnfsjd |
 
 If you wish to use configuration from any other directory, use the `-C` (or `--configuration`) argument with the daemon or any tools.
 

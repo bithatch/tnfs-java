@@ -18,14 +18,8 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-open module uk.co.bithatch.tnfs.daemon {
-	requires info.picocli;
-	requires transitive uk.co.bithatch.tnfs.server;
-	requires transitive uk.co.bithatch.tnfs.server.extensions;
-	requires transitive uk.co.bithatch.tnfs.daemonlib;
-	requires org.slf4j.simple;
+module uk.co.bithatch.tnfs.daemonlib {
+	exports uk.co.bithatch.tnfs.daemonlib;
 	requires org.slf4j;
-	requires com.sshtools.porter;
-	requires com.sshtools.jini.config;
-	requires com.ongres.scram.common;
+	requires transitive javax.jmdns;
 }

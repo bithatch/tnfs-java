@@ -34,9 +34,10 @@ RUN mvn -f $HOME/pom.xml clean package -Dbuild.native.web=true
 # Package stage
 #
 FROM debian:stable-slim 
-COPY --from=build /usr/app/web/target/tnfs-web /app/tnfsd-web
-COPY --from=build /usr/app/web/src/main/docker/configuration /etc/tnfs-web
-EXPOSE 8080
+COPY --from=build /usr/app/web/target/tnfsjd-web /app/tnfsjd-web
+COPY --from=build /usr/app/web/src/main/docker/configuration /etc/tnfsjd-web
+EXPOSE 14080
+EXPOSE 14443
 VOLUME /data
-VOLUME /etc/tnfs-web
-ENTRYPOINT /app/tnfsd-web -Dorg.slf4j.simpleLogger.defaultLogLevel=info
+VOLUME /etc/tnfsjd-web
+ENTRYPOINT /app/tnfsjd-web -Dorg.slf4j.simpleLogger.defaultLogLevel=info

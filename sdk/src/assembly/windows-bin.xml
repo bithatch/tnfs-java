@@ -109,7 +109,7 @@
 			<outputDirectory>bin</outputDirectory>
 		</file>
 		<file>
-			<source>../daemon/target/tnfsd.exe</source>
+			<source>../daemon/target/tnfsjd.exe</source>
 			<outputDirectory>sbin</outputDirectory>
 		</file>
 		<file>
@@ -117,7 +117,7 @@
 			<outputDirectory>sbin</outputDirectory>
 		</file>
 		<file>
-			<source>../web/target/tnfs-web.exe</source>
+			<source>../web/target/tnfsjd-web.exe</source>
 			<outputDirectory>sbin</outputDirectory>
 		</file>
 	</files>

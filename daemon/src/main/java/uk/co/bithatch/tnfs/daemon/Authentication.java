@@ -40,7 +40,7 @@ import com.ongres.scram.common.ScramMechanism;
 import com.ongres.scram.common.StringPreparation;
 import com.sshtools.jini.config.Monitor;
 
-import uk.co.bithatch.tnfs.lib.TNFSFileSystem;
+import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
 import uk.co.bithatch.tnfs.lib.Util;
 import uk.co.bithatch.tnfs.lib.extensions.Crypto;
 import uk.co.bithatch.tnfs.server.extensions.ScramPrincipal;
@@ -85,12 +85,12 @@ public class Authentication extends AbstractConfiguration implements ScramTNFSAu
 		}
 	}
 
-	public Authentication(Optional<Path> configurationDir) {
-		this(Optional.empty(), configurationDir);
+	public Authentication(Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
+		this(Optional.empty(), configurationDir, userConfigurationDir);
 	}
 	
-	public Authentication(Optional<Monitor> monitor, Optional<Path> configurationDir) {
-		super(Authentication.class, "authentication", monitor, configurationDir);
+	public Authentication(Optional<Monitor> monitor, Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
+		super(Authentication.class, "authentication", monitor, configurationDir, userConfigurationDir);
 		
 		var srvkey = resolveServerKey();
 		if(!Files.exists(srvkey)) {
@@ -105,12 +105,12 @@ public class Authentication extends AbstractConfiguration implements ScramTNFSAu
 	}
 
 	@Override
-	public Optional<ScramPrincipal> identify(TNFSFileSystem fs, String username) {
+	public Optional<ScramPrincipal> identify(TNFSFileAccess fs, String username) {
 		return locateUser(username);
 	}
 
 	@Override
-	public Optional<Principal> authenticate(TNFSFileSystem fs, Optional<String> username, Optional<char[]> password) {
+	public Optional<Principal> authenticate(TNFSFileAccess fs, Optional<String> username, Optional<char[]> password) {
 		if(username.isPresent()) {
 			var uname = username.get();
 			var princ = locateUser(uname);

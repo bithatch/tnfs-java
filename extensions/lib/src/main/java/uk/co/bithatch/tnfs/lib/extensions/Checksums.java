@@ -31,13 +31,13 @@ import java.util.zip.CheckedInputStream;
 
 import uk.co.bithatch.tnfs.lib.ModeFlag;
 import uk.co.bithatch.tnfs.lib.OpenFlag;
-import uk.co.bithatch.tnfs.lib.TNFSFileSystem;
+import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
 import uk.co.bithatch.tnfs.lib.Util;
 import uk.co.bithatch.tnfs.lib.extensions.Extensions.Checksum;
 
 public class Checksums {
 
-	public static String sum(TNFSFileSystem mnt, String path, Checksum type) throws IOException, NoSuchAlgorithmException {
+	public static String sum(TNFSFileAccess mnt, String path, Checksum type) throws IOException, NoSuchAlgorithmException {
 		String checksum;
 		switch (type) {
 		case CRC32:

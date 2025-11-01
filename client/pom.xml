@@ -43,16 +43,4 @@
 			<artifactId>slf4j-simple</artifactId>
 		</dependency>
 	</dependencies>
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<configuration>
-					<release>17</release>
-					<testRelease>17</testRelease>
-				</configuration>
-			</plugin>
-		</plugins>
-	</build>
 </project>

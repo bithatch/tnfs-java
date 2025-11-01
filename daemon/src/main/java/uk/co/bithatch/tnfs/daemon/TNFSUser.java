@@ -51,8 +51,11 @@ public class TNFSUser implements Callable<Integer>, ExceptionHandlerHost {
     @Option(names = { "-L", "--log-level" }, paramLabel = "LEVEL", description = "Logging level for trouble-shooting.")
     private Optional<Level> level;
     
-    @Option(names = { "-C", "--configuration" }, description = "Locate of configuration. By defafult, will either be the systems default global configuration directory or a user configuration directory.")
+    @Option(names = { "-C", "--configuration" }, description = "Location of system configuration. By default, will either be the systems default global configuration directory or a user configuration directory.")
     private Optional<Path> configuration;
+    
+    @Option(names = { "-O", "--override-configuration" }, description = "Location of user override configuration. By default, will be a configuration directory in the users home directory or the users home directory.")
+    private Optional<Path> userConfiguration;
 
     @Option(names = { "-X", "--verbose-exceptions" }, description = "Show verbose exception traces on errors.")
     private boolean verboseExceptions;
@@ -86,7 +89,7 @@ public class TNFSUser implements Callable<Integer>, ExceptionHandlerHost {
 	    	/* Logging */
 			System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", level.orElse(Level.WARN).name());
 			
-			authenticator = new Authentication(configuration);
+			authenticator = new Authentication(configuration, userConfiguration);
 		}
 		return authenticator;
 	}

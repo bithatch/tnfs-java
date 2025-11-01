@@ -27,6 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
+import java.nio.file.ReadOnlyFileSystemException;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.DosFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributeView;
@@ -43,25 +44,32 @@ import uk.co.bithatch.tnfs.lib.ModeFlag;
 import uk.co.bithatch.tnfs.lib.OpenFlag;
 import uk.co.bithatch.tnfs.lib.ResultCode;
 import uk.co.bithatch.tnfs.lib.TNFSDirectory;
-import uk.co.bithatch.tnfs.lib.TNFSFileSystem;
 
 public class TNFSDefaultFileSystem implements TNFSFileSystem {
 	private final static Logger LOG = LoggerFactory.getLogger(TNFSDefaultFileSystem.class);
 	
 	private final String mountPath;
 	private final Path root;
+	private final boolean readOnly;
 
-	public TNFSDefaultFileSystem(Path root, String mountPath) throws IOException {
+	public TNFSDefaultFileSystem(Path root, String mountPath, boolean readOnly) throws IOException {
 		if(!Files.exists(root))
 			throw new NoSuchFileException(root.toString());
 		if(!Files.isDirectory(root))
 			throw new NotDirectoryException(root.toString());
 		this.mountPath = mountPath;
 		this.root = root;
+		this.readOnly = readOnly;
+	}
+
+	@Override
+	public boolean readOnly() {
+		return readOnly;
 	}
 
 	@Override
 	public void chmod(String path, ModeFlag... modes) throws IOException {
+		checkReadOnly();
 		Files.setPosixFilePermissions(resolve(path), Set.of(ModeFlag.permissions(modes)));
 	}
 
@@ -72,7 +80,10 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 	@Override
 	public TNFSDirectory directory(String path, String wildcard) throws IOException {
 		var resolved = resolve(path);
-		LOG.info("Listing entries for `{}` (resolved at `{}`), wildcard pattern of `{}`", path, resolved, wildcard);
+		
+		if(LOG.isDebugEnabled()) {
+			LOG.debug("Listing entries for `{}` (resolved at `{}`), wildcard pattern of `{}`", path, resolved, wildcard);
+		}
 		
 		Stream<Entry> str;
 		if(wildcard.isBlank()) {
@@ -128,6 +139,7 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 
 	@Override
 	public void mkdir(String path) throws IOException {
+		checkReadOnly();
 		Files.createDirectory(resolve(path));
 	}
 
@@ -138,6 +150,11 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 
 	@Override
 	public SeekableByteChannel open(String path, ModeFlag[] mode, OpenFlag... flags) throws IOException {
+		var flgs = Arrays.asList(flags);
+		if(readOnly && (flgs.contains(OpenFlag.CREATE) || flgs.contains(OpenFlag.WRITE) || flgs.contains(OpenFlag.APPEND) || flgs.contains(OpenFlag.TRUNCATE))) {
+			throw new ReadOnlyFileSystemException();
+		}
+		
 		SeekableByteChannel chnl = Files.newByteChannel(resolve(path), OpenFlag.encodeOptions(flags));
 		if(Arrays.asList(flags).contains(OpenFlag.CREATE)) {
 			/* TODO umask? */
@@ -148,11 +165,13 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 
 	@Override
 	public void rename(String path, String targetPath) throws IOException {
+		checkReadOnly();
 		Files.move(resolve(path), resolve(targetPath));
 	}
 
 	@Override
 	public void rmdir(String path) throws IOException {
+		checkReadOnly();
 		Files.delete(resolve(path));
 	}
 	
@@ -218,7 +237,14 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 
 	@Override
 	public void unlink(String path) throws IOException {
+		checkReadOnly();
 		Files.delete(resolve(path));
+	}
+	
+	private void checkReadOnly() {
+		if(readOnly) {
+			throw new ReadOnlyFileSystemException();
+		}
 	}
 
 	private Stream<Path> list(Path path) throws IOException {

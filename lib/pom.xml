@@ -32,16 +32,4 @@
 	</parent>
 	<artifactId>tnfs-java-lib</artifactId>
 	<name>Java TNFS - Common Library</name>
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<configuration>
-					<release>17</release>
-					<testRelease>17</testRelease>
-				</configuration>
-			</plugin>
-		</plugins>
-	</build>
 </project>

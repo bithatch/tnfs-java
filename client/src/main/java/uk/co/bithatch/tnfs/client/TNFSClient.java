@@ -25,6 +25,7 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
 import java.net.StandardSocketOptions;
 import java.nio.BufferUnderflowException;
 import java.nio.channels.DatagramChannel;
@@ -239,12 +240,17 @@ public final class TNFSClient implements Closeable {
 				dchannel.receive(buf);
 			
 			buf.flip();
-			var msg = Message.decode(buf);
-			if(msg.seq() == pkt.seq()) {
-				return msg;
+			if(buf.hasRemaining()) {
+				var msg = Message.decode(buf);
+				if(msg.seq() == pkt.seq()) {
+					return msg;
+				}
+				else {
+					throw new IllegalStateException(String.format("Out of sequence (newer) response, lost a message. Expected %d, got %d", pkt.seq(), msg.seq()));
+				}
 			}
 			else {
-				throw new IllegalStateException(String.format("Out of sequence (newer) response, lost a message. Expected %d, got %d", pkt.seq(), msg.seq()));
+				throw new SocketTimeoutException();
 			}
 		}
 		else if(channel instanceof SocketChannel tchannel) {

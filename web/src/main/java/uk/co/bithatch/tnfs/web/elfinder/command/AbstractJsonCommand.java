@@ -59,7 +59,7 @@ public abstract class AbstractJsonCommand extends AbstractCommand {
             writer.flush();
         } catch (Exception e) {
             logger.error("Unable to execute abstract json command", e);
-            json.put(ElFinderConstants.ELFINDER_JSON_RESPONSE_ERROR, e.getMessage());
+            json.put(ElFinderConstants.ELFINDER_JSON_RESPONSE_ERROR, e.getMessage() == null ? e.getClass().getName() : e.getMessage());
         }
     }
 

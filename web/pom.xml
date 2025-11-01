@@ -28,7 +28,7 @@
 		<groupId>uk.co.bithatch</groupId>
 		<artifactId>tnfs-java</artifactId>
 		<version>0.9.0-SNAPSHOT</version>
-		<relativePath>../</relativePath>
+		<relativePath>../pom.xml</relativePath>
 	</parent>
 	<artifactId>tnfs-java-web</artifactId>
 	<name>Java TNFS - Web</name>
@@ -41,6 +41,11 @@
 		<dependency> 
 			<groupId>${project.groupId}</groupId>
 			<artifactId>tnfs-java-client-extensions</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>tnfs-java-daemonlib</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>
@@ -82,10 +87,6 @@
 		    <version>4.0.2</version>
 		</dependency>
 		<dependency>
-		    <groupId>org.jmdns</groupId>
-		    <artifactId>jmdns</artifactId>
-		</dependency> 
-		<dependency>
 		    <groupId>com.sshtools</groupId>
 		    <artifactId>porter</artifactId>
 		</dependency> 
@@ -97,6 +98,14 @@
     <build>
         <plugins>
         
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<release>24</release>
+					<testRelease>24</testRelease>
+				</configuration>
+			</plugin>
 				
             <plugin>
                 <groupId>com.mycila</groupId>
@@ -126,7 +135,7 @@
 							<goal>single</goal>
 						</goals>
 						<configuration>
-							<finalName>tnfs-web</finalName>
+							<finalName>tnfsjd-web</finalName>
 							<archive>
 								<manifest>
 									<mainClass>uk.co.bithatch.tnfs.web.TNFSWeb</mainClass>
@@ -164,7 +173,7 @@
 						<artifactId>native-maven-plugin</artifactId>
 						<executions>
 							<execution>
-								<id>tnfsd-native-image</id>
+								<id>tnfsjd-web-native-image</id>
 								<goals>
 									<goal>build</goal>
 								</goals>
@@ -172,7 +181,7 @@
 								<configuration>
 									<mainClass>uk.co.bithatch.tnfs.web.TNFSWeb</mainClass>
 									<skip>false</skip>
-									<imageName>tnfs-web</imageName>
+									<imageName>tnfsjd-web</imageName>
 									<buildArgs>
 										<buildArg>--install-exit-handlers</buildArg>
                                         <buildArg>-march=compatibility</buildArg>
@@ -185,12 +194,12 @@
 			</build>
 		</profile>
 
-		<!-- tnfscp -->
+		<!-- tnfsj-web -->
 		<profile>
-			<id>tnfs-web</id>
+			<id>tnfsjd-web</id>
 			<activation>
 				<property>
-					<name>tnfs-web</name>
+					<name>tnfsjd-web</name>
 				</property>
 			</activation>
 			<build>
@@ -209,14 +218,5 @@
 	</profiles>
 	
 	<repositories>
-		<!-- Temporary until jini 0.5.0 -->
-		<repository>
-			<id>oss-snapshots</id>
-			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
-			<snapshots/>
-			<releases>
-				<enabled>false</enabled>
-			</releases>
-		</repository>
 	</repositories>
 </project>

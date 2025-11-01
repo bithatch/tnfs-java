@@ -70,7 +70,9 @@ public class OpenDirXHandler implements TNFSMessageHandler {
 				context.dirHandles().put(key, dh);	
 			}
 			
-			LOG.info("Opened extended directory listing to {}, {} entries. Handle: {} [{}]", dir.path(), dh.size(), key, String.format("%04x", key));
+			if(LOG.isDebugEnabled()) {
+				LOG.debug("Opened extended directory listing to {}, {} entries. Handle: {} [{}]", dir.path(), dh.size(), key, String.format("%04x", key));
+			}
 			return new Command.OpenDirXResult(ResultCode.SUCCESS, key, dh.size());
 		});
 	}

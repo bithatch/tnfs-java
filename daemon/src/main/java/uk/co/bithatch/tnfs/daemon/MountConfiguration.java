@@ -35,39 +35,54 @@ import com.sshtools.jini.config.Monitor;
 import uk.co.bithatch.tnfs.server.TNFSMounts;
 
 public class MountConfiguration extends AbstractConfiguration {
-	private static Logger LOG = LoggerFactory.getLogger(MountConfiguration.class);
+	private final static class LazyLog {
+		private static Logger LOG = LoggerFactory.getLogger(MountConfiguration.class);
+	}
 	
 	private final TNFSMounts mounts;
 
 	private final Authentication auth;
 
-	public MountConfiguration(Monitor monitor, Configuration configuration, Optional<Path> configurationDir) {
-		super(MountConfiguration.class, "mounts", Optional.of(monitor), configurationDir);
+	public MountConfiguration(Monitor monitor, Configuration configuration, Optional<Path> configurationDir, Optional<Path> userConfigDir) {
+		super(MountConfiguration.class, "mounts", Optional.of(monitor), configurationDir, userConfigDir);
 		
 		mounts = new TNFSMounts();
 		
-		auth = new Authentication(Optional.of(monitor), configurationDir);
+		auth = new Authentication(Optional.of(monitor), configurationDir, userConfigDir);
 		
-		Arrays.asList(document().allSections(Constants.MOUNT_KEY)).forEach(sec -> {
-			
-			var authTypes = Arrays.asList(sec.getAllEnumOr(AuthenticationType.class, Constants.AUTHENTICATION_KEY).orElse(new AuthenticationType[0]));
-			var path = sec.get(Constants.PATH_KEY);
-			var local = Paths.get(sec.get(Constants.LOCAL_KEY));
-			
-			try {
-				if(authTypes.isEmpty()) {
-					LOG.info("Anonymous mounting {} to {}", local, path);
-					mounts.mount(path, local);
+		document().allSectionsOr(Constants.MOUNT_KEY).ifPresent(mntsec-> {
+			Arrays.asList(mntsec).forEach(sec -> {
+				
+				var authTypes = Arrays.asList(sec.getAllEnumOr(AuthenticationType.class, Constants.AUTHENTICATION_KEY).orElse(new AuthenticationType[0]));
+				var path = sec.get(Constants.PATH_KEY);
+				var local = Paths.get(sec.get(Constants.LOCAL_KEY));
+				var rdOnly = sec.getBoolean(Constants.READ_ONLY_KEY);
+				
+				try {
+					if(authTypes.isEmpty()) {
+						
+						if(rdOnly)
+							LazyLog.LOG.info("Anonymous mounting {} to {} as read only", local, path);
+						else
+							LazyLog.LOG.info("Anonymous mounting {} to {}", local, path);
+						
+						mounts.mount(path, local, rdOnly);
+					}
+					else {
+						
+						if(rdOnly)
+							LazyLog.LOG.info("Mounting {} to {} (using {} for auth) as read only", local, path, String.join(", ", authTypes.stream().map(AuthenticationType::name).toList()));
+						else
+							LazyLog.LOG.info("Mounting {} to {} (using {} for auth)", local, path, String.join(", ", authTypes.stream().map(AuthenticationType::name).toList()));
+						
+						mounts.mount(path, local, auth, rdOnly);
+					}
 				}
-				else {
-					LOG.info("Mounting {} to {} (using {} for auth)", local, path, String.join(", ", authTypes.stream().map(AuthenticationType::name).toList()));
-					mounts.mount(path, local, auth);
+				catch(IOException ioe) {
+					throw new UncheckedIOException(ioe);
 				}
-			}
-			catch(IOException ioe) {
-				throw new UncheckedIOException(ioe);
-			}
-		});;
+			});;
+		});
 	}
 	
 	public TNFSMounts mounts() {

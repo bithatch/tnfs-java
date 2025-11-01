@@ -1,5 +1,4 @@
-<!--
-
+====
     Copyright © 2025 Bithatch (brett@bithatch.co.uk)
 
     Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -18,24 +17,8 @@
     HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
     OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
     SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+====
 
--->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<parent>
-		<groupId>uk.co.bithatch</groupId>
-		<artifactId>tnfs-java</artifactId>
-		<version>0.9.0-SNAPSHOT</version>
-		<relativePath>../</relativePath>
-	</parent>
-    <packaging>pom</packaging>
-	<artifactId>tnfs-java-extensions</artifactId>
-	<name>Java TNFS - Extensions</name>
-	<modules>
-		<module>lib</module>
-		<module>client</module>
-		<module>server</module>
-	</modules>
-</project>
+Put your files in this directory. Remember anyone can read, write or delete files!
+For creating more secure mounts, see the configuration documentation at 
+https://github.com/bithatch/tnfs-java. 

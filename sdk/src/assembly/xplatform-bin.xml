@@ -110,11 +110,11 @@
 			<outputDirectory>bin</outputDirectory>
 		</file>
 		<file>
-			<source>../daemon/target/tnfsd.jar</source>
+			<source>../daemon/target/tnfsjd.jar</source>
 			<outputDirectory>sbin</outputDirectory>
 		</file>
 		<file>
-			<source>../web/target/tnfs-web.jar</source>
+			<source>../web/target/tnfsjd-web.jar</source>
 			<outputDirectory>sbin</outputDirectory>
 		</file>
 	</files>

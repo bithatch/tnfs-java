@@ -31,9 +31,9 @@ import uk.co.bithatch.tnfs.lib.DirSortFlag;
 import uk.co.bithatch.tnfs.lib.ModeFlag;
 import uk.co.bithatch.tnfs.lib.OpenFlag;
 import uk.co.bithatch.tnfs.lib.TNFSDirectory;
-import uk.co.bithatch.tnfs.lib.TNFSFileSystem;
+import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
 
-public interface TNFSMount extends TNFSFileSystem {
+public interface TNFSMount extends TNFSFileAccess {
 
 	/**
 	 * List all the names of entries in the root of this mount. This is a convenience method

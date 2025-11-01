@@ -23,17 +23,17 @@ package uk.co.bithatch.tnfs.server.extensions;
 import java.security.Principal;
 import java.util.Optional;
 
-import uk.co.bithatch.tnfs.lib.TNFSFileSystem;
+import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
 import uk.co.bithatch.tnfs.server.TNFSMounts.TNFSAuthenticator;
 
 public interface ScramTNFSAuthenticator extends TNFSAuthenticator {
 
 	@Override
-	default Optional<Principal> authenticate(TNFSFileSystem fs, Optional<String> username, Optional<char[]> password) {
+	default Optional<Principal> authenticate(TNFSFileAccess fs, Optional<String> username, Optional<char[]> password) {
 		throw new UnsupportedOperationException("This authenticator should be used with CLNTFRST only.");
 	}
 
-	Optional<ScramPrincipal> identify(TNFSFileSystem fs, String username);
+	Optional<ScramPrincipal> identify(TNFSFileAccess fs, String username);
 	
 	byte[] serverKey();
 

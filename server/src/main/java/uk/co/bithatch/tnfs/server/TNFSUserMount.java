@@ -22,8 +22,8 @@ package uk.co.bithatch.tnfs.server;
 
 import java.security.Principal;
 
-import uk.co.bithatch.tnfs.lib.TNFSFileSystem;
+import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
 
-public record TNFSUserMount(TNFSFileSystem fileSystem, Principal user) {
+public record TNFSUserMount(TNFSFileAccess fileSystem, Principal user) {
 
 }

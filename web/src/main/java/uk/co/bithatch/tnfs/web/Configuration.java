@@ -27,7 +27,6 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -47,13 +46,13 @@ public final class Configuration {
 	private final INI ini;
 
 	public Configuration(Monitor monitor) {
-		var bldr =  new INISet.Builder("tnfs-web").
-				withApp("tnfs-web").
-				withCreateDefaults(CreateDefaultsMode.valueOf(System.getProperty("tnfs-web.create-defaults-mode", "NONE"))).
+		var bldr =  new INISet.Builder("tnfsjd-web").
+				withApp("tnfsjd-web").
+				withCreateDefaults(CreateDefaultsMode.valueOf(System.getProperty("tnfsjd-web.create-defaults-mode", "NONE"))).
 				withSchema(Configuration.class);
 		
-		var config = System.getProperty("tnfs-web.configuration", 
-			Boolean.getBoolean("tnfs-web.dev") ? "etc" : ""
+		var config = System.getProperty("tnfsjd-web.configuration", 
+			Boolean.getBoolean("tnfsjd-web.dev") ? "etc" : ""
 		);
 		if(!config.equals("")) {
 			try {
@@ -96,6 +95,10 @@ public final class Configuration {
 
 	public Section server() {
 		return ini.section(Constants.SERVER_SECTION);
+	}
+
+	public Section mdns() {
+		return ini.section(Constants.MDNS_SECTION);
 	}
 
 	public Section http() {

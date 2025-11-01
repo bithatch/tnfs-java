@@ -28,7 +28,7 @@ import uk.co.bithatch.tnfs.lib.Command.StatResult;
 import uk.co.bithatch.tnfs.lib.ModeFlag;
 import uk.co.bithatch.tnfs.lib.OpenFlag;
 import uk.co.bithatch.tnfs.lib.TNFSDirectory;
-import uk.co.bithatch.tnfs.lib.TNFSFileSystem;
+import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
 
 public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 
@@ -113,6 +113,11 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 	public void rename(String path, String targetPath) throws IOException {
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	public boolean readOnly() {
+		return false;
 	}
 
 }

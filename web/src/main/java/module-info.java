@@ -57,6 +57,7 @@ open module uk.co.bithatch.tnfs.daemon {
 	requires transitive com.sshtools.jini.config;
 	requires javax.jmdns;
 	requires com.sshtools.porter;
+	requires uk.co.bithatch.tnfs.daemonlib;
 	
 	uses ElfinderCommand;
 	

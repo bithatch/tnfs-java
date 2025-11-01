@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -34,7 +33,6 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.jmdns.JmmDNS;
 import javax.jmdns.ServiceInfo;
 
 import org.slf4j.Logger;
@@ -50,6 +48,8 @@ import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Spec;
 import uk.co.bithatch.tnfs.daemon.ExceptionHandler.ExceptionHandlerHost;
+import uk.co.bithatch.tnfs.daemonlib.MDNS;
+import uk.co.bithatch.tnfs.lib.Net;
 import uk.co.bithatch.tnfs.lib.Protocol;
 import uk.co.bithatch.tnfs.server.TNFSMounts;
 import uk.co.bithatch.tnfs.server.TNFSServer;
@@ -80,8 +80,11 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
         System.out.format("[#] %s%n", String.join(" ", largs));
     }
 
-    @Option(names = { "-C", "--configuration" }, description = "Locate of configurationDir. By defafult, will either be the systems default global configuration directory or a user configuration directory.")
+    @Option(names = { "-C", "--configuration" }, description = "Locate of system configurationDir. By defafult, will either be the systems default global configuration directory or a user configuration directory.")
     private Optional<Path> configurationDir;
+    
+    @Option(names = { "-O", "--override-configuration" }, description = "Location of user override configuration. By default, will be a configuration directory in the users home directory or the users home directory.")
+    private Optional<Path> userConfiguration;
 
     @Option(names = { "--hash" }, description = "The default hashing algorithm when using extended authentication.")
     private String hash = "MD5";
@@ -125,33 +128,31 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 		        }
 	        }
     		
-    		configuration = new Configuration(monitor, configurationDir);
+    		configuration = new Configuration(monitor, configurationDir, userConfiguration);
     		
 	    	/* Logging */
 			System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", level.orElse(Level.WARN).name());
 			log = LoggerFactory.getLogger(TNFSDaemon.class);
     		
-    		mountConfiguration = new MountConfiguration(monitor, configuration, configurationDir);
+    		mountConfiguration = new MountConfiguration(monitor, configuration, configurationDir, userConfiguration);
     		var tnfsMounts = mountConfiguration.mounts();
     	
 	    	
 	        /* Get actual address to listen on */
-	    	actualAddress = configuration.server().getOr(Constants.ADDRESS_KEY).map(t -> {
-				try {
-					return InetAddress.getByName(t);
-				} catch (UnknownHostException e) {
-					throw new UncheckedIOException(e);
-				}
-			}).orElseGet(InetAddress::getLoopbackAddress);
+	    	actualAddress = configuration.server().getOr(Constants.ADDRESS_KEY).map(t ->Net.parseAddress(t, t)).
+	    			orElseGet(InetAddress::getLoopbackAddress);
+	    	
+	    	log.info("Will listen on {}", actualAddress);
 	    	
 	    	if(configuration.server().getBoolean(Constants.UPNP_KEY) && actualAddress.isLoopbackAddress()) {
 	    		throw new IllegalStateException("Cannot map port using UPnP if only listening to loopback address. Use --addresss argument to specify address to bind to.");
 	    	}
 
 	    	/* Announce to everyone else we exist */
-			if(configuration.server().getBoolean(Constants.ANNOUNCE_KEY)) {
+			if(configuration.mdns().getBoolean(Constants.ANNOUNCE_KEY)) {
 
-				JmmDNS jmdns =JmmDNS.Factory.getInstance();
+				var jmdns = new MDNS(configuration.mdns().getOr(Constants.ADDRESS_KEY).map(t ->Net.parseAddress(t, t)).
+		    			orElse(actualAddress));
 	            
 	            var deregistered = new AtomicBoolean();
 	            try {
@@ -192,15 +193,15 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 	private InetAddress getPublicAddress() {
     	if(actualAddress.isAnyLocalAddress())
 			try {
-				return InetAddress.getLocalHost();
-			} catch (UnknownHostException e) {
+				return Net.getIpAddress();
+			} catch (UncheckedIOException e) {
 				throw new IllegalStateException("Cannot get localhost, but the server is listening on a wildcard address. Will not be able to announce to mDNS.", e);
 			}
 		else
     		return actualAddress;
     }
 
-	private List<String> mountNammes(TNFSMounts mounts) {
+	private List<String> mountNames(TNFSMounts mounts) {
 		return mounts.mounts().stream().map(mnt -> mnt.fs().mountPath()).toList();
 	}
 
@@ -208,8 +209,8 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 		var hostaddr = addr.getHostAddress();
 		if(hostaddr.equals("0.0.0.0")) {
 			try {
-				addr = InetAddress.getLocalHost();
-			} catch (UnknownHostException e) {
+				addr = Net.getIpAddress();
+			} catch (UncheckedIOException e) {
 				return "localhost";
 			}
 			hostaddr = addr.getHostAddress();
@@ -224,7 +225,7 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 		}
 	}
 	
-	private void registerMDNS(TNFSMounts tnfsMounts, Optional<JmmDNS> mDNS, Protocol protocol) {
+	private void registerMDNS(TNFSMounts tnfsMounts, Optional<MDNS> mDNS, Protocol protocol) {
 		mDNS.ifPresent(m -> {
 			try {
 				var txtname = configuration.server().get(Constants.NAME_KEY).
@@ -236,14 +237,14 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 						String.format("_tnfs._%s.local.", protocol.name().toLowerCase()), 
 						txtname, 
 						configuration.server().getInt(Constants.PORT_KEY), 
-						String.join(";", String.format("path=%s", mountNammes(tnfsMounts)))));
+						String.join(";", String.format("path=%s", mountNames(tnfsMounts)))));
 			} catch (IOException e) {
 				throw new UncheckedIOException(e);
 			}
 		});
 	}
 
-	private void runServer(TNFSMounts tnfsMounts, Optional<Gateway> gateway, Optional<JmmDNS> mDNS) throws IOException, InterruptedException {
+	private void runServer(TNFSMounts tnfsMounts, Optional<Gateway> gateway, Optional<MDNS> mDNS) throws IOException, InterruptedException {
 		
 		var port = configuration.server().getInt(Constants.PORT_KEY);
 		var protocols = Arrays.asList(configuration.server().getAllEnum(Protocol.class, Constants.PROTOCOLS_KEY));
@@ -331,7 +332,7 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 		}
 	}
 
-	private void runServer(TNFSMounts tnfsMounts, Optional<JmmDNS> mDNS) throws IOException, InterruptedException {
+	private void runServer(TNFSMounts tnfsMounts, Optional<MDNS> mDNS) throws IOException, InterruptedException {
 		if(configuration.server().getBoolean(Constants.UPNP_KEY)) {
 			runServer(tnfsMounts, UPnP.gateway(), mDNS);
 		}

@@ -22,43 +22,24 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>uk.co.bithatch</groupId>
 		<artifactId>tnfs-java</artifactId>
 		<version>0.9.0-SNAPSHOT</version>
 		<relativePath>../</relativePath>
 	</parent>
-	<modelVersion>4.0.0</modelVersion>
-	<properties>
-		<!--<maven.compiler.release>22</maven.compiler.release>-->
-	</properties>
-	<artifactId>tnfs-java-fuse</artifactId>
-	<name>Java TNFS - FUSE</name>
-	<description>Uses FUSE to allow mounting of TNFS resource to the local file system</description>
+	<artifactId>tnfs-java-daemonlib</artifactId>
+	<name>Java TNFS - Daemon Library</name>
 	<dependencies>
-		<dependency>
-			<groupId>${project.groupId}</groupId>
-			<artifactId>tnfs-java-client</artifactId>
-			<version>${project.version}</version>
-		</dependency>
         <dependency>
-            <groupId>org.cryptomator</groupId>
-            <artifactId>jfuse</artifactId>
-            <version>0.7.3</version>
-        </dependency>
+		    <groupId>org.jmdns</groupId>
+		    <artifactId>jmdns</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+		</dependency>
 	</dependencies>
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<configuration>
-					<release>24</release>
-					<testRelease>24</testRelease>
-				</configuration>
-			</plugin>
-		</plugins>
-	</build>
-
 </project>

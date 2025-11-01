@@ -24,21 +24,21 @@ package uk.co.bithatch.tnfs.daemon;
 import java.nio.file.Path;
 import java.util.Optional;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.sshtools.jini.INI.Section;
 import com.sshtools.jini.config.Monitor;
 
 public final class Configuration extends AbstractConfiguration {
-	static Logger LOG = LoggerFactory.getLogger(Configuration.class);
 
-	public Configuration(Monitor monitor, Optional<Path> configDir) {
-		super(Configuration.class, "tnfsd", Optional.of(monitor), configDir);
+	public Configuration(Monitor monitor, Optional<Path> configDir, Optional<Path> userConfigDir) {
+		super(Configuration.class, "tnfsjd", Optional.of(monitor), configDir, userConfigDir);
 	}
 	
 	public Section server() {
 		return document().section(Constants.SERVER_SECTION);
+	}
+	
+	public Section mdns() {
+		return document().section(Constants.MDNS_SECTION);
 	}
 
 }

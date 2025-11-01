@@ -25,6 +25,11 @@ public class Constants {
 	public static final String MOUNTS_SECTION = "mounts";
 	public static final String MOUNT_SECTION = "mount";
 	public static final String SERVER_SECTION = "server";
+	public static final String HTTPS_SECTION = "https";
+	public static final String NCSA_SECTION = "ncsa";
+	public static final String TUNING_SECTION = "tuning";
+	public static final String HTTP_SECTION = "http";
+	public static final String MDNS_SECTION = "mdns";
 	
 	public static final String NAME_KEY = "name";
 	public static final String HOSTNAME_KEY = "hostname";
@@ -39,10 +44,6 @@ public class Constants {
 	public static final String KEY_PASSWORD_KEY = "key-password";
 	public static final String ADDRESS_KEY = "address";
 	public static final String PORT_KEY = "port";
-	public static final String HTTPS_SECTION = "https";
-	public static final String NCSA_SECTION = "ncsa";
-	public static final String TUNING_SECTION = "tuning";
-	public static final String HTTP_SECTION = "http";
 	public static final String COMPRESSION_KEY = "compression";
 	public static final String ENABLED_KEY = "enabled";
 

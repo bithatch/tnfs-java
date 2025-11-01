@@ -173,6 +173,7 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 				List<TNFSMessageProcessor> postProcessors,
 				Optional<Supplier<byte[]>> serverKey)  throws  IOException {
 			super(port, messageSize.orElse(TNFS.DEFAULT_TCP_MESSAGE_SIZE), hostname, fileSystemFactory, retryTime, maxSessions, preProcessors, postProcessors, ServerSocketChannel.open(), serverKey);
+			LOG.info("Binding TCP server to {}", address());
 			channel().bind(address());
 			channel().configureBlocking(false);
 			buffer = Message.allocateLE(this.messageSize);
@@ -284,6 +285,7 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 				List<TNFSMessageProcessor> postProcessors,
 				Optional<Supplier<byte[]>> serverKey)  throws  IOException {
 			super(port, messageSize.orElse(TNFS.DEFAULT_UDP_MESSAGE_SIZE), hostname, fileSystemFactory, retryTime, maxSessions, preProcessors, postProcessors, DatagramChannel.open(), serverKey);
+			LOG.info("Binding UDP server to {}", address());
 			channel().socket().bind(address());
 		}
 
@@ -439,7 +441,7 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 
 	@Override
 	public void run() {
-		LOG.info("Listening on {} {}:{}", address().getHostName(), address().getPort(), protocol());
+		LOG.info("Listening on {} {}:{}", address().getHostString(), address().getPort(), protocol());
 		try {
 			doRun();
 		} catch(RuntimeException re) {

@@ -43,7 +43,7 @@ import uk.co.bithatch.tnfs.lib.Command.StatResult;
  * <code>server</code> module in the <em>TNFS Java</em> stack provides a default
  * implementation that accesses the local file system.
  */
-public interface TNFSFileSystem extends Closeable {
+public interface TNFSFileAccess extends Closeable {
 
 	/**
 	 * The virtual path this mount is mounted as.

@@ -9,13 +9,13 @@ A simple webapp for TNFS resources using an [elFinder](https://github.com/Studio
 The are self-contained, pre-built binaries for a few platforms. If yours is one supported, just download the executables and run.
 
 ```
-/path/to/tnfs-web
+/path/to/tnfsjd-web
 ```
 
 or
 
 ```
-C:\Path\to\tnfs-web.exe
+C:\Path\to\tnfsjd-web.exe
 ```
 
 ### Download Cross Platform Jars
@@ -23,7 +23,7 @@ C:\Path\to\tnfs-web.exe
 If you have a JDK installed, you can just download the `.jar` builds and run them.
 
 ```
-java -jar /path/to/tnfs-web.jar
+java -jar /path/to/tnfsjd-web.jar
 ```
 
 ### Run From Source
@@ -37,7 +37,7 @@ You probably only want to do this if you are working on tnfs-java itself. You wi
 The run the application by choosing the appropriate profile and supplying the `args` property.
 
 ```
-mvn exec:run -P tnfs-web -Dargs="-Dsome.property=123"
+mvn exec:run -P tnfsjd-web -Dargs="-Dsome.property=123"
 ```
 ### Docker
 
@@ -47,23 +47,21 @@ mvn exec:run -P tnfs-web -Dargs="-Dsome.property=123"
 
 #### From Source
 
-A `Dockerfile` is provided.
-
-Make sure you are in the root of the `tnfs-java` project (i.e. one directory above where this file is), and run the following.
+Make sure you are in the root of the `tnfs-java` project (i.e. one directory above where this file is). Then a `Dockerfile` is used for the next step.
 
 ```
-docker build -t your-name/tnfs-web -f daemon/Dockerfile .
+docker build -t your-name/tnfsj-web -f web/Dockerfile .
 ```
 
 Then run.
 
 ```
-docker run your-name/tnfs-web
+docker run your-name/tnfsj-web
 ```
 
 ## Configuration
 
-If you are using [tnfs-java-daemon](../daemon) on the same network (or Docker Container) as `tnfs-web`, then zero configuration is needed. mDNS will be used to automatically locate all of your shares and present them in the web interface.
+If you are using [tnfs-java-daemon](../daemon) on the same network (or Docker Container) as `tnfsjd-web`, then zero configuration is needed. mDNS will be used to automatically locate all of your shares and present them in the web interface.
 
 If you are using standard TNFS servers, you will have to add their locations to one or more `[mount]`  sections in the main configuration file.
 
@@ -73,20 +71,20 @@ By default, configuration files are expected to be in certain locations dependin
 
 | OS | User | Location |
 | --- | --- | --- |
-| Linux | root / server | /etc/tnfs-web |
-| Linux | standard users | $HOME/.configuration/tnfs-web |
-| Windows | administrator / service | C:\\Program Files\\Common Files\\tnfs-web |
-| Windows | standard users | %HOME%/AppData/Roaming\\tnfs-web |
-| Other | administrator / service | /etc/tnfs-web |
-| Other | standard users | $HOME/.tnfs-web |
+| Linux | root / server | /etc/tnfsjd-web |
+| Linux | standard users | $HOME/.configuration/tnfsjd-web |
+| Windows | administrator / service | C:\\Program Files\\Common Files\\tnfsjd-web |
+| Windows | standard users | %HOME%/AppData/Roaming\\tnfsjd-web |
+| Other | administrator / service | /etc/tnfsjd-web |
+| Other | standard users | $HOME/.tnfsjd-web |
 
 Or to run the daemon with its configuration elsewhere.
 
 ```
-tnfs-web -Dtnfs-web.configuration=/data/my-tnfs-web-config
+tnfs-web -Dtnfsjd-web.configuration=/data/my-tnfsjd-web-config
 ```
 
-In the configuration directory will be a single configuration file `tnfs-web.ini`,  or the *drop-in*  directory `tnfs-web.d`.
+In the configuration directory will be a single configuration file `tnfsjd-web.ini`,  or the *drop-in*  directory `tnfsjd-web.d`.
 
 ## Credits
 

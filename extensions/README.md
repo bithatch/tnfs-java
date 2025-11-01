@@ -6,7 +6,7 @@ In the meantime, clients could simple attempt to use such extended commands, and
 
 Each extension requires a client part and a server part. See [server](server) and [client](client) respectively for how to use them. Common extension code is found in the extensions [lib](lib) module.
 
-*Work in progress*
+*WARNING Work in progress. The server implementation of SCRAM authentication is incomplete.*
 
 ### File System Extensions
 

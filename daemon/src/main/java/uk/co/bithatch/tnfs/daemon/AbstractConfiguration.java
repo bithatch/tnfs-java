@@ -26,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -44,11 +45,16 @@ public abstract class AbstractConfiguration {
 	
 	protected final INISet iniSet;
 
-	protected AbstractConfiguration(Class<?> schema, String cfgName, Optional<Monitor> monitor, Optional<Path> configDir) {
+	protected AbstractConfiguration(Class<?> schema, String cfgName, 
+			Optional<Monitor> monitor, 
+			Optional<Path> configDir, 
+			Optional<Path> userConfigDir) {
 		var bldr =  new INISet.Builder(cfgName).
-				withApp("tnfsd").
-				withCreateDefaults(CreateDefaultsMode.valueOf(System.getProperty(cfgName + ".create-defauls-mode", "NONE"))).
+				withApp("tnfsjd").
+				withCreateDefaults(CreateDefaultsMode.valueOf(System.getProperty(cfgName + ".create-defaults-mode", "NONE"))).
 				withSchema(schema);
+		
+		var scopes = new ArrayList<Scope>();
 		
 		configDir.ifPresent(dir -> {
 			try {
@@ -56,13 +62,31 @@ public abstract class AbstractConfiguration {
 					throw new NoSuchFileException(dir.toString());
 				if(!Files.isDirectory(dir))
 					throw new NotDirectoryException(dir.toString());
-				bldr.withScopes(Scope.USER);
-				bldr.withPath(Scope.USER, dir);
+				scopes.add(Scope.GLOBAL);
+				bldr.withPath(Scope.GLOBAL, dir);
 			}
 			catch(IOException ioe) {
 				throw new UncheckedIOException(ioe);
 			}
 		});
+		
+		userConfigDir.ifPresent(dir -> {
+			try {
+				if(!Files.exists(dir))
+					throw new NoSuchFileException(dir.toString());
+				if(!Files.isDirectory(dir))
+					throw new NotDirectoryException(dir.toString());
+				bldr.withPath(Scope.USER, dir);
+				scopes.add(Scope.USER);
+			}
+			catch(IOException ioe) {
+				throw new UncheckedIOException(ioe);
+			}
+		});
+		
+
+		if(!scopes.isEmpty())
+			bldr.withScopes(scopes.toArray(new Scope[0]));
 		
 		monitor.ifPresent(bldr::withMonitor);
 		

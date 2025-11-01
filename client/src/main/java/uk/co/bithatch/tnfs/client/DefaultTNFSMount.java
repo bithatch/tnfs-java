@@ -21,6 +21,7 @@
 package uk.co.bithatch.tnfs.client;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 
 import uk.co.bithatch.tnfs.lib.Command;
 import uk.co.bithatch.tnfs.lib.Message;
@@ -55,8 +56,13 @@ public final class DefaultTNFSMount extends AbstractTNFSMount {
 
 	private DefaultTNFSMount(Builder bldr) throws IOException {
 		super(bldr); 
-		var rep = client.send(Command.MOUNT, Message.of(Command.MOUNT, new Command.Mount(bldr.path, username, password)));
-		sessionId = rep.mesage().connectionId();
+		try {
+			var rep = client.send(Command.MOUNT, Message.of(Command.MOUNT, new Command.Mount(bldr.path, username, password)));
+			sessionId = rep.mesage().connectionId();
+		}
+		catch(SocketTimeoutException ste) {
+			throw new IOException("No TNFS service responded to request.");
+		}
 	}
 
 	@Override

@@ -20,62 +20,123 @@
  */
 package uk.co.bithatch.tnfs.lib;
 
+import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.net.Inet4Address;
-import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
-import java.util.Optional;
-import java.util.stream.Stream;
+import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Enumeration;
+import java.util.List;
 
 public class Net {
+
+	public static InetAddress parseAddress(String address) {
+		return parseAddress(address, "localhost");
+	}
 	
-	public static Stream<InetAddress> allAddresses() {
+	public static InetAddress parseAddress(String address, String defaultAddress) {
 		try {
-			return NetworkInterface.networkInterfaces().
-				filter(nif -> {
-					try {
-						return nif.isUp();
-					} catch (SocketException e) {
-						return false;
+			if("%".equals(address)) {
+				return getIpAddress();
+			}
+			else if(address == null || address.equals("")) {
+				if(defaultAddress == null || defaultAddress.equals(""))
+					return InetAddress.getLoopbackAddress();
+				else
+					return InetAddress.getByName(defaultAddress);
+			}
+			else {
+				if(address.equals("*")) {
+					if(Boolean.getBoolean("java.net.preferIPv6Address")) {
+						return InetAddress.getByName("::");
 					}
-				}).
-				filter(nif -> {
-					try {
-						return !nif.isLoopback();
-					} catch (SocketException e) {
-						return false;
+					else {
+						return InetAddress.getByName("0.0.0.0");
 					}
-				}).
-				sorted((n1, n2) ->
-					Integer.valueOf(n1.getIndex()).compareTo(n2.getIndex())
-				).
-				flatMap(nif -> nif.inetAddresses());
-		} catch (SocketException e) {
-			throw new UncheckedIOException(e);
+				}
+				else {
+					return InetAddress.getByName(address);
+				}
+			}
+		}
+		catch(UnknownHostException uhe) {
+			throw new UncheckedIOException(uhe);
 		}
 	}
 	
-	public static Stream<InetAddress> allLANAddresses() {
-		return allAddresses().
-				filter(a -> !a.isLoopbackAddress());
-	}
+	/**
+     * If running in container attempt to get the host address else return localhost. Retrieves the IP address of the local
+     * machine. It iterates through all available
+     * network interfaces and checks their IP addresses. If a suitable non-loopback,
+     * site-local address is found, it is returned as the IP address of the local machine.
+     *
+     * @return the {@link InetAddress} representing the IP address of the local machine.
+     * @throws UnknownHostException if the local host name could not be resolved into an address.
+     * @throws SocketException if an I/O error occurs when querying the network interfaces.
+     */
+    public static InetAddress getIpAddress()  {
+        // Get all network interfaces
+    	try {
+	        Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
 	
-	public static Optional<InetAddress> firstLANAddress() {
-		return allLANAddresses().findFirst();
-	}
+	        InetAddress localhost = InetAddress.getLocalHost();
 	
-	public static Optional<Inet4Address> firstIpv4LANAddress() {
-		return allLANAddresses().filter(
-			a -> a instanceof Inet4Address
-		).map(a -> (Inet4Address)a).findFirst();
-	}
+	        if (!isRunningInContainer()) {
+	            return localhost;
+	        }
 	
-	public static Optional<Inet6Address> firstIpv6LANAddress() {
-		return allLANAddresses().filter(
-			a -> a instanceof Inet6Address
-		).map(a -> (Inet6Address)a).findFirst();
-	}
+	        // Iterate through all interfaces
+	        while (networkInterfaces.hasMoreElements()) {
+	            NetworkInterface networkInterface = networkInterfaces.nextElement();
+	
+	            // Get all IP addresses for each network interface
+	            Enumeration<InetAddress> inetAddresses = networkInterface.getInetAddresses();
+	
+	            while (inetAddresses.hasMoreElements()) {
+	                InetAddress inetAddress = inetAddresses.nextElement();
+	
+	                if (!inetAddress.isLoopbackAddress() && inetAddress.isSiteLocalAddress()) {
+	                    // Print out information about each IP address
+	                    String displayName = networkInterface.getDisplayName();
+	
+	                    if (displayName.startsWith("wlan") || displayName.startsWith("eth")) {
+	                        localhost = inetAddress;
+	                    }
+	                }
+	            }
+	        }
+	        return localhost;
+    	}
+    	catch(IOException ioe) {
+    		throw new UncheckedIOException(ioe);
+    	}
+    }
+
+    /**
+     * Determines if the application is running inside a container (such as Docker or Kubernetes).
+     * This is done by inspecting the '/proc/1/cgroup' file and checking for the presence of
+     * "docker" or "kubepods". Additionally, it checks specific environment variables to verify
+     * the container environment.
+     *
+     * @return {@code true} if the application is running inside a container; {@code false} otherwise.
+     */
+    public static boolean isRunningInContainer() {
+        try {
+            List<String> lines = Files.readAllLines(Paths.get("/proc/1/cgroup"));
+            for (String line : lines) {
+                if (line.contains("docker") || line.contains("kubepods")) {
+                    return true;
+                }
+            }
+        } catch (IOException e) {
+            // Ignore, likely not in a container if the file doesn't exist
+        }
+
+        // check environment variables
+        return System.getenv("CONTAINER") != null || System.getenv("KUBERNETES_SERVICE_HOST") != null;
+    }
 
 }

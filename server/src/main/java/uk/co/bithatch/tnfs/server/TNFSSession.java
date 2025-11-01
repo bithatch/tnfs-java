@@ -26,7 +26,7 @@ import java.security.Principal;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import uk.co.bithatch.tnfs.lib.TNFSFileSystem;
+import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
 import uk.co.bithatch.tnfs.lib.Version;
 
 public final class TNFSSession implements Closeable {
@@ -34,7 +34,7 @@ public final class TNFSSession implements Closeable {
 
 	private static final int MAX_HANDLES = 256;
 
-	private final TNFSFileSystem mount;
+	private final TNFSFileAccess mount;
 	private final int id;
 	
 	final Map<Integer, AbstractDirHandle<?>> dirHandles = new ConcurrentHashMap<>();
@@ -87,7 +87,7 @@ public final class TNFSSession implements Closeable {
 		return id;
 	}
 	
-	public TNFSFileSystem mount() {
+	public TNFSFileAccess mount() {
 		return mount;
 	}
 	
