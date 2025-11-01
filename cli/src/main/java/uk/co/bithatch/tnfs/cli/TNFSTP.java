@@ -487,39 +487,44 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 	private void spawn(String[] args, Object cmd) throws IOException, InterruptedException {
 		if(args[0].startsWith("!")) {
 			args[0] = args[0].substring(1);
-			var pb = new ProcessBuilder(Arrays.asList(args));
-			pb.directory(getLcwd().toFile());
-			pb.redirectErrorStream(true);
-			Process p = pb.start();
 			try {
-				var thread = new Thread() {
-					public void run() {
-						var b = new byte[256];
-						var in = terminal.input();
-						var out = p.getOutputStream();
-						int r;
-						try {
-							while( ( r = in.read(b)) != -1) {
-								out.write(b, 0, r);
-								out.flush();
+				var pb = new ProcessBuilder(Arrays.asList(args));
+				pb.directory(getLcwd().toFile());
+				pb.redirectErrorStream(true);
+				Process p = pb.start();
+				try {
+					var thread = new Thread() {
+						public void run() {
+							var b = new byte[256];
+							var in = terminal.input();
+							var out = p.getOutputStream();
+							int r;
+							try {
+								while( ( r = in.read(b)) != -1) {
+									out.write(b, 0, r);
+									out.flush();
+								}
+							}
+							catch(Exception ioe) {
 							}
 						}
-						catch(Exception ioe) {
-						}
+					};
+					thread.start();
+					try {
+						p.getInputStream().transferTo(System.out);
 					}
-				};
-				thread.start();
-				try {
-					p.getInputStream().transferTo(System.out);
+					finally {
+						thread.interrupt();
+					}
 				}
 				finally {
-					thread.interrupt();
+					if(p.waitFor() != 0) {
+						error(String.format("%s exited with error code %d.%n", args[0], p.exitValue()));
+					}
 				}
 			}
-			finally {
-				if(p.waitFor() != 0) {
-					error(String.format("%s exited with error code %d.", args[0], p.exitValue()));
-				}
+			catch(IOException ioe) { 
+				error(String.format("Command %s failed. %s%n", args[0], ioe.getMessage()));
 			}
 		}
 		else {

@@ -37,8 +37,12 @@ public class Bye extends TNFSTPCommand implements Callable<Integer> {
 	
 	@Override
 	protected Integer onCall() throws Exception {
-		getContainer().getMount().close();
-		System.exit(0);
+		try {
+			getContainer().getMount().close();
+		}
+		finally {
+			System.exit(0);
+		}
 		return 0;
 	}
 }

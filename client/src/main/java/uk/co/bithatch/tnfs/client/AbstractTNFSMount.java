@@ -409,12 +409,27 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 			@Override
 			public int write(ByteBuffer src) throws IOException {
 				var max = client.payloadSize - 3;
-				if(src.remaining() > max) {
-					throw new IllegalArgumentException("Source buffer must provider fewer than " + max + " bytes");
+				var wrtn = 0;
+				
+				while(src.hasRemaining()) {
+					var waslimit = -1;
+					if(src.remaining() > max) {
+						waslimit = src.limit();
+						src.limit(src.position() + max);
+	//					throw new IllegalArgumentException("Source buffer must provider fewer than " + max + " bytes");
+					}
+					
+					
+					var w = client.sendMessage(Command.WRITE,
+							Message.of(sessionId(), Command.WRITE, 
+									new Command.Write(fh.handle(), src)), path).written();
+					wrtn += w;
+					if(waslimit > -1) {
+						src.limit(waslimit);
+					}
 				}
-				var w = client.sendMessage(Command.WRITE, Message.of(sessionId(), Command.WRITE, new Command.Write(fh.handle(), src)), path).written();
-				position += w;
-				return w;
+				position += wrtn;
+				return wrtn;
 			}
 
 			@Override
@@ -517,8 +532,12 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 		for(var x : extensions.values()) {
 			x.close();
 		}
-		client.sendMessage(Command.UMOUNT, Message.of(sessionId(), Command.UMOUNT, new Command.HeaderOnly()));
-		onClose();
+		
+		try {
+			client.sendMessage(Command.UMOUNT, Message.of(sessionId(), Command.UMOUNT, new Command.HeaderOnly()));
+		} finally {
+			onClose();	
+		}
 	}
 	
 	protected void beforeClose() throws IOException {
