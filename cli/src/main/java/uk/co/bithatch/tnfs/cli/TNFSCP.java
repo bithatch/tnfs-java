@@ -125,7 +125,7 @@ public class TNFSCP extends AbstractTNFSFilesCommand implements Callable<Integer
 		var mount = doConnectAndMount(uri);
 		var local = Paths.get(source);
 		
-		new FileTransfer(force, !noProgress, recursive).
+		new FileTransfer(force, !noProgress, recursive, getSeparator(isWindowsParsing())).
 			localToRemote(mount, local, uri.path().orElse("/"));
 	}
 
@@ -134,7 +134,7 @@ public class TNFSCP extends AbstractTNFSFilesCommand implements Callable<Integer
 		var mount = doConnectAndMount(uri);
 		var local = Paths.get(target);
 		
-		new FileTransfer(force, !noProgress, recursive).
+		new FileTransfer(force, !noProgress, recursive, getSeparator(isWindowsParsing())).
 			remoteToLocal(mount, uri.path().orElse("/"), local);
 	}
 

@@ -128,8 +128,17 @@ public interface TNFSContainer {
 	 * Translate the path separators from the native forward slashes to whatever
 	 * is automatically detected for the platform (or chosen through configuration).
 	 * 
-	 * @param cwd
+	 * @param path
 	 * @return translated path
 	 */
-	String translatePath(String cwd);
+	String translatePath(String path);
+
+	/**
+	 * Translate the path separators from the native forward slashes to whatever
+	 * is automatically detected for the platform (or chosen through configuration).
+	 * 
+	 * @param path
+	 * @return translated path
+	 */
+	String untranslatePath(String path);
 }

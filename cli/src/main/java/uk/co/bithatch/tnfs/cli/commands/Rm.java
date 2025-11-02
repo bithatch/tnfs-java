@@ -44,7 +44,7 @@ public class Rm extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var sftp = container.getMount();
-		file = Util.relativizePath(container.getCwd(), file);
+		file = Util.relativizePath(container.getCwd(), file, container.getSeparator());
 		sftp.unlink(file);
 		return 0;
 	}

@@ -132,7 +132,12 @@ public class InteractiveConsole implements Runnable, TNFSContainer {
 	}
 
 	@Override
-	public String translatePath(String cwd) {
-		return cntr.translatePath(cwd);
+	public String translatePath(String path) {
+		return cntr.translatePath(path);
+	}
+
+	@Override
+	public String untranslatePath(String path) {
+		return cntr.untranslatePath(path);
 	}
 }

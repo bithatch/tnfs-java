@@ -57,6 +57,7 @@ import uk.co.bithatch.tnfs.lib.DirSortFlag;
 import uk.co.bithatch.tnfs.lib.Message;
 import uk.co.bithatch.tnfs.lib.ModeFlag;
 import uk.co.bithatch.tnfs.lib.OpenFlag;
+import uk.co.bithatch.tnfs.lib.TNFS;
 import uk.co.bithatch.tnfs.lib.TNFSDirectory;
 import uk.co.bithatch.tnfs.lib.Util;
 
@@ -580,7 +581,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 					while(it.hasNext()) {
 						var child = it.next();
 						if (DirEntryFlag.isFile(child.flags())) {
-							var childFile = new TNFSFile(Util.concatenatePaths(path, child.name()), child);
+							var childFile = new TNFSFile(Util.concatenatePaths(path, child.name(), TNFS.UNIX_SEPARATOR), child);
 							var fileVisitResult = visitor.visitFile(childFile, fileToBasicAttributes(childFile));
 							if (fileVisitResult != FileVisitResult.CONTINUE
 									&& fileVisitResult != FileVisitResult.SKIP_SUBTREE) {
@@ -588,7 +589,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 							}
 						} else if (DirEntryFlag.isDirectory(child.flags()) && !child.name().equals(".")
 								&& !child.name().equals("..")) {
-							switch (visit(Util.concatenatePaths(path, child.name()), visitor)) {
+							switch (visit(Util.concatenatePaths(path, child.name(), TNFS.UNIX_SEPARATOR), visitor)) {
 							case SKIP_SIBLINGS:
 								break;
 							case TERMINATE:

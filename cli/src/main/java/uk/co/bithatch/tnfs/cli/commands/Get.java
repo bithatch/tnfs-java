@@ -63,11 +63,11 @@ public class Get extends TNFSTPCommand implements Callable<Integer> {
 		var mount = container.getMount();
 		var localDest =  destination.map(d -> container.getLcwd().resolve(d)).orElseGet(container::getLcwd);
 		
-		file = Util.relativizePath(container.getCwd(), file);
+		file = Util.relativizePath(container.getCwd(), file, container.getSeparator());
 
 		var localFile = Files.isDirectory(localDest) ? localDest.resolve(Util.basename(file)) : localDest;
 		
-		new FileTransfer(force, !noProgress, recursive).remoteToLocal(mount, file, localFile);
+		new FileTransfer(force, !noProgress, recursive, container.getSeparator()).remoteToLocal(mount, file, localFile);
 			System.out.println("Downloaded " + file + " to " + localFile);
 
 		return 0;

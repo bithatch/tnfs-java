@@ -174,11 +174,11 @@ public class Util {
 	 * @param filename path to resolve
 	 * @return resolved path
 	 */
-	public static String resolvePaths(String path, String filename) {
+	public static String resolvePaths(String path, String filename, String sep) {
 		if(filename.startsWith("/"))
 			return filename;
 		else
-			return concatenatePaths(path, filename);
+			return concatenatePaths(path, filename, sep);
 	}
 
 	/**
@@ -188,7 +188,7 @@ public class Util {
 	 * @param filename path to append
 	 * @return concatenated path
 	 */
-	public static String concatenatePaths(String path, String filename) {
+	public static String concatenatePaths(String path, String filename, String sep) {
 		if (filename.startsWith("./"))
 			filename = filename.substring(2);
 		while (path.endsWith("/")) {
@@ -214,12 +214,12 @@ public class Util {
 		return str;
 	}
 
-	public static String relativizePath(String cwd, String newCwd) {
-		if(!newCwd.equals("/") && newCwd.endsWith("/")) {
+	public static String relativizePath(String cwd, String newCwd, String sep) {
+		if(!newCwd.equals(sep) && newCwd.endsWith(sep)) {
 			newCwd = newCwd.substring(0, newCwd.length() - 1);
 		}
-		if (!newCwd.startsWith("/")) {
-			newCwd = normalPath(concatenatePaths(cwd, newCwd));
+		if (!newCwd.startsWith(sep)) {
+			newCwd = normalPath(concatenatePaths(cwd, newCwd, sep));
 		}
 		return newCwd;
 	}

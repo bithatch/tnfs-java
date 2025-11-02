@@ -27,10 +27,15 @@ import org.jline.reader.LineReaderBuilder;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 
+import picocli.CommandLine.Option;
+
 public abstract class AbstractTNFSFilesCommand extends AbstractTNFSCommand {
 	
 	protected Terminal terminal;
 	protected LineReader reader;
+
+	@Option(names = { "--paths" }, description = "Whether or not to use WINDOWS styles paths and escaping, or UNIX style. When AUTO, defaults to automatic based on operating system.")
+	public PathsMode paths = PathsMode.AUTO;
 
 	/**
 	 * Constructor.
@@ -60,5 +65,18 @@ public abstract class AbstractTNFSFilesCommand extends AbstractTNFSCommand {
 				return reader.readLine(MessageFormat.format(message, args));
 			}
 		}
+	}
+
+	 protected String getSeparator(boolean useForwardSlash) {
+        return useForwardSlash ? "/" : ( isWindowsParsing() ? "\\" : "/" );
+    }
+	
+	protected boolean isWindowsParsing() {
+		if(paths == PathsMode.UNIX)
+			return false;
+		else if(paths == PathsMode.WINDOWS)
+			return true;
+		else
+			return System.getProperty("os.name").toLowerCase().contains("windows");
 	}
 }

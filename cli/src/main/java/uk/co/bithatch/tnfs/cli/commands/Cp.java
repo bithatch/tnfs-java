@@ -48,8 +48,8 @@ public class Cp extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var ext = container.getMount().extension(Copy.class);
-		file = Util.relativizePath(container.getCwd(), file);
-		targetFile = Util.relativizePath(container.getCwd(), targetFile);
+		file = Util.relativizePath(container.getCwd(), file, container.getSeparator());
+		targetFile = Util.relativizePath(container.getCwd(), targetFile, container.getSeparator());
 		ext.copy(file, targetFile);
 		return 0;
 	}

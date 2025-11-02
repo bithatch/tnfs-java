@@ -49,12 +49,14 @@ public final class FileTransfer {
 	private final boolean force;
 	private final boolean progress;
 	private final boolean recursive;
+	private final String sep;
 
-	public FileTransfer(boolean force, boolean progress, boolean recursive) {
+	public FileTransfer(boolean force, boolean progress, boolean recursive, String sep) {
 		super();
 		this.force = force;
 		this.progress = progress;
 		this.recursive = recursive;
+		this.sep = sep;
 	}
 
 	public void localToRemote(TNFSMount mount, Path localFile, String file) throws IOException {
@@ -71,14 +73,14 @@ public final class FileTransfer {
 
 				@Override
 				public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-					currentPath = Util.concatenatePaths(currentPath, dir.getFileName().toString());
+					currentPath = Util.concatenatePaths(currentPath, dir.getFileName().toString(), sep);
 					return super.preVisitDirectory(dir, attrs);
 				}
 
 				@Override
 				public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
 					mount.mkdir(currentPath);
-					copyLocalToRemoteFile(mount, file, Util.concatenatePaths(currentPath, file.getFileName().toString()), Files.size(file));
+					copyLocalToRemoteFile(mount, file, Util.concatenatePaths(currentPath, file.getFileName().toString(), currentPath), Files.size(file));
 					return super.visitFile(file, attrs);
 				}
 

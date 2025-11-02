@@ -50,7 +50,7 @@ public class ChkSum extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var sum = container.getMount().extension(Sum.class);
-		file = Util.relativizePath(container.getCwd(), file);
+		file = Util.relativizePath(container.getCwd(), file, container.getSeparator());
 		System.out.format("%s %s%n", sum.sum(type, file), file);
 		return 0;
 	}

@@ -44,7 +44,7 @@ public class Rmdir extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var sftp = container.getMount();
-		directory = Util.relativizePath(container.getCwd(), directory);
+		directory = Util.relativizePath(container.getCwd(), directory, container.getSeparator());
 		sftp.rmdir(directory);
 		return 0;
 	}

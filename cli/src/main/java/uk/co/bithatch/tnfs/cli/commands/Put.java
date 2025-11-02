@@ -57,7 +57,7 @@ public class Put extends TNFSTPCommand implements Callable<Integer> {
 
 		try(var f = Files.newByteChannel(path, StandardOpenOption.READ)) {
 			var base = Util.basename(file);
-    		var target = Util.relativizePath(container.getCwd(), base);
+    		var target = Util.relativizePath(container.getCwd(), base, container.getSeparator());
 
 //			var transfers = getContainer().getTransferHost();
 

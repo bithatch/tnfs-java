@@ -39,6 +39,7 @@ import uk.co.bithatch.tnfs.lib.DirEntryFlag;
 import uk.co.bithatch.tnfs.lib.DirOptionFlag;
 import uk.co.bithatch.tnfs.lib.DirSortFlag;
 import uk.co.bithatch.tnfs.lib.OpenFlag;
+import uk.co.bithatch.tnfs.lib.TNFS;
 import uk.co.bithatch.tnfs.lib.Util;
 import uk.co.bithatch.tnfs.web.elfinder.core.Target;
 import uk.co.bithatch.tnfs.web.elfinder.core.Volume;
@@ -189,7 +190,7 @@ public class TNFSMountVolume implements Volume {
 		private final Entry entry;
 		
 		private EntryTNFSTarget(TNFSMountVolume volume, TNFSTarget parent, Entry entry) {
-			super(volume, () -> parent, Util.concatenatePaths(parent.getPath(), entry.name()));
+			super(volume, () -> parent, Util.concatenatePaths(parent.getPath(), entry.name(), TNFS.UNIX_SEPARATOR));
 			this.entry = entry;
 		}
 
@@ -260,7 +261,7 @@ public class TNFSMountVolume implements Volume {
         if (relativePath.startsWith(rootDir)) {
             path = relativePath;
         } else {
-            path = Util.concatenatePaths(rootDir, relativePath);
+            path = Util.concatenatePaths(rootDir, relativePath, TNFS.UNIX_SEPARATOR);
         }
         
 		return new StatTNFSTarget(this, () -> {

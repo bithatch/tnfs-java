@@ -92,10 +92,6 @@ import uk.co.bithatch.tnfs.lib.Util;
 		Stat.class, Help.class })
 public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<Integer>, TNFSContainer {
 
-	public enum PathsMode {
-		AUTO, WINDOWS, UNIX
-	}
-	
 	public enum FilenameCompletionMode {
 		DIRECTORIES_REMOTE, DIRECTORIES_REMOTE_THEN_LOCAL, DIRECTORIES_LOCAL, DIRECTORIES_LOCAL_THEN_REMOTE, 
 		REMOTE, REMOTE_THEN_LOCAL, LOCAL, LOCAL_THEN_REMOTE, NONE
@@ -120,7 +116,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 	 * @param command command to parse
 	 * @return parsed command
 	 */
-	public static List<String> parseQuotedString(String command) {
+	public static List<String> parseQuotedString(String command, boolean windowsParsing) {
 		var args = new ArrayList<String>();
 		var escaped = false;
 		var quoted = false;
@@ -133,7 +129,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 				} else {
 					quoted = true;
 				}
-			} else if (c == '\\' && !escaped) {
+			} else if (((c == '\\' && !windowsParsing) || (c == '^' && windowsParsing) )  && !escaped) {
 				escaped = true;
 			} else if (c == ' ' && !escaped && !quoted) {
 				if (word.length() > 0) {
@@ -143,6 +139,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 				}
 			} else {
 				word.append(c);
+				escaped = false;
 			}
 		}
 		if (word.length() > 0)
@@ -150,9 +147,6 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 		return args;
 	}
 
-	@Option(names = { "--paths" }, description = "Whether or not to use WINDOWS styles paths and escaping, or UNIX style. When AUTO, defaults to automatic based on operating system.")
-	public PathsMode paths = PathsMode.AUTO;
-	
 	public final static class CompletionMode {
 
 		@Option(names = { "-nc", "--no-completion" }, description = "Turn off filename completion entirely.")
@@ -171,7 +165,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 	@Spec 
 	private CommandSpec spec;
 
-	private String cwd = "/";
+	private String cwd;
 	private boolean exitWhenDone;
 	private Path lcwd = Paths.get(System.getProperty("user.dir"));
 	private TNFSMount mount;
@@ -186,6 +180,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 
 	@Override
 	public Integer call() throws Exception {
+		cwd = getSeparator();
 		start();
 		return 0;
 	}
@@ -245,7 +240,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 		var oldMount = mount;
 		mount = doMount(uri, client);
 		this.uri = uri; 
-		cwd = "/";
+		cwd = getSeparator();
 		if(oldMount != null) {
 			oldMount.close();
 		}
@@ -257,7 +252,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 		var oldClient = client;
 		client = doConnect(uri);
 		this.uri = uri;
-		cwd = "/";
+		cwd = getSeparator();
 		if(oldClient != null) {
 			mount = null;
 			oldClient.close();
@@ -280,7 +275,16 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 		if(!sep.equals("/"))
 			return cwd.replace("/", sep);
 		else
-			return cwd;
+			return cwd.replace("\\", sep);
+	}
+	@Override
+	public String untranslatePath(String cwd) {
+		/* TODO what if path has escaped forward slash? */
+		var sep = getSeparator();
+		if(sep.equals("/"))
+			return cwd.replace("/", sep);
+		else
+			return cwd.replace("\\", sep);
 	}
 
 	protected void onStart() throws IOException {
@@ -323,11 +327,14 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 			/* Add completers etc */
 			configureSystemRegistry(systemRegistry, picocliCommands, subs);
 
-			var reader = LineReaderBuilder.builder().terminal(terminal).
+			var bldr = LineReaderBuilder.builder().terminal(terminal).
 					completer(systemRegistry.completer()).
 					parser(parser).
 	                option(LineReader.Option.DISABLE_EVENT_EXPANSION, true).
-					variable(LineReader.LIST_MAX, 50).
+					variable(LineReader.LIST_MAX, 50);
+			bldr.option(LineReader.Option.USE_FORWARD_SLASH, !isWindowsParsing());
+			
+			var reader = bldr.
 					build();
 			factory.setTerminal(terminal);
 			
@@ -342,7 +349,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 			keyMap.bind(new Reference("tailtip-toggle"), KeyMap.alt("s"));
 			
 			/* Welcome text */
-			cwd = "/";
+			cwd = getSeparator();
 			var trm = terminal.writer();
 			trm.println(String.format("Connected to %s @ %s over %s", mount.client().address(), mount.mountPath().equals("") ? "default mount" : mount.mountPath(), mount.client().protocol()));
 			trm.flush();
@@ -353,7 +360,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 					systemRegistry.cleanUp();
 					var cmd = reader.readLine("tnfs> ");
 					if (cmd != null && cmd.length() > 0) {
-						var newargs = parseQuotedString(cmd);
+						var newargs = parseQuotedString(cmd, isWindowsParsing());
 						newargs.removeIf(item -> item == null || "".equals(item));
 						var args = newargs.toArray(new String[0]);
 						if (args.length > 0) {
@@ -372,15 +379,6 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 		} finally {
 			mount.close();
 		}
-	}
-	
-	private boolean isWindowsParsing() {
-		if(paths == PathsMode.UNIX)
-			return false;
-		else if(paths == PathsMode.WINDOWS)
-			return true;
-		else
-			return System.getProperty("os.name").toLowerCase().contains("windows");
 	}
 
 	private void configureSystemRegistry(SystemRegistryImpl systemRegistry, PicocliCommands picocliCommands,
@@ -564,7 +562,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
             try {
                 if (lastSep >= 0) {
                     curBuf = buffer.substring(0, lastSep + 1);
-                    current = Util.resolvePaths(getCwd(), curBuf);
+                    current = Util.resolvePaths(getCwd(), curBuf, getSeparator());
                 } else {
                     curBuf = "";
                     current = getCwd();
@@ -613,10 +611,6 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
         protected boolean accept(Entry path) {
             return !path.name().startsWith(".");
         }
-    }
-
-    String getSeparator(boolean useForwardSlash) {
-        return useForwardSlash ? "/" : ( isWindowsParsing() ? "\\" : "/" );
     }
 
     public static String getDisplay(Terminal terminal, Entry p, StyleResolver resolver, int width, String separator, boolean nameTailIndicator) {

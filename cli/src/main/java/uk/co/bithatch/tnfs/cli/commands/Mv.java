@@ -47,8 +47,8 @@ public class Mv extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var sftp = container.getMount();
-		file = Util.relativizePath(container.getCwd(), file);
-		targetFile = Util.relativizePath(container.getCwd(), targetFile);
+		file = Util.relativizePath(container.getCwd(), file, container.getSeparator());
+		targetFile = Util.relativizePath(container.getCwd(), targetFile, container.getSeparator());
 		sftp.rename(file, targetFile);
 		return 0;
 	}
