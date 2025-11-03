@@ -22,6 +22,7 @@ package uk.co.bithatch.tnfs.cli;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeoutException;
 
@@ -31,8 +32,8 @@ import org.slf4j.LoggerFactory;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
 import picocli.CommandLine.Model.CommandSpec;
+import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Spec;
 import uk.co.bithatch.tnfs.fuse.TNFSFUSEFileSystem;
@@ -59,6 +60,9 @@ public class TNFSFUSE extends AbstractTNFSFilesCommand implements Callable<Integ
 	@Option(names = { "-c", "--create" }, description = "Create the mount point folder if it does not exist.")
 	private boolean create;
 
+	@Option(names = {"--libpath" }, description = "The location of the libfuse library.", hidden = true)
+	protected Optional<Path> libpath;
+
 	@Parameters(arity = "1", index = "0", description = "URI of TNFS resource to mount.")
 	protected String remotePath;
 
@@ -84,6 +88,7 @@ public class TNFSFUSE extends AbstractTNFSFilesCommand implements Callable<Integ
 		var uri = TNFSURI.parse(remotePath);
 		var mount = doMount(uri, doConnect(uri));
 		var builder = Fuse.builder();
+		libpath.ifPresent(p -> builder.setLibraryPath(p.toString()));
 		var fuseOps = new TNFSFUSEFileSystem(mount, builder.errno());
 		try (var fuse = builder.build(fuseOps)) {
 			Runtime.getRuntime().addShutdownHook(new Thread(() -> {

@@ -46,36 +46,113 @@ public class Util {
 		return b;
 	}
 
-	public static String normalPath(String path) {
-		var idx = 0;
-		var eidx = 0;
-		while(true) {
-			idx = path.indexOf("//");
-			if(idx == -1) {
-				idx = path.indexOf("../");
-				if(idx == -1 && path.endsWith("..")) {
-					idx = path.length() - 2;
-				}
-				
-				if(idx == -1) {
-					break;
-				}
-	
-				eidx = path.lastIndexOf('/', idx - 2);
-				if(eidx == -1) {
-					break;
-				}
-				
-				path = path.substring(0, eidx) + path.substring(idx + 2);
-			}
-			else {
-				path = path.substring(0, idx) + path.substring(idx + 2);
-			}
-		}
-		
-		if(path.equals(""))
-			path = "/";
-		return path;
+	/**
+	 * Normalizes a Unix-style path string using pure string handling.
+	 * Rules:
+	 *  - Collapse multiple '/'.
+	 *  - Remove "." segments (including leading "./" and trailing "/.").
+	 *  - Resolve ".." by removing the previous segment; never ascends above "/" for absolute paths.
+	 *  - For absolute inputs, result is absolute; for relative, result is relative (no leading "./").
+	 *  - Trailing slashes are removed unless the result is root ("/").
+	 *
+	 * Examples:
+	 *   "/di1/dir2/./dir3"        -> "/di1/dir2/dir3"
+	 *   "./dir/./"                -> "dir"
+	 *   "/dir1/dir2/../dir3"      -> "/dir1/dir3"
+	 *   "/.."                     -> "/"
+	 *   "/dir1/dir2/../../../../../" -> "/"
+	 *   
+	 *   @param path path to normalise
+	 *   @param sep separator
+	 */
+	public static String normalUnixPath(String path) {
+		return normalPath(path, '/');
+	}
+
+	/**
+	 * Normalizes a Unix-style or Windows path string using pure string handling.
+	 * Rules:
+	 *  - Collapse multiple '/'.
+	 *  - Remove "." segments (including leading "./" and trailing "/.").
+	 *  - Resolve ".." by removing the previous segment; never ascends above "/" for absolute paths.
+	 *  - For absolute inputs, result is absolute; for relative, result is relative (no leading "./").
+	 *  - Trailing slashes are removed unless the result is root ("/").
+	 *
+	 * Examples:
+	 *   "/di1/dir2/./dir3"        -> "/di1/dir2/dir3"
+	 *   "./dir/./"                -> "dir"
+	 *   "/dir1/dir2/../dir3"      -> "/dir1/dir3"
+	 *   "/.."                     -> "/"
+	 *   "/dir1/dir2/../../../../../" -> "/"
+	 *   
+	 *   @param path path to normalise
+	 *   @param sep separator
+	 */
+	public static String normalPath(String path, char sep) {
+	    if (path == null || path.isEmpty()) return "";
+
+	    final boolean absolute = path.charAt(0) == sep;
+
+	    // Split by '/', handling consecutive slashes via empty segments
+	    // Iterate and use a small deque-like buffer implemented with an array list.
+	    java.util.ArrayList<String> stack = new java.util.ArrayList<>();
+
+	    int i = 0, n = path.length();
+	    while (i < n) {
+	        // Skip consecutive '/'
+	        while (i < n && path.charAt(i) == sep) i++;
+	        if (i >= n) break;
+
+	        // Read next segment [i, j)
+	        int j = i;
+	        while (j < n && path.charAt(j) != sep) j++;
+	        String segment = path.substring(i, j);
+	        i = j;
+
+	        if (segment.equals("") || segment.equals(".")) {
+	            // ignore
+	            continue;
+	        } else if (segment.equals("..")) {
+	            if (!stack.isEmpty()) {
+	                // Pop last normal segment if possible
+	                String last = stack.get(stack.size() - 1);
+	                if (!last.equals("..")) {
+	                    stack.remove(stack.size() - 1);
+	                } else {
+	                    // previous was ".." (only happens for relative paths); keep another ".."
+	                    if (!absolute) stack.add("..");
+	                }
+	            } else {
+	                // Nothing to pop
+	                if (!absolute) stack.add(".."); // keep leading ".." for relative paths
+	                // If absolute, ignore attempts to go above root
+	            }
+	        } else {
+	            // normal path component
+	            stack.add(segment);
+	        }
+	    }
+
+	    // Build result
+	    if (absolute) {
+	        if (stack.isEmpty()) return String.valueOf(sep);
+	        StringBuilder sb = new StringBuilder(path.length());
+	        for (int k = 0; k < stack.size(); k++) {
+	            sb.append(sep).append(stack.get(k));
+	        }
+	        return sb.toString();
+	    } else {
+	        if (stack.isEmpty()) return ""; // no leading "./" retained
+	        String first = stack.get(0);
+	        int totalLen = Math.max(0, stack.size() - 1); // for slashes
+	        for (String s : stack) totalLen += s.length();
+	        StringBuilder sb = new StringBuilder(totalLen);
+	        sb.append(first);
+	        for (int k = 1; k < stack.size(); k++) {
+	            sb.append(sep).append(stack.get(k));
+	        }
+	        return sb.toString();
+	    }
 	}
 
 	public static String formatSize(long bytes) {
@@ -219,7 +296,7 @@ public class Util {
 			newCwd = newCwd.substring(0, newCwd.length() - 1);
 		}
 		if (!newCwd.startsWith(sep)) {
-			newCwd = normalPath(concatenatePaths(cwd, newCwd, sep));
+			newCwd = normalPath(concatenatePaths(cwd, newCwd, sep), sep.charAt(0));
 		}
 		return newCwd;
 	}

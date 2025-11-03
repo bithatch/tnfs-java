@@ -269,7 +269,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 	}
 
 	@Override
-	public String translatePath(String cwd) {
+	public String nativeToLocalPath(String cwd) {
 		/* TODO what if path has escaped forward slash? */
 		var sep = getSeparator();
 		if(!sep.equals("/"))
@@ -278,7 +278,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 			return cwd.replace("\\", sep);
 	}
 	@Override
-	public String untranslatePath(String cwd) {
+	public String localToNativePath(String cwd) {
 		/* TODO what if path has escaped forward slash? */
 		var sep = getSeparator();
 		if(sep.equals("/"))

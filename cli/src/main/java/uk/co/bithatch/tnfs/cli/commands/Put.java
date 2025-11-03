@@ -39,6 +39,8 @@ import uk.co.bithatch.tnfs.lib.Util;
 @Command(name = "put", aliases = { "upload"}, mixinStandardHelpOptions = true, description = "Upload local file.")
 public class Put extends TNFSTPCommand implements Callable<Integer> {
 
+	private static final int LOCAL_READ_BUFFER_SIZE = 65536;
+
 	@Parameters(index = "0", arity = "1", description = "File to store.")
 	private String file;
 
@@ -65,14 +67,14 @@ public class Put extends TNFSTPCommand implements Callable<Integer> {
 //			transfers.startedTransfer(path.toString(), target, Files.size(path));
     		
 				try(var o = mnt.open(target, OpenFlag.WRITE, OpenFlag.TRUNCATE, OpenFlag.CREATE)) {
-					var buf = ByteBuffer.allocate(mnt.client().messageSize());
-					var rd = 0;
-					while( ( rd = f.read(buf) ) != -1) {
+					var buf = ByteBuffer.allocate(LOCAL_READ_BUFFER_SIZE);
+					while( ( f.read(buf) ) != -1) {
 						buf.flip();
-						o.write(buf);
+						while(buf.hasRemaining()) {
+							var wrt = o.write(buf);
+							pb.stepBy(wrt);
+						}
 						buf.clear();
-						
-						pb.stepBy(rd);
 	
 //						transfers.transferProgress(path.toString(), target, rd);
 					}

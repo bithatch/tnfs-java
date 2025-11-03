@@ -91,7 +91,7 @@ public class Ls extends TNFSTPCommand implements Callable<Integer> {
 
 		var dirOptions = new ArrayList<DirOptionFlag>();
 		var dirSort = new ArrayList<DirSortFlag>();
-		var apath = container.untranslatePath(path.orElseGet(container::getCwd));
+		var apath = container.localToNativePath(path.orElseGet(container::getCwd));
 		var base = Util.basename(apath);
 		var wildcard = "";
         var resolver = Styles.lsStyle();

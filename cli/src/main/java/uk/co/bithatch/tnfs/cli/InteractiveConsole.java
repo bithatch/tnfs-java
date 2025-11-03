@@ -132,12 +132,12 @@ public class InteractiveConsole implements Runnable, TNFSContainer {
 	}
 
 	@Override
-	public String translatePath(String path) {
-		return cntr.translatePath(path);
+	public String nativeToLocalPath(String path) {
+		return cntr.nativeToLocalPath(path);
 	}
 
 	@Override
-	public String untranslatePath(String path) {
-		return cntr.untranslatePath(path);
+	public String localToNativePath(String path) {
+		return cntr.localToNativePath(path);
 	}
 }

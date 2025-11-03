@@ -37,7 +37,7 @@ public class Pwd extends TNFSTPCommand implements Callable<Integer> {
 
 	@Override
 	protected Integer onCall() throws Exception {
-		getContainer().getTerminal().writer().println(getContainer().translatePath(getContainer().getCwd()));
+		getContainer().getTerminal().writer().println(getContainer().nativeToLocalPath(getContainer().getCwd()));
 		return 0;
 	}
 }

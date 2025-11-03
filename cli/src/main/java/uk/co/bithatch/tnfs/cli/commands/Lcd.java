@@ -47,13 +47,26 @@ public class Lcd extends TNFSTPCommand implements Callable<Integer> {
 	@Override
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
-		var resolved = directory.orElseGet(() -> Paths.get(System.getProperty("user.home")));
+		var userhome = Paths.get(System.getProperty("user.home"));
+		var resolved = directory.map(d -> {
+			if(d.getName(0).getFileName().toString().equals("~")) {
+				if(d.getNameCount() == 1) {
+					return userhome;
+				}
+				else {
+					return userhome.resolve(d.subpath(1, d.getNameCount()));	
+				}
+			}
+			else {
+				return d;
+			}
+		}).orElse(userhome);
 		
 		if (!resolved.isAbsolute())	
 			resolved = container.getLcwd().resolve(resolved);
 		
 		if (Files.isDirectory(resolved))
-			container.setLcwd(resolved);
+			container.setLcwd(resolved.normalize());
 		else
 			throw new NotDirectoryException(resolved.toString());
 		return 0;

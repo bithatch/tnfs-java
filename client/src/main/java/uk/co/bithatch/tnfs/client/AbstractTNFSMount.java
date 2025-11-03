@@ -410,27 +410,21 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 			@Override
 			public int write(ByteBuffer src) throws IOException {
 				var max = client.payloadSize - 3;
-				var wrtn = 0;
-				
-				while(src.hasRemaining()) {
-					var waslimit = -1;
-					if(src.remaining() > max) {
-						waslimit = src.limit();
-						src.limit(src.position() + max);
-	//					throw new IllegalArgumentException("Source buffer must provider fewer than " + max + " bytes");
-					}
-					
-					
-					var w = client.sendMessage(Command.WRITE,
-							Message.of(sessionId(), Command.WRITE, 
-									new Command.Write(fh.handle(), src)), path).written();
-					wrtn += w;
-					if(waslimit > -1) {
-						src.limit(waslimit);
-					}
+				var waslimit = -1;
+				if(src.remaining() > max) {
+					waslimit = src.limit();
+					src.limit(src.position() + max);
 				}
-				position += wrtn;
-				return wrtn;
+				
+				
+				var w = client.sendMessage(Command.WRITE,
+						Message.of(sessionId(), Command.WRITE, 
+								new Command.Write(fh.handle(), src)), path).written();
+				position += w;
+				if(waslimit > -1) {
+					src.limit(waslimit);
+				}
+				return w;
 			}
 
 			@Override

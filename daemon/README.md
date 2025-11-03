@@ -46,7 +46,12 @@ mvn exec:run -P tnfsjd -Dargs="--help"
 
 #### From Hub
 
-**TODO**
+```
+docker pull bithatch/tnfsjd:latest
+```
+
+The image exposes the single port `16384` on both `TCP` and `UDP`.  It contains two volumes,
+`/public-files` and `/configuration`.  The former is the default writable file system that is shared over TNFS, the latter is where you can place configuration files that override  the defaults.
 
 #### From Source
 

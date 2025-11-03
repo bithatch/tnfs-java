@@ -48,7 +48,7 @@ public class Cd extends TNFSTPCommand implements Callable<Integer> {
 
 		if (directory != null && directory.length() > 0) {
 			directory = Util.relativizePath(container.getCwd(), directory, container.getSeparator());
-			var file = mount.stat(directory);
+			var file = mount.stat(container.localToNativePath(directory));
 			if (file.isDirectory()) {
 				container.setCwd(directory);
 			} else {

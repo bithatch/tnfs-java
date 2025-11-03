@@ -125,20 +125,20 @@ public interface TNFSContainer {
 	void startIfNotStarted() throws  Exception;
 
 	/**
-	 * Translate the path separators from the native forward slashes to whatever
+	 * Translate the path separators from the TNFS forward slashes to whatever
 	 * is automatically detected for the platform (or chosen through configuration).
 	 * 
 	 * @param path
 	 * @return translated path
 	 */
-	String translatePath(String path);
+	String nativeToLocalPath(String path);
 
 	/**
-	 * Translate the path separators from the native forward slashes to whatever
-	 * is automatically detected for the platform (or chosen through configuration).
+	 * Translate the path separators from those automatically detected for the platform 
+	 * (or chosen through configuration) to TNFS forward slashes.
 	 * 
 	 * @param path
 	 * @return translated path
 	 */
-	String untranslatePath(String path);
+	String localToNativePath(String path);
 }
