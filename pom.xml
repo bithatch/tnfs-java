@@ -202,23 +202,14 @@
                     <publishingServerId>ossrh-bithatch</publishingServerId>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-gpg-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>sign-artifacts</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>sign</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
 		</plugins>
 		<pluginManagement>
 			<plugins>
-			
+				<plugin>
+					<artifactId>maven-deploy-plugin</artifactId>
+					<version>3.1.4</version>
+					<groupId>org.apache.maven.plugins</groupId>
+				</plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
@@ -269,6 +260,8 @@
 						<excludes>
 							<exclude>**/README.md</exclude>
 							<exclude>**/*LICENSE*</exclude>
+							<exclude>Jenkinsfile</exclude>
+							<exclude>bithatch.build.properties</exclude>
 							<exclude>src/test/resources/**</exclude>
 							<exclude>src/main/resources/**</exclude>
 						</excludes>
@@ -386,6 +379,29 @@
 			</plugin>
 		</plugins>
 	</reporting>
+	
+	<profiles>
+		<profile>
+			<id>sign</id>
+			<build>
+				<plugins>
+		            <plugin>
+		                <groupId>org.apache.maven.plugins</groupId>
+		                <artifactId>maven-gpg-plugin</artifactId>
+		                <executions>
+		                    <execution>
+		                        <id>sign-artifacts</id>
+		                        <phase>verify</phase>
+		                        <goals>
+		                            <goal>sign</goal>
+		                        </goals>
+		                    </execution>
+		                </executions>
+		            </plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 
 	<pluginRepositories>
 		<!-- Temporary until https://github.com/remkop/picocli/pull/2419 is merged -->
