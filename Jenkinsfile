@@ -19,7 +19,7 @@ pipeline {
                  */
                 stage ('Cross-platform TNFS Jar Libraries') {
                     agent {
-                        label 'linux'
+                        label 'linux && posix'
                     }
                     steps {
                         configFileProvider([
@@ -126,7 +126,7 @@ pipeline {
 				}
                 
 				/*
-				 * MacOS installers
+				 * MacOS
 				 */
 				stage ('MacOS Intel TNFS') {
 					agent {
@@ -155,6 +155,44 @@ pipeline {
 	                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" \
 	                                    -U -P native-image,upload-distribution clean package \
 				                        -Dbuild.uploadPassword="$FTP_UPLOAD_PASSWORD" -Dbuild.uploadUsername=$FTP_UPLOAD_USERNAME
+	                                '''
+	                            }
+					 		}
+        				}
+                        
+					}
+				}
+				
+				/*
+				 * Windows
+				 */
+				stage ('Windows Intel TNFS') {
+					agent {
+						label 'windows && x86_64'
+					}
+					steps {
+                    
+                        script {
+                            env.FULL_VERSION = getFullVersion()
+                            echo "Full Version : ${env.FULLVERSION}"
+                        }
+                        
+						configFileProvider([
+					 			configFile(
+                                    fileId: "${env.BUILD_PROPERTIES_ID}",  
+					 				replaceTokens: true,
+                                    targetLocation: "${env.BUILD_PROPERTIES_FILENAME}",
+					 				variable: 'BUILD_PROPERTIES'
+					 			)
+					 		]) {
+					 		withMaven(
+                                globalMavenSettingsConfig: "${env.MAVEN_PROPERTIES_ID}"
+					 		) {	
+								withCredentials([usernamePassword(credentialsId: 'bithatch-ftp-upload', passwordVariable: 'FTP_UPLOAD_PASSWORD', usernameVariable: 'FTP_UPLOAD_USERNAME')]) {			 		  	
+	                                bat '''
+	                                mvn "-Dbuild.projectProperties=%BUILD_PROPERTIES%" \
+	                                    -U -P native-image,upload-distribution clean package \
+				                        -Dbuild.uploadPassword="%FTP_UPLOAD_PASSWORD%" -Dbuild.uploadUsername=%FTP_UPLOAD_USERNAME%
 	                                '''
 	                            }
 					 		}
