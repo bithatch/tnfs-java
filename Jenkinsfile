@@ -35,14 +35,17 @@ pipeline {
                             ) {
 								
 								withCredentials([file(credentialsId: 'bithatch-gpg-signing', variable: 'GPGKEY')]) {
-								    sh '''
-								        gpg --import $GPGKEY
-		                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" \
-		                                    -U clean deploy -P sign
-		                                '''
+									
+									withCredentials([usernamePassword(credentialsId: 'bithatch-ftp-upload', passwordVariable: 'FTP_UPLOAD_PASSWORD', usernameVariable: 'FTP_UPLOAD_USERNAME')]) {
+										sh '''
+									        gpg --import $GPGKEY
+			                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" \
+			                                    -U clean deploy -P sign,upload-distribution \
+			                                    -Dbuild.uploadPassword="$FTP_UPLOAD_PASSWORD" -Dbuild.uploadUsername=$FTP_UPLOAD_USERNAME
+			                                '''
+										}
+									
 								}
-								
-                                
                             }
                         }
                     }
@@ -72,11 +75,14 @@ pipeline {
 					 		]) {
 					 		withMaven(
                                 globalMavenSettingsConfig: "${env.MAVEN_PROPERTIES_ID}"
-					 		) {					 		  	
-                                sh '''
-                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" \
-                                    -U clean package
-                                '''
+					 		) {		
+								withCredentials([usernamePassword(credentialsId: 'bithatch-ftp-upload', passwordVariable: 'FTP_UPLOAD_PASSWORD', usernameVariable: 'FTP_UPLOAD_USERNAME')]) {			 		  	
+	                                sh '''
+	                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" \
+	                                    -U -P native-image,upload-distribution clean package \
+			                            -Dbuild.uploadPassword="$FTP_UPLOAD_PASSWORD" -Dbuild.uploadUsername=$FTP_UPLOAD_USERNAME
+	                                '''
+	                            }
 					 		}
         				}
 					}
@@ -106,11 +112,14 @@ pipeline {
 					 		]) {
 					 		withMaven(
                                 globalMavenSettingsConfig: "${env.MAVEN_PROPERTIES_ID}"
-					 		) {					 		  	
-                                sh '''
-                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" \
-                                    -U clean package
-                                '''
+					 		) {
+								withCredentials([usernamePassword(credentialsId: 'bithatch-ftp-upload', passwordVariable: 'FTP_UPLOAD_PASSWORD', usernameVariable: 'FTP_UPLOAD_USERNAME')]) {					 		  	
+	                                sh '''
+	                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" \
+	                                    -U -P native-image,upload-distribution clean package \
+				                        -Dbuild.uploadPassword="$FTP_UPLOAD_PASSWORD" -Dbuild.uploadUsername=$FTP_UPLOAD_USERNAME
+	                                '''
+	                            }
 					 		}
         				}
 					}
@@ -140,8 +149,14 @@ pipeline {
 					 		]) {
 					 		withMaven(
                                 globalMavenSettingsConfig: "${env.MAVEN_PROPERTIES_ID}"
-					 		) {
-                                sh 'mvn -U -P native-image clean package'
+					 		) {	
+								withCredentials([usernamePassword(credentialsId: 'bithatch-ftp-upload', passwordVariable: 'FTP_UPLOAD_PASSWORD', usernameVariable: 'FTP_UPLOAD_USERNAME')]) {			 		  	
+	                                sh '''
+	                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" \
+	                                    -U -P native-image,upload-distribution clean package \
+				                        -Dbuild.uploadPassword="$FTP_UPLOAD_PASSWORD" -Dbuild.uploadUsername=$FTP_UPLOAD_USERNAME
+	                                '''
+	                            }
 					 		}
         				}
                         

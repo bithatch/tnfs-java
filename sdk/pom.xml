@@ -34,6 +34,16 @@
 	<name>Java TNFS - SDK</name>
 	<description>This project assembles all built tools and libraries into a distributable archive known as the TNFS Java SDK.</description>
 	<url>${scmWebRoot}/${project.artifactId}/</url>
+	<properties>
+        <build.uploadHostname>bithatch.co.uk</build.uploadHostname>
+        <build.uploadPath>/httpdocs/downloads/tnfs-java</build.uploadPath>
+        <build.uploadUsername>__YOUR_USERNAME_</build.uploadUsername>
+        <build.uploadPassword>__YOUR_PASSWORD__</build.uploadPassword>
+        
+        <sdk.assembly.platform>xplatform</sdk.assembly.platform>
+        <sdk.assembly.arch>anycpu</sdk.assembly.arch>
+        
+	</properties>
 	<build>
 		<plugins>
 			<plugin>
@@ -56,6 +66,7 @@
 							<goal>single</goal>
 						</goals>
 						<configuration>
+							<finalName>tnfs-java-sdk-xplatform-anycpu</finalName>
 							<descriptors>
 								<descriptor>src/assembly/xplatform-bin.xml</descriptor>
 							</descriptors>
@@ -64,6 +75,22 @@
 				</executions>
 			</plugin>
 		</plugins>
+		<pluginManagement>
+			<plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-antrun-plugin</artifactId>
+                    <version>3.1.0</version>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.apache.ant</groupId>
+                            <artifactId>ant-commons-net</artifactId>
+                            <version>1.10.15</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+			</plugins>
+		</pluginManagement>
 	</build>
 
 	<profiles>
@@ -77,6 +104,7 @@
                 </os>
             </activation>
             <properties>
+				<sdk.assembly.platform>windows</sdk.assembly.platform>
 				<sdk.assembly.bin>src/assembly/windows-bin.xml</sdk.assembly.bin>
 			</properties>
         </profile>
@@ -88,6 +116,7 @@
                 </os>
             </activation>
             <properties>
+				<sdk.assembly.platform>linux</sdk.assembly.platform>
 				<sdk.assembly.bin>src/assembly/linux-bin.xml</sdk.assembly.bin>
 			</properties>
         </profile>
@@ -99,7 +128,41 @@
                 </os>
             </activation>
             <properties>
+				<sdk.assembly.platform>macos</sdk.assembly.platform>
 				<sdk.assembly.bin>src/assembly/macos-bin.xml</sdk.assembly.bin>
+			</properties>
+        </profile>
+        <profile>
+            <id>x86_64</id>
+            <activation>
+                <os>
+                	<arch>x86_64</arch>
+                </os>
+            </activation>
+            <properties>
+				<sdk.assembly.arch>amd64</sdk.assembly.arch>
+			</properties>
+        </profile>
+        <profile>
+            <id>amd64</id>
+            <activation>
+                <os>
+                	<arch>amd64</arch>
+                </os>
+            </activation>
+            <properties>
+				<sdk.assembly.arch>amd64</sdk.assembly.arch>
+			</properties>
+        </profile>
+        <profile>
+            <id>aarch64</id>
+            <activation>
+                <os>
+                    <arch>aarch64</arch>
+                </os>
+            </activation>
+            <properties>
+				<sdk.assembly.arch>amd64</sdk.assembly.arch>
 			</properties>
         </profile>
 	
@@ -121,6 +184,7 @@
 									<goal>single</goal>
 								</goals>
 								<configuration>
+									<finalName>tnfs-java-sdk-${sdk.assembly.platform}-${sdk.assembly.arch}</finalName>
 									<descriptors>
 										<descriptor>${sdk.assembly.bin}</descriptor>
 									</descriptors>
@@ -131,6 +195,51 @@
 				</plugins>
 			</build>
 		
+		</profile>
+		
+		<profile>
+			<id>upload-distribution</id>
+			
+			<build>
+				<plugins>
+				  <plugin>
+		                <groupId>org.apache.maven.plugins</groupId>
+		                <artifactId>maven-antrun-plugin</artifactId>
+		                <executions>
+		                    <execution>
+		                        <id>upload-sdk</id>
+		                        <phase>deploy</phase>
+		                        <configuration>
+		                            <target>
+		                                <ftp action="mkdir"
+		                                     server="${build.uploadHostname}"
+		                                     remotedir="${build.uploadPath}"
+		                                     userid="${build.uploadUsername}"
+		                                     password="${build.uploadPassword}"
+		                                     ignoreNoncriticalErrors="true"
+		                                     skipFailedTransfers="true">
+		                                </ftp>
+		                                <ftp server="${build.uploadHostname}"
+		                                     remotedir="${build.uploadPath}"
+		                                     userid="${build.uploadUsername}"
+		                                     password="${build.uploadPassword}"
+		                                     binary="yes"
+		                                     passive="yes"
+		                                     depends="no">
+		                                    <fileset dir="target">
+		                                        <include name="tnfs-java-sdk-${sdk.assembly.platform}-${sdk.assembly.arch}-*"/>
+		                                    </fileset>
+		                                </ftp>
+		                            </target>
+		                        </configuration>
+		                        <goals>
+		                            <goal>run</goal>
+		                        </goals>
+		                    </execution>
+		                </executions>
+		            </plugin>
+				</plugins>
+			</build>
 		</profile>
 	</profiles>
 </project>
