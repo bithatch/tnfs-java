@@ -106,7 +106,7 @@ Configuration is split across 4 files in one of the OS specific directories abov
 | --- | --- | --- |
 | tnfsd.ini | tnfsd.d | Server and general configuration. |
 | mounts.ini | mounts.d | Mount configuration. |
-| authentication.ini | mounts.d | Authentication configuration. |
+| authentication.ini | authentication.d | Authentication configuration. |
 | users.properties | | Users and password (manipulated with `tnfs-user` command). |
 
 ### Server Configuration
