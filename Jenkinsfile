@@ -2,7 +2,7 @@ pipeline {
  	agent none
  	tools {
 		maven 'Maven 3.9.11' 
-		jdk 'OpenJDK 25' 
+		jdk 'Graal 25' 
 	} 
 	
 	environment {
