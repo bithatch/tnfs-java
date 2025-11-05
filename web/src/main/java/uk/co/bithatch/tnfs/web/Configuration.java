@@ -26,7 +26,9 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
-import java.nio.file.Paths;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Optional;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -45,29 +47,47 @@ public final class Configuration {
 	private final INISet iniSet;
 	private final INI ini;
 
-	public Configuration(Monitor monitor) {
+	public Configuration(Monitor monitor, Optional<Path> configDir, Optional<Path> userConfigDir) {
 		var bldr =  new INISet.Builder("tnfsjd-web").
 				withApp("tnfsjd-web").
 				withCreateDefaults(CreateDefaultsMode.valueOf(System.getProperty("tnfsjd-web.create-defaults-mode", "NONE"))).
 				withSchema(Configuration.class);
 		
-		var config = System.getProperty("tnfsjd-web.configuration", 
-			Boolean.getBoolean("tnfsjd-web.dev") ? "etc" : ""
-		);
-		if(!config.equals("")) {
+
+		
+		var scopes = new ArrayList<Scope>();
+		
+		configDir.ifPresent(dir -> {
 			try {
-				var dir = Paths.get(config);
 				if(!Files.exists(dir))
-					throw new NoSuchFileException(config);
+					throw new NoSuchFileException(dir.toString());
 				if(!Files.isDirectory(dir))
-					throw new NotDirectoryException(config);
-				bldr.withScopes(Scope.USER);
-				bldr.withPath(Scope.USER, dir);
+					throw new NotDirectoryException(dir.toString());
+				scopes.add(Scope.GLOBAL);
+				bldr.withPath(Scope.GLOBAL, dir);
 			}
 			catch(IOException ioe) {
 				throw new UncheckedIOException(ioe);
 			}
-		}
+		});
+		
+		userConfigDir.ifPresent(dir -> {
+			try {
+				if(!Files.exists(dir))
+					throw new NoSuchFileException(dir.toString());
+				if(!Files.isDirectory(dir))
+					throw new NotDirectoryException(dir.toString());
+				bldr.withPath(Scope.USER, dir);
+				scopes.add(Scope.USER);
+			}
+			catch(IOException ioe) {
+				throw new UncheckedIOException(ioe);
+			}
+		});
+		
+
+		if(!scopes.isEmpty())
+			bldr.withScopes(scopes.toArray(new Scope[0]));
 		
 		if(monitor != null)
 			bldr.withMonitor(monitor);

@@ -22,10 +22,11 @@ package uk.co.bithatch.tnfs.web;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.net.InetAddress;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -46,11 +47,18 @@ import com.sshtools.uhttpd.UHTTPD.NCSALoggerBuilder;
 import com.sshtools.uhttpd.UHTTPD.Status;
 import com.sshtools.uhttpd.UHTTPD.Transaction;
 
+import picocli.CommandLine;
+import picocli.CommandLine.Model.CommandSpec;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Spec;
 import uk.co.bithatch.tnfs.client.TNFSClient;
 import uk.co.bithatch.tnfs.daemonlib.MDNS;
+import uk.co.bithatch.tnfs.lib.AppLogLevel;
 import uk.co.bithatch.tnfs.lib.Net;
 import uk.co.bithatch.tnfs.lib.TNFS;
 import uk.co.bithatch.tnfs.lib.TNFSException;
+import uk.co.bithatch.tnfs.web.ExceptionHandler.ExceptionHandlerHost;
 import uk.co.bithatch.tnfs.web.elfinder.ElFinderConstants;
 import uk.co.bithatch.tnfs.web.elfinder.core.ElfinderContext;
 import uk.co.bithatch.tnfs.web.elfinder.service.ElfinderStorageFactory;
@@ -61,7 +69,26 @@ import uk.co.bithatch.tnfs.web.elfinder.service.impl.DefaultVolumeRef;
 /**
  * Simple web front-end to TNFS resources.
  */
-public final class TNFSWeb implements Callable<Integer> {
+@Command(name = "tnfsjd-web", description = "TNFS Web File Manager.", mixinStandardHelpOptions = true)
+public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
+
+    @Option(names = { "-L", "--log-level" }, paramLabel = "LEVEL", description = "Logging level for trouble-shooting.")
+    private Optional<AppLogLevel> level;
+    
+    @Spec
+    private CommandSpec spec;
+
+    @Option(names = { "-C", "--configuration" }, description = "Locate of system configurationDir. By defafult, will either be the systems default global configuration directory or a user configuration directory.")
+    private Optional<Path> configurationDir;
+    
+    @Option(names = { "-O", "--override-configuration" }, description = "Location of user override configuration. By default, will be a configuration directory in the users home directory or the users home directory.")
+    private Optional<Path> userConfiguration;
+
+    @Option(names = { "-D", "--sysprop" }, description = "Set a system property.")
+    private List<String> systemProperties;
+    
+	@Option(names = { "-X", "--verbose-exceptions" }, description = "Show verbose exception traces on errors.")
+    private boolean verboseExceptions;
 
 	/**
 	 * Entry point.
@@ -70,20 +97,43 @@ public final class TNFSWeb implements Callable<Integer> {
 	 * @throws Exception on error
 	 */
 	public static void main(String[] args) throws Exception {
-		System.exit(new TNFSWeb().call());
+        var cmd = new TNFSWeb();
+        System.exit(new CommandLine(cmd).setExecutionExceptionHandler(new ExceptionHandler(cmd)).execute(args));
 	}
 
-	private final ServiceCommandFactory commandFactory;
-	private final DefaultElfinderStorageFactory storageFactory;
-	private final Configuration configuration;
-	private final Optional<MDNS> mdns;
-	private final Logger log;
+	private ServiceCommandFactory commandFactory;
+	private DefaultElfinderStorageFactory storageFactory;
+	private Configuration configuration;
+	private Optional<MDNS> mdns;
+	private Logger log;
 
 	public TNFSWeb() {
 
+	}
+
+	@Override
+	public Integer call() throws Exception {
+
 		var monitor = new Monitor();
 		try {
-			configuration = new Configuration(monitor);
+	    	/* System properties */
+	        if(systemProperties != null) {
+		        for(var str: systemProperties) {
+		        	var idx = str.indexOf('=');
+		        	if(idx == -1) {
+		        		System.setProperty(str, "true");
+		        	}
+		        	else {
+		        		System.setProperty(str.substring(0, idx), str.substring(idx + 1));
+		        	}
+		        }
+	        }
+    		
+	    	/* Logging */
+			System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", level.orElse(AppLogLevel.WARN).name());
+			log = LoggerFactory.getLogger(TNFSWeb.class);
+	        
+			configuration = new Configuration(monitor, configurationDir, userConfiguration);
 	
 			log = LoggerFactory.getLogger(TNFSWeb.class);
 	
@@ -228,10 +278,7 @@ public final class TNFSWeb implements Callable<Integer> {
 			}
 			throw re;
 		}
-	}
-
-	@Override
-	public Integer call() throws Exception {
+		
 		SLF4JBridgeHandler.removeHandlersForRootLogger();
 		SLF4JBridgeHandler.install();
 
@@ -260,6 +307,16 @@ public final class TNFSWeb implements Callable<Integer> {
 		return 0;
 	}
 
+	@Override
+	public CommandSpec spec() {
+		return spec;
+	}
+
+	@Override
+	public boolean verboseExceptions() {
+		return verboseExceptions;
+	}
+
 	private void runServer(Optional<MDNS> mdns) throws IOException {
 
 		if (configuration.server().getBoolean(Constants.UPNP_KEY)) {
@@ -283,13 +340,13 @@ public final class TNFSWeb implements Callable<Integer> {
 		var httpPort = http.getInt(Constants.PORT_KEY);
 		if(httpPort > 0)
 			bldr.withHttp(httpPort);
-		bldr.withHttpAddress(Net.parseAddress(http.get(Constants.ADDRESS_KEY), "localhost"));
+		bldr.withHttpAddress(Net.parseAddress(http.get(Constants.ADDRESS_KEY, "localhost"), "localhost"));
 		
 		var https = configuration.https();
 		var httpsPort = https.getInt(Constants.PORT_KEY);
 		if(httpsPort > 0)
 			bldr.withHttps(httpsPort);
-		bldr.withHttpsAddress(Net.parseAddress(https.get(Constants.ADDRESS_KEY), "localhost"));
+		bldr.withHttpsAddress(Net.parseAddress(https.get(Constants.ADDRESS_KEY, "localhost"), "localhost"));
 		https.getOr(Constants.KEY_PASSWORD_KEY).ifPresent(kp -> bldr.withKeyPassword(kp.toCharArray()));
 		https.getOr(Constants.KEYSTORE_FILE_KEY).ifPresent(ks -> bldr.withKeyStoreFile(Paths.get(ks)));
 		https.getOr(Constants.KEYSTORE_PASSWORD_KEY).ifPresent(kp -> bldr.withKeyPassword(kp.toCharArray()));

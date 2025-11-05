@@ -6,24 +6,29 @@ A simple webapp for TNFS resources using an [elFinder](https://github.com/Studio
 
 ### Download Pre-built Binaries
 
-The are self-contained, pre-built binaries for a few platforms. If yours is one supported, just download the executables and run.
+There are self-contained, pre-built [downloads](https://bithatch.co.uk/?page_id=344) for a few platforms. If yours is one supported, just download the executables, change directory to the build name. E.g.
 
 ```
-/path/to/tnfsjd-web
+cd tnfs-java-sdk-linux-amd64
+sbin/tnfsjd-web -C etc -L INFO
 ```
 
 or
 
 ```
-C:\Path\to\tnfsjd-web.exe
+CD tnfs-java-sdk-windows-amd64
+sbin\tnfsjd-web.exe -C etc -L INFO
 ```
+
+The `-C` tells the daemon where to load the configuration from. If you omit this, a default location will be used. The `-L INFO` increases the output level a little so you can see what is going on.
 
 ### Download Cross Platform Jars
 
-If you have a JDK installed, you can just download the `.jar` builds and run them.
+If you have a JDK installed, you can just [downloads](https://bithatch.co.uk/?page_id=344) the Cross Platform builds and run them.
 
 ```
-java -jar /path/to/tnfsjd-web.jar
+cd tnfs-java-sdk-xplatform-anycpu
+java -jar sbin/tnfsjd-web.jar -C etc -L INFO
 ```
 
 ### Run From Source
@@ -37,13 +42,18 @@ You probably only want to do this if you are working on tnfs-java itself. You wi
 The run the application by choosing the appropriate profile and supplying the `args` property.
 
 ```
-mvn exec:run -P tnfsjd-web -Dargs="-Dsome.property=123"
+mvn exec:run -P tnfsjd-web -Dargs="-C etc -L INFO"
 ```
 ### Docker
 
 #### From Hub
 
-**TODO**
+```
+docker pull bithatch/tnfsjd-web:latest
+```
+
+The image exposes the two ports `14080` and `14443` on `TCP`.  It exposes a single volume,
+`/configuration`, where you can place configuration files that override the defaults.
 
 #### From Source
 
@@ -81,7 +91,7 @@ By default, configuration files are expected to be in certain locations dependin
 Or to run the daemon with its configuration elsewhere.
 
 ```
-tnfs-web -Dtnfsjd-web.configuration=/data/my-tnfsjd-web-config
+tnfs-web -C /data/my-tnfsjd-web-config
 ```
 
 In the configuration directory will be a single configuration file `tnfsjd-web.ini`,  or the *drop-in*  directory `tnfsjd-web.d`.

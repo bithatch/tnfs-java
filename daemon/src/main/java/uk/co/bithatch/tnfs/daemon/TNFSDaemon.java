@@ -49,6 +49,7 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Spec;
 import uk.co.bithatch.tnfs.daemon.ExceptionHandler.ExceptionHandlerHost;
 import uk.co.bithatch.tnfs.daemonlib.MDNS;
+import uk.co.bithatch.tnfs.lib.AppLogLevel;
 import uk.co.bithatch.tnfs.lib.Net;
 import uk.co.bithatch.tnfs.lib.Protocol;
 import uk.co.bithatch.tnfs.server.TNFSMounts;
@@ -57,13 +58,9 @@ import uk.co.bithatch.tnfs.server.TNFSServer;
 /**
  * A TNFS server.
  */
-@Command(name = "tnfsd", description = "TNFS Daemon.", mixinStandardHelpOptions = true)
+@Command(name = "tnfsjd", description = "TNFS Daemon.", mixinStandardHelpOptions = true)
 public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 
-    public enum Level {
-        DEBUG, ERROR, INFO, TRACE, WARN,
-    }
-    
     final static PrintStream out = System.out;
 
     public static void main(String[] args) throws Exception {
@@ -80,12 +77,6 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
         System.out.format("[#] %s%n", String.join(" ", largs));
     }
 
-    @Option(names = { "-C", "--configuration" }, description = "Locate of system configurationDir. By defafult, will either be the systems default global configuration directory or a user configuration directory.")
-    private Optional<Path> configurationDir;
-    
-    @Option(names = { "-O", "--override-configuration" }, description = "Location of user override configuration. By default, will be a configuration directory in the users home directory or the users home directory.")
-    private Optional<Path> userConfiguration;
-
     @Option(names = { "--hash" }, description = "The default hashing algorithm when using extended authentication.")
     private String hash = "MD5";
 
@@ -93,10 +84,16 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
     private int iterations = 4096;
 
     @Option(names = { "-L", "--log-level" }, paramLabel = "LEVEL", description = "Logging level for trouble-shooting.")
-    private Optional<Level> level;
+    private Optional<AppLogLevel> level;
     
     @Spec
     private CommandSpec spec;
+
+    @Option(names = { "-C", "--configuration" }, description = "Locate of system configurationDir. By defafult, will either be the systems default global configuration directory or a user configuration directory.")
+    private Optional<Path> configurationDir;
+    
+    @Option(names = { "-O", "--override-configuration" }, description = "Location of user override configuration. By default, will be a configuration directory in the users home directory or the users home directory.")
+    private Optional<Path> userConfiguration;
 
     @Option(names = { "-D", "--sysprop" }, description = "Set a system property.")
     private List<String> systemProperties;
@@ -128,11 +125,11 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 		        }
 	        }
     		
-    		configuration = new Configuration(monitor, configurationDir, userConfiguration);
-    		
 	    	/* Logging */
-			System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", level.orElse(Level.WARN).name());
+			System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", level.orElse(AppLogLevel.WARN).name());
 			log = LoggerFactory.getLogger(TNFSDaemon.class);
+    		
+    		configuration = new Configuration(monitor, configurationDir, userConfiguration);
     		
     		mountConfiguration = new MountConfiguration(monitor, configuration, configurationDir, userConfiguration);
     		var tnfsMounts = mountConfiguration.mounts();

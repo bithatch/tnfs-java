@@ -35,7 +35,7 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Spec;
 import uk.co.bithatch.tnfs.daemon.ExceptionHandler.ExceptionHandlerHost;
-import uk.co.bithatch.tnfs.daemon.TNFSDaemon.Level;
+import uk.co.bithatch.tnfs.lib.AppLogLevel;
 import uk.co.bithatch.tnfs.lib.extensions.Crypto;
 
 @Command(name = "tnfs-user", description = "Manage TNFS users.", mixinStandardHelpOptions = true,
@@ -49,7 +49,7 @@ public class TNFSUser implements Callable<Integer>, ExceptionHandlerHost {
     }
 
     @Option(names = { "-L", "--log-level" }, paramLabel = "LEVEL", description = "Logging level for trouble-shooting.")
-    private Optional<Level> level;
+    private Optional<AppLogLevel> level;
     
     @Option(names = { "-C", "--configuration" }, description = "Location of system configuration. By default, will either be the systems default global configuration directory or a user configuration directory.")
     private Optional<Path> configuration;
@@ -87,7 +87,7 @@ public class TNFSUser implements Callable<Integer>, ExceptionHandlerHost {
 		if(authenticator == null) {
 			
 	    	/* Logging */
-			System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", level.orElse(Level.WARN).name());
+			System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", level.orElse(AppLogLevel.WARN).name());
 			
 			authenticator = new Authentication(configuration, userConfiguration);
 		}

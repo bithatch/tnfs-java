@@ -38,6 +38,5 @@ COPY --from=build /usr/app/web/target/tnfsjd-web /app/tnfsjd-web
 COPY --from=build /usr/app/web/src/main/docker/configuration /etc/tnfsjd-web
 EXPOSE 14080
 EXPOSE 14443
-VOLUME /data
-VOLUME /etc/tnfsjd-web
-ENTRYPOINT /app/tnfsjd-web -Dorg.slf4j.simpleLogger.defaultLogLevel=info
+VOLUME /configuration
+ENTRYPOINT /app/tnfsjd-web -X -L INFO -C /etc/tnfsjd-web -O /configuration

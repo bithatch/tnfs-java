@@ -43,6 +43,7 @@ import uk.co.bithatch.tnfs.web.elfinder.command.UploadCommand;
 open module uk.co.bithatch.tnfs.daemon {
 	requires transitive uk.co.bithatch.tnfs.client;
 	requires transitive uk.co.bithatch.tnfs.client.extensions;
+	requires info.picocli;
 	requires org.slf4j.simple;
 	requires jul.to.slf4j;
 	requires org.slf4j;

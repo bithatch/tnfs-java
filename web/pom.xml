@@ -62,6 +62,10 @@
 			<artifactId>slf4j-simple</artifactId>
 		</dependency>
         <dependency>
+            <groupId>info.picocli</groupId>
+            <artifactId>picocli</artifactId>
+        </dependency>
+        <dependency>
 		    <groupId>org.apache.commons</groupId>
 		    <artifactId>commons-compress</artifactId>
 		    <version>1.27.1</version>
@@ -97,13 +101,19 @@
 	</dependencies>
     <build>
         <plugins>
-        
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<configuration>
 					<release>24</release>
 					<testRelease>24</testRelease>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>info.picocli</groupId>
+                            <artifactId>picocli-codegen</artifactId>
+			    			<version>4.7.7</version>
+                        </path>
+                    </annotationProcessorPaths>
 				</configuration>
 			</plugin>
 				
