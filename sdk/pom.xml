@@ -42,6 +42,7 @@
         
         <sdk.assembly.platform>xplatform</sdk.assembly.platform>
         <sdk.assembly.arch>anycpu</sdk.assembly.arch>
+        <sdk.assembly.finalName>tnfs-java-sdk-xplatform-anycpu</sdk.assembly.finalName>
         
 	</properties>
 	<build>
@@ -162,13 +163,16 @@
                 </os>
             </activation>
             <properties>
-				<sdk.assembly.arch>amd64</sdk.assembly.arch>
+				<sdk.assembly.arch>aarch64</sdk.assembly.arch>
 			</properties>
         </profile>
 	
 	
 		<profile>
 			<id>native-image</id>
+            <properties>
+                <sdk.assembly.finalName>tnfs-java-sdk-${sdk.assembly.platform}-${sdk.assembly.arch}</sdk.assembly.finalName>
+            </properties>
 			<build>
 				<plugins>
 					<plugin>
@@ -184,7 +188,7 @@
 									<goal>single</goal>
 								</goals>
 								<configuration>
-									<finalName>tnfs-java-sdk-${sdk.assembly.platform}-${sdk.assembly.arch}</finalName>
+									<finalName>${sdk.assembly.finalName}</finalName>
 									<descriptors>
 										<descriptor>${sdk.assembly.bin}</descriptor>
 									</descriptors>
@@ -211,6 +215,7 @@
 		                        <phase>package</phase>
 		                        <configuration>
 		                            <target>
+		                                  <echo>TARG:</echo>
 		                                <ftp action="mkdir"
 		                                     server="${build.uploadHostname}"
 		                                     remotedir="${build.uploadPath}"
@@ -227,7 +232,7 @@
 		                                     passive="yes"
 		                                     depends="no">
 		                                    <fileset dir="target">
-		                                        <include name="tnfs-java-sdk-${sdk.assembly.platform}-${sdk.assembly.arch}-*"/>
+		                                        <include name="${sdk.assembly.finalName}-distribution.*"/>
 		                                    </fileset>
 		                                </ftp>
 		                            </target>

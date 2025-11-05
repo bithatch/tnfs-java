@@ -4,6 +4,8 @@ An alternative stack for [TNFS](https://github.com/spectrumero/tnfsd) written in
 
 I started this to help me understand the TNFS protocol, as I intend to implement a client for the ZX Spectrum Next. But, it kinda snowballed! From a simple client library, it turned into a rather complete TNFS implementation with all the parts you need to work with TNFS in Java.
 
+[More about TNFS Java](https://bithatch.co.uk/?page_id=443)
+
 # For Users
 
 *TNFS Java* provides a full suite of ready-made tools for TNFS.
@@ -15,7 +17,7 @@ I started this to help me understand the TNFS protocol, as I intend to implement
  * `tnfsjd-web`. An alternative web front-end based on [elFinder](https://github.com/Studio-42/elFinder).
  * All server tools have a `Dockerfile` to build your own docker containers. 
  
-See [Releases](releases) for downloads. 
+*A pre-built SDK including all components is available from my [Downloads](https://bithatch.co.uk/?page_id=344) page. Some platforms have full natively compiled builds, for everyone else there are pure Java builds.*
 
 # For Developers
 
@@ -29,6 +31,8 @@ See [Releases](releases) for downloads.
  * Great for use with low power computers, such as retro 8-bit and 16-bit machines, or \
    more modern IOT devices. 
  * Libraries can be used with Java 17 or higher, the tools need at least Java 21. For building the entire project, Java 24 is currently recommended. 
+ 
+*Available on Maven Central. See Installation section below.*
  
 ## Extensions
 
