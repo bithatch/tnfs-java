@@ -46,6 +46,13 @@ public enum ModeFlag implements BitSet {
 		IROTH, IWOTH, IXOTH,
 	};
 	
+	public static ModeFlag[] ALL_FLAGS_DIR = {
+			IFDIR,
+			IRUSR, IWUSR, IXUSR,
+			IRGRP, IWGRP, IXGRP,
+			IROTH, IWOTH, IXOTH,
+		};
+	
 	public static ModeFlag[] USER_EXECUTABLE = {
 		IRUSR, IXUSR,
 	};

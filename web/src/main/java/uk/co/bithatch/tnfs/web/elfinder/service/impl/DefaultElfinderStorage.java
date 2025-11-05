@@ -105,7 +105,7 @@ public class DefaultElfinderStorage implements ElfinderStorage {
     private DefaultElfinderStorage(Builder builder) {
     	this.volumes = builder.volumes.stream().map(DefaultVolumeRef::getVolume).toList();
     	builder.volumes.forEach((v) -> {
-    		volumeIds.put(v.getVolume(), v.getId());
+    		volumeIds.put(v.getVolume(), encodeStr(v.getId()));
     		volumeLocales.put(v.getVolume(), v.getLocale().orElseGet(Locale::getDefault));
     	});
     	this.thumbnailWidth = builder.thumbnailWidth;
@@ -140,14 +140,19 @@ public class DefaultElfinderStorage implements ElfinderStorage {
     @Override
     public String getHash(Target target) throws IOException {
         String relativePath = target.getVolume().getPath(target);
-        String base = new String(Base64.getEncoder().encode(relativePath.getBytes()));
+        String base = encodeStr(relativePath);
+
+        return getVolumeId(target.getVolume()) + "_" + base;
+    }
+
+	private String encodeStr(String relativePath) {
+		String base = new String(Base64.getEncoder().encode(relativePath.getBytes()));
 
         for (String[] pair : ESCAPES) {
             base = base.replace(pair[0], pair[1]);
         }
-
-        return getVolumeId(target.getVolume()) + "_" + base;
-    }
+		return base;
+	}
 
     @Override
     public String getVolumeId(Volume volume) {

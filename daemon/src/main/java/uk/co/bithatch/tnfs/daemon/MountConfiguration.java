@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import com.sshtools.jini.config.Monitor;
 
+import uk.co.bithatch.tnfs.server.TNFSInMemoryFileSystem;
 import uk.co.bithatch.tnfs.server.TNFSMounts;
 
 public class MountConfiguration extends AbstractConfiguration {
@@ -50,7 +51,7 @@ public class MountConfiguration extends AbstractConfiguration {
 		
 		auth = new Authentication(Optional.of(monitor), configurationDir, userConfigDir);
 		
-		document().allSectionsOr(Constants.MOUNT_KEY).ifPresent(mntsec-> {
+		document().allSectionsOr(Constants.MOUNT_KEY).ifPresentOrElse(mntsec-> {
 			Arrays.asList(mntsec).forEach(sec -> {
 				
 				var authTypes = Arrays.asList(sec.getAllEnumOr(AuthenticationType.class, Constants.AUTHENTICATION_KEY).orElse(new AuthenticationType[0]));
@@ -82,6 +83,9 @@ public class MountConfiguration extends AbstractConfiguration {
 					throw new UncheckedIOException(ioe);
 				}
 			});;
+		}, () -> {
+			LazyLog.LOG.info("Mounting / to default demonstration in-memory file system. Add your own mount to override this behaviour.");
+			mounts.mount("/", new TNFSInMemoryFileSystem("/"));
 		});
 	}
 	
