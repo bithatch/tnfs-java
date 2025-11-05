@@ -208,7 +208,7 @@
 		                <executions>
 		                    <execution>
 		                        <id>upload-sdk</id>
-		                        <phase>deploy</phase>
+		                        <phase>package</phase>
 		                        <configuration>
 		                            <target>
 		                                <ftp action="mkdir"
