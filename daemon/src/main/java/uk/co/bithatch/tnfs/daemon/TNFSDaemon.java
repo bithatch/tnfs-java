@@ -137,7 +137,15 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 	    	
 	        /* Get actual address to listen on */
 	    	actualAddress = configuration.server().getOr(Constants.ADDRESS_KEY).map(t ->Net.parseAddress(t, t)).
-	    			orElseGet(InetAddress::getLoopbackAddress);
+	    			orElseGet(() -> {
+	    				if(mountConfiguration.isDemo()) {
+	    					log.warn("Listening on LAN address because demonstration mount is active. When you define your own mounts, you will also need to configure the listening address.");
+	    					return Net.getIpAddress();
+	    				}
+	    				else {
+	    					return InetAddress.getLoopbackAddress();
+	    				}
+	    			});
 	    	
 	    	log.info("Will listen on {}", actualAddress);
 	    	

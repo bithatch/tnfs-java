@@ -45,8 +45,8 @@ public class MountConfiguration extends AbstractConfiguration {
 	}
 	
 	private final TNFSMounts mounts;
-
 	private final Authentication auth;
+	private boolean demo;
 
 	public MountConfiguration(Monitor monitor, Configuration configuration, Optional<Path> configurationDir, Optional<Path> userConfigDir) {
 		super(MountConfiguration.class, "mounts", Optional.of(monitor), configurationDir, userConfigDir);
@@ -89,6 +89,7 @@ public class MountConfiguration extends AbstractConfiguration {
 			});;
 		}, () -> {
 			LazyLog.LOG.info("Mounting / to default demonstration in-memory file system. Add your own mount to override this behaviour.");
+			demo = true;
 			var memFs = new TNFSInMemoryFileSystem("/");
 			mounts.mount("/", memFs);
 			try(var in = getClass().getResourceAsStream("readme.txt")) {
@@ -100,6 +101,10 @@ public class MountConfiguration extends AbstractConfiguration {
 				throw new UncheckedIOException(ioe);
 			}
 		});
+	}
+	
+	public boolean isDemo() {
+		return demo;
 	}
 	
 	public TNFSMounts mounts() {
