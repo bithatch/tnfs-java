@@ -219,6 +219,11 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 		}).collect(Collectors.toMap(TNFSMountExtension::getClass, Function.identity()));
 	}
 
+	@Override
+	public Optional<String> username() {
+		return username;
+	}
+
 	public abstract int sessionId();
 
 	@Override

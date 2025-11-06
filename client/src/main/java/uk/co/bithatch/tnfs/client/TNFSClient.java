@@ -63,7 +63,7 @@ public final class TNFSClient implements Closeable {
 	
 	public static class Builder extends AbstractBuilder<Builder> {
 		
-		private Optional<Duration> timeout  = Optional.of(Duration.ofSeconds(60));
+		private Optional<Duration> timeout  = Optional.of(Duration.ofSeconds(TNFS.DEFAULT_TIMEOUT_SECONDS));
 		
 		public Builder withTimeout(Duration timeout) {
 			this.timeout = Optional.of(timeout);

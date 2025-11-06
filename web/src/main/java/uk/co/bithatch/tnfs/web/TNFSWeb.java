@@ -43,6 +43,7 @@ import com.sshtools.porter.UPnP;
 import com.sshtools.porter.UPnP.Gateway;
 import com.sshtools.porter.UPnP.Protocol;
 import com.sshtools.uhttpd.UHTTPD;
+import com.sshtools.uhttpd.UHTTPD.FormData;
 import com.sshtools.uhttpd.UHTTPD.NCSALoggerBuilder;
 import com.sshtools.uhttpd.UHTTPD.Status;
 import com.sshtools.uhttpd.UHTTPD.Transaction;
@@ -329,7 +330,8 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 
 	private void runServer(Optional<MDNS> mdns, Optional<Gateway> gateway) throws IOException {
 		var bldr = UHTTPD.server()
-				.get("/api/(.*)", this::api)
+				.post("/api/(.*)", this::apiPost)
+				.get("/api/(.*)", this::apiGet)
 				.get("/index.html", UHTTPD.classpathResource("web/ui/index.html"))
 				.get("/", (tx) -> tx.redirect(Status.MOVED_TEMPORARILY, "/index.html"))
 				.classpathResources("/theme/(.*)", "web/theme")
@@ -410,7 +412,24 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 		}
 	}
 
-	private void api(Transaction tx) throws Exception {
+	private void apiPost(Transaction tx) throws Exception {
+		commandFactory.get(tx.request().asFormData(ElFinderConstants.ELFINDER_PARAMETER_COMMAND).asString())
+				.execute(new ElfinderContext() {
+
+					@Override
+					public ElfinderStorageFactory getVolumeSourceFactory() {
+						return storageFactory;
+					}
+
+					@Override
+					public Transaction getTx() {
+						return tx;
+					}
+				});
+		;
+	}
+
+	private void apiGet(Transaction tx) throws Exception {
 		commandFactory.get(tx.parameter(ElFinderConstants.ELFINDER_PARAMETER_COMMAND).asString())
 				.execute(new ElfinderContext() {
 

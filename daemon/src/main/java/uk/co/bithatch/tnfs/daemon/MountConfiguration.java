@@ -22,6 +22,8 @@ package uk.co.bithatch.tnfs.daemon;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.channels.Channels;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -32,6 +34,8 @@ import org.slf4j.LoggerFactory;
 
 import com.sshtools.jini.config.Monitor;
 
+import uk.co.bithatch.tnfs.lib.ModeFlag;
+import uk.co.bithatch.tnfs.lib.OpenFlag;
 import uk.co.bithatch.tnfs.server.TNFSInMemoryFileSystem;
 import uk.co.bithatch.tnfs.server.TNFSMounts;
 
@@ -85,7 +89,16 @@ public class MountConfiguration extends AbstractConfiguration {
 			});;
 		}, () -> {
 			LazyLog.LOG.info("Mounting / to default demonstration in-memory file system. Add your own mount to override this behaviour.");
-			mounts.mount("/", new TNFSInMemoryFileSystem("/"));
+			var memFs = new TNFSInMemoryFileSystem("/");
+			mounts.mount("/", memFs);
+			try(var in = getClass().getResourceAsStream("readme.txt")) {
+				try(var out = Channels.newOutputStream(memFs.open("/readme.txt", OpenFlag.WRITE, OpenFlag.CREATE))) {
+					in.transferTo(out);
+				}
+			}
+			catch(IOException ioe) {
+				throw new UncheckedIOException(ioe);
+			}
 		});
 	}
 	

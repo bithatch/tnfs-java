@@ -18,18 +18,47 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package uk.co.bithatch.tnfs.lib;
+package uk.co.bithatch.tnfs.nio;
 
-public final class TNFS {
-	
-	public static final int DEFAULT_PORT = 16384;
-	public static final int DEFAULT_UDP_MESSAGE_SIZE = 532;
-	public static final int DEFAULT_TCP_MESSAGE_SIZE = 532;
-	
-	public static final Version PROTOCOL_VERSION = Version.fromString("1.2");
-	
-	public static final int DEFAULT_MAX_SESSIONS = 256;
-	public static final String UNIX_SEPARATOR = "/";
-	public static final int DEFAULT_REPLY_TIMEOUT_SECONDS = 5;
-	public static final int DEFAULT_TIMEOUT_SECONDS = 5;
+import java.util.AbstractList;
+
+/**
+ * Simple immutable array list
+ *
+ * @param <T> The element type
+ */
+public class ImmutableList<T> extends AbstractList<T> {
+
+    private final T[] data;
+    private final int from;
+    private final int to;
+
+    public ImmutableList(T[] data) {
+        this(data, 0, data.length);
+    }
+
+    public ImmutableList(T[] data, int from, int to) {
+        this.data = data;
+        this.from = from;
+        this.to = to;
+    }
+
+    @Override
+    public T get(int index) {
+        return data[from + index];
+    }
+
+    @Override
+    public int size() {
+        return to - from;
+    }
+
+    @Override
+    public ImmutableList<T> subList(int fromIndex, int toIndex) {
+        if (fromIndex == from && toIndex == to) {
+            return this;
+        }
+        return new ImmutableList<>(data, from + fromIndex, from + toIndex);
+    }
+
 }

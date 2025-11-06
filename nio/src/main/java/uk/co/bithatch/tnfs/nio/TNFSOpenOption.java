@@ -18,18 +18,9 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package uk.co.bithatch.tnfs.lib;
+package uk.co.bithatch.tnfs.nio;
 
-public final class TNFS {
-	
-	public static final int DEFAULT_PORT = 16384;
-	public static final int DEFAULT_UDP_MESSAGE_SIZE = 532;
-	public static final int DEFAULT_TCP_MESSAGE_SIZE = 532;
-	
-	public static final Version PROTOCOL_VERSION = Version.fromString("1.2");
-	
-	public static final int DEFAULT_MAX_SESSIONS = 256;
-	public static final String UNIX_SEPARATOR = "/";
-	public static final int DEFAULT_REPLY_TIMEOUT_SECONDS = 5;
-	public static final int DEFAULT_TIMEOUT_SECONDS = 5;
+import java.nio.file.OpenOption;
+
+public enum TNFSOpenOption implements OpenOption {
 }

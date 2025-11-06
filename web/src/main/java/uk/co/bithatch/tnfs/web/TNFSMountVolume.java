@@ -32,6 +32,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+import org.json.JSONPropertyIgnore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.co.bithatch.tnfs.client.TNFSMount;
 import uk.co.bithatch.tnfs.lib.Command.Entry;
 import uk.co.bithatch.tnfs.lib.Command.StatResult;
@@ -47,6 +51,10 @@ import uk.co.bithatch.tnfs.web.elfinder.support.content.detect.DefaultFileTypeDe
 import uk.co.bithatch.tnfs.web.elfinder.support.content.detect.Detector;
 
 public class TNFSMountVolume implements Volume {
+	
+	private final static class Lazy {
+		static Logger LOG = LoggerFactory.getLogger(TNFSMountVolume.class);
+	}
 	
 	interface TNFSTarget extends Target {
 		String getPath();
@@ -77,6 +85,9 @@ public class TNFSMountVolume implements Volume {
 			this.volume = volume;
 			this.path = path;
 			this.parent = parent;
+			if(path.equals("/") && parent != null) {
+				throw new IllegalArgumentException("Root path cannot have a parent");
+			}
 		}
 
 		@Override
@@ -109,6 +120,7 @@ public class TNFSMountVolume implements Volume {
 		}
 
 		@Override
+	    @JSONPropertyIgnore
 		public final Target getParent() {
 			return parent.get();
 		}
@@ -229,21 +241,25 @@ public class TNFSMountVolume implements Volume {
 
 	@Override
 	public void createFile(Target target) throws IOException {
-		mount.open(((TNFSTarget)target).getPath(), OpenFlag.WRITE, OpenFlag.EXCLUSIVE).close();
+		Lazy.LOG.info("Create new file {}", target);
+		mount.open(((TNFSTarget)target).getPath(), OpenFlag.WRITE, OpenFlag.EXCLUSIVE, OpenFlag.CREATE).close();
 	}
 
 	@Override
 	public void createFolder(Target target) throws IOException {
+		Lazy.LOG.info("Create new folder {}", target);
 		mount.mkdir(((TNFSTarget)target).getPath());
 	}
 
 	@Override
 	public void deleteFile(Target target) throws IOException {
+		Lazy.LOG.info("Delete file {}", target);
 		mount.unlink(((TNFSTarget)target).getPath());
 	}
 
 	@Override
 	public void deleteFolder(Target target) throws IOException {
+		Lazy.LOG.info("Delete folder {}", target);
 		mount.rmdir(((TNFSTarget)target).getPath());
 	}
 
@@ -264,10 +280,14 @@ public class TNFSMountVolume implements Volume {
             path = Util.concatenatePaths(rootDir, relativePath, TNFS.UNIX_SEPARATOR);
         }
         
-		return new StatTNFSTarget(this, () -> {
-			var ppath = Util.dirname(path);
-			return fromPath(ppath);
-		}, path);
+        if(path.equals("/"))
+        	return new StatTNFSTarget(this, path);
+        else {
+			return new StatTNFSTarget(this, () -> {
+				var ppath = Util.dirname(path);
+				return fromPath(ppath);
+			}, path);
+        }
 	}
 
 	@Override
@@ -344,16 +364,19 @@ public class TNFSMountVolume implements Volume {
 
 	@Override
 	public InputStream openInputStream(Target target) throws IOException {
+		Lazy.LOG.info("Open input stream {}", target);
 		return Channels.newInputStream(mount.open(((TNFSTarget)target).getPath(), OpenFlag.READ));
 	}
 
 	@Override
 	public OutputStream openOutputStream(Target target) throws IOException {
+		Lazy.LOG.info("Open output stream {}", target);
 		return Channels.newOutputStream(mount.open(((TNFSTarget)target).getPath(), OpenFlag.WRITE, OpenFlag.CREATE, OpenFlag.TRUNCATE));
 	}
 
 	@Override
 	public void rename(Target origin, Target destination) throws IOException {
+		Lazy.LOG.info("Rename {} to {}", origin, destination);
 		mount.rename(((TNFSTarget)origin).getPath(), ((TNFSTarget)destination).getPath());
 	}
 

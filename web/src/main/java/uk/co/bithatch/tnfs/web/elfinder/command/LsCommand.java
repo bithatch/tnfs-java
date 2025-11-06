@@ -31,6 +31,7 @@
  */
 package uk.co.bithatch.tnfs.web.elfinder.command;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -50,7 +51,7 @@ public class LsCommand extends AbstractJsonCommand implements ElfinderCommand {
         Map<String, VolumeHandler> files = new HashMap<>();
         VolumeHandler volumeHandler = findTarget(elfinderStorage, target);
         addChildren(files, volumeHandler);
-
-        json.put(ElFinderConstants.ELFINDER_PARAMETER_LIST, files.values());
+        Collection<VolumeHandler> values = files.values();
+		json.put(ElFinderConstants.ELFINDER_PARAMETER_LIST, values);
     }
 }

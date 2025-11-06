@@ -21,6 +21,7 @@
 package uk.co.bithatch.tnfs.lib;
 
 import java.security.SecureRandom;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 public class Util {
@@ -31,6 +32,14 @@ public class Util {
 
 	private static final long MS_IN_HOUR = TimeUnit.HOURS.toMillis(1);
 	private static final long MS_IN_MINUTE = TimeUnit.MINUTES.toMillis(1);
+
+	public static Optional<String> emptyOptionalIfBlank(String str) {
+		return "".equals(str) ? Optional.empty() : Optional.ofNullable(str);
+	}
+
+	public static Optional<char[]> emptyOptionalIfBlank(char[] str) {
+		return str != null && str.length == 0 ? Optional.empty() : Optional.ofNullable(str);
+	}
 	
 	public static String toHexString(byte[] data) {
 		var sb = new StringBuilder();

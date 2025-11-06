@@ -59,7 +59,7 @@ public abstract class AbstractTNFSCommand {
 	private boolean tcp;
 
 	@Option(names = { "-R", "--reply-timeout" }, description = "Reply timeout in seconds. A value of zero, means no timeout.")
-	private int replyTimeout = 5;
+	private int replyTimeout = TNFS.DEFAULT_REPLY_TIMEOUT_SECONDS;
 
     @Option(names = { "-X", "--verbose-exceptions" }, description = "Show verbose exception traces on errors.")
     private boolean verboseExceptions;

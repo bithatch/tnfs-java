@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import uk.co.bithatch.tnfs.lib.DirOptionFlag;
@@ -121,4 +122,11 @@ public interface TNFSMount extends TNFSFileAccess {
 	FileVisitResult visit(String path, FileVisitor<TNFSFile> visitor) throws IOException;
 
 	TNFSClient client();
+	
+	/**
+	 * Get the username this mount is authenticated as.
+	 * 
+	 * @return username
+	 */
+	Optional<String> username();
 }

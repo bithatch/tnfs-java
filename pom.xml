@@ -55,6 +55,7 @@
 		<module>daemon</module>
 		<module>cli</module>
 		<module>fuse</module>
+		<module>nio</module>
 		<module>web</module>
 		<module>extensions</module>
 		<module>sdk</module>

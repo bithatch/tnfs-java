@@ -33,6 +33,8 @@ package uk.co.bithatch.tnfs.web.elfinder.core.impl;
 
 import java.nio.file.Path;
 
+import org.json.JSONPropertyIgnore;
+
 import uk.co.bithatch.tnfs.web.elfinder.core.Target;
 import uk.co.bithatch.tnfs.web.elfinder.core.Volume;
 
@@ -50,7 +52,8 @@ public class NIO2FileSystemTarget implements Target {
     public Volume getVolume() {
         return volume;
     }
-
+    
+    @JSONPropertyIgnore
     public Path getPath() {
         return path;
     }

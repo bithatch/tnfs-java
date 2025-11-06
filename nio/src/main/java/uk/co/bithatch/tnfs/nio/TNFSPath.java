@@ -1,0 +1,446 @@
+/*
+ * Copyright © 2025 Bithatch (brett@bithatch.co.uk)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this
+ * software and associated documentation files (the “Software”), to deal in the Software
+ * without restriction, including without limitation the rights to use, copy, modify,
+ * merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies
+ * or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+ * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package uk.co.bithatch.tnfs.nio;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.FileSystem;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.ProviderMismatchException;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
+import java.util.AbstractList;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+public class TNFSPath implements Path {
+
+	private final ImmutableList<String> names;
+    private final String root;
+    private final TNFSFileSystem fileSystem;
+
+    TNFSPath(TNFSFileSystem fileSystem, String root, ImmutableList<String> names) {
+        this.fileSystem = fileSystem;
+        this.root = root;
+        this.names = names;
+    }
+
+    TNFSPath(TNFSFileSystem fileSystem, String root, String... names) {
+    	this(fileSystem, root, new ImmutableList<>(names));
+    }
+
+	@Override
+    public int compareTo(Path paramPath) {
+        var p2 = paramPath == null ? null : checkPath(paramPath);
+        int c = compare(root, p2 == null ? null : p2.root);
+        if (c != 0) {
+            return c;
+        }
+        for (int i = 0; i < Math.min(names.size(), p2 == null ? Integer.MAX_VALUE : p2.names.size()); i++) {
+            String n1 = names.get(i);
+            String n2 = p2 == null ? null : p2.names.get(i);
+            c = compare(n1, n2);
+            if (c != 0) {
+                return c;
+            }
+        }
+        return names.size() - (p2 == null ? 0 : p2.names.size());
+    }
+
+	@Override
+    public boolean endsWith(Path other) {
+    	var otherFs = other instanceof TNFSPath ? ((TNFSPath)other).fileSystem : null;
+    	var otherRoot = other instanceof TNFSPath ? ((TNFSPath)other).root : null;
+    	var otherNames = other instanceof TNFSPath ? ((TNFSPath)other).names: null;
+    	
+//        if (other.isAbsolute()) {
+//            return compareTo(other) == 0;
+//        }
+        return Objects.equals(getFileSystem(), otherFs)
+                && Objects.equals(root, otherRoot)
+                && endsWith(names, otherNames);
+    }
+
+	@Override
+    public boolean endsWith(String other) {
+        return endsWith(getFileSystem().getPath(other));
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof Path
+                && compareTo((Path) obj) == 0;
+    }
+
+    @Override
+    public Path getFileName() {
+        if (!names.isEmpty()) {
+            return create(null, names.get(names.size() - 1));
+        }
+        return null;
+    }
+
+    @Override
+    public TNFSFileSystem getFileSystem() {
+        return fileSystem;
+    }
+
+    @Override
+    public Path getName(int index) {
+        int maxIndex = getNameCount();
+        if ((index < 0) || (index >= maxIndex)) {
+            throw new IllegalArgumentException("Invalid name index " + index + " - not in range [0-" + maxIndex + "]");
+        }
+        return create(null, names.subList(index, index + 1));
+    }
+
+    @Override
+    public int getNameCount() {
+        return names.size();
+    }
+
+    @Override
+    public Path getParent() {
+        if (names.isEmpty() || ((names.size() == 1) && (root == null))) {
+            return null;
+        }
+        return create(root, names.subList(0, names.size() - 1));
+    }
+
+    @Override
+    public Path getRoot() {
+        if (isAbsolute()) {
+            return create(root);
+        }
+        return null;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = Objects.hashCode(getFileSystem());
+        // use hash codes from toString() form of names
+        hash = 31 * hash + Objects.hashCode(root);
+        for (String name : names) {
+            hash = 31 * hash + Objects.hashCode(name);
+        }
+        return hash;
+    }
+
+    @Override
+    public boolean isAbsolute() {
+        return root != null;
+    }
+
+    @Override
+    public Iterator<Path> iterator() {
+        return new AbstractList<Path>() {
+            @Override
+            public Path get(int index) {
+                return getName(index);
+            }
+
+            @Override
+            public int size() {
+                return getNameCount();
+            }
+        }.iterator();
+    }
+
+    @Override
+    public Path normalize() {
+        if (isNormal()) {
+            return this;
+        }
+
+        Deque<String> newNames = new ArrayDeque<>();
+        for (String name : names) {
+            if (name.equals("..")) {
+                String lastName = newNames.peekLast();
+                if (lastName != null && !lastName.equals("..")) {
+                    newNames.removeLast();
+                } else if (!isAbsolute()) {
+                    // if there's a root and we have an extra ".." that would go up above the root, ignore it
+                    newNames.add(name);
+                }
+            } else if (!name.equals(".")) {
+                newNames.add(name);
+            }
+        }
+
+        return create(root, newNames);
+    }
+
+    @Override
+    public WatchKey register(WatchService watcher, WatchEvent.Kind<?>... events) throws IOException {
+        throw new UnsupportedOperationException("Register to watch " + toAbsolutePath() + " N/A");
+    }
+
+    @Override
+    public WatchKey register(WatchService watcher, WatchEvent.Kind<?>[] events, WatchEvent.Modifier... modifiers) throws IOException {
+        throw new UnsupportedOperationException("Register to watch " + toAbsolutePath() + " N/A");
+    }
+
+    @Override
+    public Path relativize(Path other) {
+    	TNFSPath p2 = checkPath(other);
+        if (!Objects.equals(getRoot(), p2.getRoot())) {
+            throw new IllegalArgumentException("Paths have different roots: " + this + ", " + other);
+        }
+        if (p2.equals(this)) {
+            return create(null);
+        }
+        if (root == null && names.isEmpty()) {
+            return p2;
+        }
+        // Common subsequence
+        int sharedSubsequenceLength = 0;
+        for (int i = 0; i < Math.min(names.size(), p2.names.size()); i++) {
+            if (names.get(i).equals(p2.names.get(i))) {
+                sharedSubsequenceLength++;
+            } else {
+                break;
+            }
+        }
+        int extraNamesInThis = Math.max(0, names.size() - sharedSubsequenceLength);
+        List<String> extraNamesInOther = (p2.names.size() <= sharedSubsequenceLength)
+                ? Collections.<String>emptyList()
+                : p2.names.subList(sharedSubsequenceLength, p2.names.size());
+        List<String> parts = new ArrayList<>(extraNamesInThis + extraNamesInOther.size());
+        // add .. for each extra name in this path
+        parts.addAll(Collections.nCopies(extraNamesInThis, ".."));
+        // add each extra name in the other path
+        parts.addAll(extraNamesInOther);
+        return create(null, parts);
+    }
+
+    @Override
+    public Path resolve(Path other) {
+        TNFSPath p2 = checkPath(other);
+        if (p2.isAbsolute()) {
+            return p2;
+        }
+        if (p2.names.isEmpty()) {
+            return this;
+        }
+        String[] names = new String[this.names.size() + p2.names.size()];
+        int index = 0;
+        for (String p : this.names) {
+            names[index++] = p;
+        }
+        for (String p : p2.names) {
+            names[index++] = p;
+        }
+        return create(root, names);
+    }
+
+    @Override
+    public Path resolve(String other) {
+        return resolve(getFileSystem().getPath(other));
+    }
+
+    @Override
+    public Path resolveSibling(Path other) {
+        Path parent = getParent();
+        return parent == null ? other : parent.resolve(other);
+    }
+
+    @Override
+    public Path resolveSibling(String other) {
+        return resolveSibling(getFileSystem().getPath(other));
+    }
+
+    @Override
+    public boolean startsWith(Path other) {
+    	var otherFs = other instanceof TNFSPath ? ((TNFSPath)other).fileSystem : null;
+    	var otherRoot = other instanceof TNFSPath ? ((TNFSPath)other).root : null;
+    	var otherNames = other instanceof TNFSPath ? ((TNFSPath)other).names: null;
+        return Objects.equals(getFileSystem(), otherFs)
+                && Objects.equals(root, otherRoot)
+                && startsWith(names, otherNames);
+    }
+
+    @Override
+    public boolean startsWith(String other) {
+        return startsWith(getFileSystem().getPath(other));
+    }
+
+    @Override
+    public Path subpath(int beginIndex, int endIndex) {
+        int maxIndex = getNameCount();
+        if ((beginIndex < 0) || (beginIndex >= maxIndex) || (endIndex > maxIndex) || (beginIndex >= endIndex)) {
+            throw new IllegalArgumentException("subpath(" + beginIndex + "," + endIndex + ") bad index range - allowed [0-" + maxIndex + "]");
+        }
+        return create(null, names.subList(beginIndex, endIndex));
+    }
+
+    @Override
+    public Path toAbsolutePath() {
+        if (isAbsolute()) {
+            return this;
+        }
+        Path dir = fileSystem.getDefaultDir();
+		return dir.resolve(this);
+    }
+
+    @Override
+    public File toFile() {
+        throw new UnsupportedOperationException("To file " + toAbsolutePath() + " N/A");
+    }
+
+    @Override
+	public Path toRealPath(LinkOption... options) throws IOException {
+    	/* Symlinks not supported */
+    	return toAbsolutePath();
+	}
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        if (root != null) {
+            sb.append(root);
+        }
+        
+        String separator = getFileSystem().getSeparator();
+        for (String name : names) {
+            if ((sb.length() > 0) && (sb.charAt(sb.length() - 1) != '/')) {
+                sb.append(separator);
+            }
+            sb.append(name);
+        }
+        return sb.toString();
+    }
+
+    @Override
+    public URI toUri() {
+        return getFileSystem().toUri().resolve(toAbsolutePath().toString());
+    }
+
+    protected TNFSPath checkPath(Path paramPath) {
+        if (paramPath.getClass() != getClass()) {
+            throw new ProviderMismatchException("Path is not of this class: " + paramPath + "[" + paramPath.getClass().getSimpleName() + "]");
+        }
+        TNFSPath t = (TNFSPath) paramPath;
+
+        FileSystem tnfsFileSystem = t.getFileSystem();
+        if (tnfsFileSystem.provider() != this.fileSystem.provider()) {
+            throw new ProviderMismatchException("Mismatched providers for " + t);
+        }
+        return t;
+    }
+
+    protected int compare(String s1, String s2) {
+        if (s1 == null) {
+            return s2 == null ? 0 : -1;
+        } else {
+            return s2 == null ? +1 : s1.compareTo(s2);
+        }
+    }
+
+    protected TNFSPath create(String root, Collection<String> names) {
+        return create(root, new ImmutableList<>(names.toArray(new String[names.size()])));
+    }
+
+    protected TNFSPath create(String root, ImmutableList<String> names) {
+        return fileSystem.create(root, names);
+    }
+
+    protected TNFSPath create(String root, String... names) {
+        return create(root, new ImmutableList<>(names));
+    }
+
+    protected boolean endsWith(List<?> list, List<?> other) {
+        return other.size() <= list.size() && list.subList(list.size() - other.size(), list.size()).equals(other);
+    }
+
+    protected boolean isNormal() {
+        int count = getNameCount();
+        if ((count == 0) || ((count == 1) && !isAbsolute())) {
+            return true;
+        }
+        boolean foundNonParentName = isAbsolute(); // if there's a root, the path doesn't start with ..
+        boolean normal = true;
+        for (String name : names) {
+            if (name.equals("..")) {
+                if (foundNonParentName) {
+                    normal = false;
+                    break;
+                }
+            } else {
+                if (name.equals(".")) {
+                    normal = false;
+                    break;
+                }
+                foundNonParentName = true;
+            }
+        }
+        return normal;
+    }
+
+    protected boolean startsWith(List<?> list, List<?> other) {
+        return list.size() >= other.size() && list.subList(0, other.size()).equals(other);
+    }
+
+    Map<String, Object> readAttributes(String attributes, LinkOption... options) throws IOException {
+		String view = null;
+		String attrs = null;
+		int colonPos = attributes.indexOf(':');
+		if (colonPos == -1) {
+			view = "basic";
+			attrs = attributes;
+		} else {
+			view = attributes.substring(0, colonPos++);
+			attrs = attributes.substring(colonPos);
+		}
+		var zfv = TNFSFileAttributeViews.get(this, view);
+		if (zfv == null) {
+			throw new UnsupportedOperationException("view not supported");
+		}
+		return zfv.readAttributes(attrs);
+	}
+
+    void setAttribute(String attribute, Object value, LinkOption... options) throws IOException {
+		String type = null;
+		String attr = null;
+		int colonPos = attribute.indexOf(':');
+		if (colonPos == -1) {
+			type = "basic";
+			attr = attribute;
+		} else {
+			type = attribute.substring(0, colonPos++);
+			attr = attribute.substring(colonPos);
+		}
+		var view = TNFSFileAttributeViews.get(this, type);
+		if (view == null)
+			throw new UnsupportedOperationException("view <" + view + "> is not supported");
+		view.setAttribute(attr, value);
+	}
+
+}

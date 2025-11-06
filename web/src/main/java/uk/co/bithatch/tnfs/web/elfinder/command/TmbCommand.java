@@ -31,6 +31,8 @@
  */
 package uk.co.bithatch.tnfs.web.elfinder.command;
 
+import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.nio.channels.Channels;
 import java.time.ZonedDateTime;
@@ -43,28 +45,37 @@ import com.sshtools.uhttpd.UHTTPD.Transaction;
 import uk.co.bithatch.tnfs.web.elfinder.service.ElfinderStorage;
 
 public class TmbCommand extends AbstractCommand implements ElfinderCommand {
-    @Override
-    public void execute(ElfinderStorage elfinderStorage, Transaction tx) throws Exception {
+	@Override
+	public void execute(ElfinderStorage elfinderStorage, Transaction tx) throws Exception {
 
-        var target = tx.parameter("target").asString();
-        var fsi = super.findTarget(elfinderStorage, target);
+		var target = tx.parameter("target").asString();
+		var fsi = super.findTarget(elfinderStorage, target);
 
-        var dateTime = ZonedDateTime.now();
-        var pattern = "d MMM yyyy HH:mm:ss 'GMT'";
-        var dateTimeFormatter = DateTimeFormatter.ofPattern(pattern);
+		var dateTime = ZonedDateTime.now();
+		var pattern = "d MMM yyyy HH:mm:ss 'GMT'";
+		var dateTimeFormatter = DateTimeFormatter.ofPattern(pattern);
 
-        try (var is = fsi.openInputStream()) {
-            var image = ImageIO.read(is);
-            var width = 80;
-            
-            var fac = Math.min((float)width / image.getHeight(), (float)width / image.getWidth());
-            var b = (BufferedImage)image.getScaledInstance((int)(image.getWidth() * fac), (int)(image.getHeight() * fac), BufferedImage.SCALE_SMOOTH);
-            
-            tx.header("Last-Modified", dateTimeFormatter.format(dateTime));
-            tx.header("Expires", dateTimeFormatter.format(dateTime.plusYears(2)));
-            try(var wtr = Channels.newOutputStream(tx.responseWriter())) {
-                ImageIO.write(b, "png", wtr);
-            }
-        }
-    }
+		try (var is = fsi.openInputStream()) {
+			var image = ImageIO.read(is);
+			var width = 80;
+
+			var fac = Math.min((float) width / image.getHeight(), (float) width / image.getWidth());
+			var b = ensureBufferedImage(image.getScaledInstance((int) (image.getWidth() * fac),
+					(int) (image.getHeight() * fac), BufferedImage.SCALE_SMOOTH));
+
+			tx.header("Last-Modified", dateTimeFormatter.format(dateTime));
+			tx.header("Expires", dateTimeFormatter.format(dateTime.plusYears(2)));
+			try (var wtr = Channels.newOutputStream(tx.responseWriter())) {
+				ImageIO.write(b, "png", wtr);
+			}
+		}
+	}
+
+	private BufferedImage ensureBufferedImage(Image image) {
+		var newImage = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_ARGB);
+		var g = newImage.createGraphics();
+		g.drawImage(image, 0, 0, null);
+		g.dispose();
+		return newImage;
+	}
 }

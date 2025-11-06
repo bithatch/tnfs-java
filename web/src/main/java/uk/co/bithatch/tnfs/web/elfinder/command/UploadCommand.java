@@ -31,37 +31,63 @@
  */
 package uk.co.bithatch.tnfs.web.elfinder.command;
 
-import org.json.JSONObject;
+import java.io.IOException;
+import java.util.ArrayList;
 
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.sshtools.uhttpd.UHTTPD.FormData;
 import com.sshtools.uhttpd.UHTTPD.Transaction;
 
+import uk.co.bithatch.tnfs.web.elfinder.ElFinderConstants;
 import uk.co.bithatch.tnfs.web.elfinder.service.ElfinderStorage;
+import uk.co.bithatch.tnfs.web.elfinder.service.VolumeHandler;
 
 public class UploadCommand extends AbstractJsonCommand implements ElfinderCommand {
+	static Logger LOG = LoggerFactory.getLogger(UploadCommand.class);
 
     @Override
     protected void execute(ElfinderStorage elfinderStorage, Transaction tx, JSONObject json) throws Exception {
-// TODO
-//        List<FileItemStream> files = (List<FileItemStream>) request.getAttribute(FileItemStream.class.getName());
-//        List<VolumeHandler> added = new ArrayList<>();
-//
-//        String target = request.getParameter(ElFinderConstants.ELFINDER_PARAMETER_TARGET);
-//        VolumeHandler parentDir = findTarget(elfinderStorage, target);
-//
-//        for (FileItemStream file : files) {
-//            String fileName = file.getName();
-//            VolumeHandler newFile = new VolumeHandler(parentDir, fileName);
-//            newFile.createFile();
-//            InputStream is = file.openStream();
-//            OutputStream os = newFile.openOutputStream();
-//
-//            IOUtils.copy(is, os);
-//            os.close();
-//            is.close();
-//
-//            added.add(newFile);
-//        }
-//
-//        json.put(ElFinderConstants.ELFINDER_JSON_RESPONSE_ADDED, buildJsonFilesArray(request, added));
+
+			
+    	var added = new ArrayList<VolumeHandler>();    	
+    	var content = tx.request();
+       	var target = content.asFormData(ElFinderConstants.ELFINDER_PARAMETER_TARGET).asString();
+
+		LOG.info("Upload request for target {}", target);
+		
+      	var parentDir = findTarget(elfinderStorage, target);
+      	
+      	// TODO something not right in uhttpd. (earlier parts already ready from content in TNFSWeb.apiPost
+//      	for(var part : content.asBufferedParts(FormData.class)) {
+//    		LOG.info("   Part name: {}", part.name());
+//      		if(part.name().startsWith("upload")) {
+//      			var newFile = uploadPart(parentDir, part);
+//      			added.add(newFile);
+//      		}
+//      	}
+      	
+
+			var newFile = uploadPart(parentDir, content.asFormData("upload[]"));
+			added.add(newFile);
+      	
+		LOG.info("Upload complete target {}", target);
+      	
+        json.put(ElFinderConstants.ELFINDER_JSON_RESPONSE_ADDED, buildJsonFilesArray(tx, added));
     }
+
+	private VolumeHandler uploadPart(VolumeHandler parentDir, FormData part) throws IOException {
+		var filename = part.filename().get();
+		LOG.info("Receiving upload {}", filename);
+		var newFile = new VolumeHandler(parentDir, filename);
+		newFile.createFile();
+		try(var is = part.asStream()) {
+			try(var os = newFile.openOutputStream()) {
+				is.transferTo(os);
+			}
+		}
+		return newFile;
+	}
 }

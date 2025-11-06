@@ -26,10 +26,10 @@ I started this to help me understand the TNFS protocol, as I intend to implement
  * Compatible with Graal Native Image. 
  * TNFS authentication supported in client and server libraries and all tools.
  * Client and server are fully extendable.
+ * Includes an optional Java NIO file system library. Access TNFS resources with just a `Path`. 
  * Unofficial protocol extensions for massively increasing authentication security, remote copy, checksums and mount listing.
  * Pick the tools you need, or download the full [SDK](sdk).
- * Great for use with low power computers, such as retro 8-bit and 16-bit machines, or \
-   more modern IOT devices. 
+ * Use on your PC as a reference client or server implementation to develop TNFS applications for with low power computers, such as retro 8-bit and 16-bit machines. Or perhaps directly with Java capable modern IOT devices. 
  * Libraries can be used with Java 17 or higher, the tools need at least Java 21. For building the entire project, Java 24 is currently recommended. 
  
 *Available on Maven Central. See Installation section below.*
@@ -46,6 +46,7 @@ This project is separated into several modules.
 | --- | --- | --- | --- |
 | tnfs-java-lib | [lib](lib) | 17 | The core library, shared by other components. |
 | tnfs-java-client | [client](client/README.md) | 17 | The base client library. Use this if you wish to build your own TNFS based client. |
+| tnfs-java-nio | [nio](nio/README.md) | 17 | Use in Java applications to treat TNFS as a `Path`. Great for quickly adding TNFS support to existing applications. |
 | tnfs-java-server | [server](server) | 17 | The base server library. Use this if you wish to build your own TNFS based server.  |
 | tnfs-java-extensions | [extensions](extensions) | 17 | Unofficial protocol extension for the server and client.  |
 | tnfs-java-cli | [cli](cli) | 24 | Some read-to-use tools for working with TNFS. A simple copy tool, and an FTP-like client. |

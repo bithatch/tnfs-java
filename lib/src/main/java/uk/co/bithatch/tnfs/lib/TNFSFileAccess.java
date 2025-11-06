@@ -92,11 +92,23 @@ public interface TNFSFileAccess extends Closeable {
 	 * @throws IOException on error
 	 */
 	void unlink(String path) throws IOException;
+	
+	/**
+	 * Open file channel. By default for reading
+	 * 
+	 * @param path path
+	 * @return file channel
+	 */
+	default SeekableByteChannel open(String path, OpenFlag... flags) throws IOException {
+		return open(path, new ModeFlag[0], flags.length == 0 ? new OpenFlag[] { OpenFlag.READ } : flags);
+	}
 
 	/**
 	 * Open a file channel
 	 * 
-	 * @param path
+	 * @param path path
+	 * @param mode mode to set
+	 * @param flags flags
 	 * @return file channel
 	 */
 	SeekableByteChannel open(String path, ModeFlag[] mode, OpenFlag... flags) throws IOException;

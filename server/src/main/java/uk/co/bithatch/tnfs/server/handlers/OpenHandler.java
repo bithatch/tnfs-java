@@ -63,8 +63,9 @@ public class OpenHandler implements TNFSMessageHandler {
 				key = context.nextFileHandle();
 				context.fileHandles().put(key, new FileHandle(fh, ByteBuffer.allocate(context.session().server().messageSize())));
 			}
-			
-			LOG.info("Opened file {}, handle {}", open.path(), key);
+
+				
+			LOG.info("Opened file {}, handle {} (flags {}, mode {})", open.path(), key, Arrays.asList(open.mode()), Arrays.asList(open.flags()));
 			return new Command.HandleResult(ResultCode.SUCCESS, key);
 		});
 	}
