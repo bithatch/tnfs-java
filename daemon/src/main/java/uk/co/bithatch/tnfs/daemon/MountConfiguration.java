@@ -23,7 +23,6 @@ package uk.co.bithatch.tnfs.daemon;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.channels.Channels;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -34,7 +33,6 @@ import org.slf4j.LoggerFactory;
 
 import com.sshtools.jini.config.Monitor;
 
-import uk.co.bithatch.tnfs.lib.ModeFlag;
 import uk.co.bithatch.tnfs.lib.OpenFlag;
 import uk.co.bithatch.tnfs.server.TNFSInMemoryFileSystem;
 import uk.co.bithatch.tnfs.server.TNFSMounts;

@@ -22,6 +22,7 @@ package uk.co.bithatch.tnfs.web;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.MessageFormat;
@@ -43,14 +44,13 @@ import com.sshtools.porter.UPnP;
 import com.sshtools.porter.UPnP.Gateway;
 import com.sshtools.porter.UPnP.Protocol;
 import com.sshtools.uhttpd.UHTTPD;
-import com.sshtools.uhttpd.UHTTPD.FormData;
 import com.sshtools.uhttpd.UHTTPD.NCSALoggerBuilder;
 import com.sshtools.uhttpd.UHTTPD.Status;
 import com.sshtools.uhttpd.UHTTPD.Transaction;
 
 import picocli.CommandLine;
-import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Spec;
 import uk.co.bithatch.tnfs.client.TNFSClient;
@@ -189,8 +189,8 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 						var https = configuration.https();
 						var httpOn = http.getInt(Constants.PORT_KEY, 0) > 0;
 						var httpsOn = https.getInt(Constants.PORT_KEY, 0) > 0;
-						var httpAddr =  http.get(Constants.ADDRESS_KEY, "127.0.0.1");
-						var httpsAddr =  https.get(Constants.ADDRESS_KEY, "127.0.0.1");
+						var httpAddr =  http.get(Constants.ADDRESS_KEY, "%");
+						var httpsAddr =  https.get(Constants.ADDRESS_KEY, "%");
 						
 						if(httpOn  && httpsOn && !httpAddr.equals(httpsAddr)) {
 							return Net.parseAddress("*");
@@ -342,13 +342,13 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 		var httpPort = http.getInt(Constants.PORT_KEY);
 		if(httpPort > 0)
 			bldr.withHttp(httpPort);
-		bldr.withHttpAddress(Net.parseAddress(http.get(Constants.ADDRESS_KEY, "localhost"), "localhost"));
+		bldr.withHttpAddress(Net.parseAddress(http.get(Constants.ADDRESS_KEY, ""), ""));
 		
 		var https = configuration.https();
 		var httpsPort = https.getInt(Constants.PORT_KEY);
 		if(httpsPort > 0)
 			bldr.withHttps(httpsPort);
-		bldr.withHttpsAddress(Net.parseAddress(https.get(Constants.ADDRESS_KEY, "localhost"), "localhost"));
+		bldr.withHttpsAddress(Net.parseAddress(https.get(Constants.ADDRESS_KEY, ""), ""));
 		https.getOr(Constants.KEY_PASSWORD_KEY).ifPresent(kp -> bldr.withKeyPassword(kp.toCharArray()));
 		https.getOr(Constants.KEYSTORE_FILE_KEY).ifPresent(ks -> bldr.withKeyStoreFile(Paths.get(ks)));
 		https.getOr(Constants.KEYSTORE_PASSWORD_KEY).ifPresent(kp -> bldr.withKeyPassword(kp.toCharArray()));
@@ -376,38 +376,51 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 
 		try (var httpd = bldr.build()) {
 
+			httpd.httpAddress().ifPresent(addr -> {
+				var iaddr = (InetSocketAddress)addr;
+				log.info("Listening on {} @ {} for HTTP", iaddr.getPort(), iaddr.getHostString());
+			});
+			httpd.httpsAddress().ifPresent(addr -> {
+				var iaddr = (InetSocketAddress)addr;
+				log.info("Listening on {} @ {} for HTTPS", iaddr.getPort(), iaddr.getHostString());
+			});
+
 			gateway.ifPresent(gw -> {
-				httpd.httpPort().ifPresent(p -> {
-					log.info("Mapping port {} for HTTP on your router to this machine", p);
-					gw.map(p, Protocol.TCP);
-					log.warn("Mapping port {} for HTTP successful. Your server is now on the internet!", p);
+				httpd.httpAddress().ifPresent(addr -> {
+					var iaddr = (InetSocketAddress)addr;
+					log.info("Mapping port {} @ {} for HTTP on your router to this machine", iaddr.getPort(), iaddr.getHostString());
+					gw.map(iaddr.getPort(), Protocol.TCP);
+					log.warn("Mapping port {} @ {} for HTTP successful. Your server is now on the internet!", iaddr.getPort(), iaddr.getHostString());
 				});
-				httpd.httpsPort().ifPresent(p -> {
-					log.info("Mapping port {} for HTTPS on your router to this machine", p);
-					gw.map(p, Protocol.TCP);
-					log.warn("Mapping port {} for HTTPS successful. Your server is now on the internet!", p);
+				httpd.httpsAddress().ifPresent(addr -> {
+					var iaddr = (InetSocketAddress)addr;
+					log.info("Mapping port {} @ {} for HTTP on your router to this machine", iaddr.getPort(), iaddr.getHostString());
+					gw.map(iaddr.getPort(), Protocol.TCP);
+					log.warn("Mapping port {} @ {} for HTTPS successful. Your server is now on the internet!", iaddr.getPort(), iaddr.getHostString());
 				});
 			});
 
 			mdns.ifPresent(d -> {
-				httpd.httpPort().ifPresent(p -> {
-					log.info("Registering mDNS for HTTP on {}", p);
+				httpd.httpAddress().ifPresent(addr -> {
+					var iaddr = (InetSocketAddress)addr;
+					log.info("Registering mDNS for HTTP on {} @ {}", iaddr.getPort(), iaddr.getHostString());
 					try {
-						d.registerService( ServiceInfo.create("_http._tcp.local.", "TNFSJ Web", p, "path=index.html"));
+						d.registerService( ServiceInfo.create("_http._tcp.local.", "TNFSJ Web", iaddr.getPort(), "path=index.html"));
 					} catch (IOException e) {
 						throw new UncheckedIOException(e);
 					}
 				});
-				httpd.httpsPort().ifPresent(p -> {
-					log.info("Registering mDNS for HTTPS on {}", p);
+				httpd.httpsAddress().ifPresent(addr -> {
+					var iaddr = (InetSocketAddress)addr;
+					log.info("Registering mDNS for HTTPS on {} @ {}", iaddr.getPort(), iaddr.getHostString());
 					try {
-						d.registerService( ServiceInfo.create("_https._tcp.local.", "TNFSJ Web", p, "path=index.html"));
+						d.registerService( ServiceInfo.create("_https._tcp.local.", "TNFSJ Web", iaddr.getPort(), "path=index.html"));
 					} catch (IOException e) {
 						throw new UncheckedIOException(e);
 					}
 				});
 			});
-
+			
 			httpd.run();
 		}
 	}
