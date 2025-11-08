@@ -1,0 +1,10 @@
+<service>
+  <id>tnfsjd-web-service</id>
+  <name>TNFS Web Based File Manager</name>
+  <description>A service that allows web-based file management of TNFS file shares</description>
+  <executable>%BASE%\sbin\tnfsjd-web.exe</executable>
+  <depend>tnfsjd</depend>
+  <log mode="reset">
+    <logpath>%BASE%\log</logpath>
+  </log>
+</service>

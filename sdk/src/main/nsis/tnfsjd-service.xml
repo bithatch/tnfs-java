@@ -1,0 +1,10 @@
+<service>
+  <id>tnfsjd</id>
+  <name>TNFS File Server Daemon</name>
+  <description>A service that provides TNFS file sharding</description>
+  <executable>%BASE%\sbin\tnfsjd.exe</executable>
+  <!-- <depend>XXX</depend> -->
+  <log mode="reset">
+    <logpath>%BASE%\log</logpath>
+  </log>
+</service>

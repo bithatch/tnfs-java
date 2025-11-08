@@ -56,7 +56,6 @@
 			</plugin>
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
-				<version>3.1.1</version>
 				<groupId>org.apache.maven.plugins</groupId>
 				<inherited>false</inherited>
 				<executions>
@@ -78,6 +77,11 @@
 		</plugins>
 		<pluginManagement>
 			<plugins>
+				<plugin>
+					<artifactId>maven-assembly-plugin</artifactId>
+					<version>3.1.1</version>
+					<groupId>org.apache.maven.plugins</groupId>
+				</plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-antrun-plugin</artifactId>
@@ -201,6 +205,77 @@
 		
 		</profile>
 		
+        <profile>
+            <id>installer</id>
+            <build>
+                <plugins>
+                
+					
+					<plugin>
+						<artifactId>maven-assembly-plugin</artifactId>
+						<groupId>org.apache.maven.plugins</groupId>
+						<inherited>false</inherited>
+						<executions>
+							<execution>
+								<id>make-assembly-tnfs-sdk</id>
+								<phase>package</phase>
+								<goals>
+									<goal>single</goal>
+								</goals>
+								<configuration>
+									<finalName>${sdk.assembly.finalName}</finalName>
+									<descriptors>
+										<descriptor>${sdk.assembly.bin}</descriptor>
+									</descriptors>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+					
+					<plugin>
+		                <groupId>org.apache.maven.plugins</groupId>
+		                <artifactId>maven-antrun-plugin</artifactId>
+		                <executions>
+		                    <execution>
+		                        <id>extract-sdk-for-installer</id>
+		                        <phase>package</phase>
+		                        <configuration>
+		                            <target>
+		                            	<unzip src="${basedir}/target/${sdk.assembly.finalName}-distribution.zip" dest="${basedir}/target/sdk"/>
+		                            	<deltree dir="${basedir}/target/sdk/${sdk.assembly.finalName}/src"/>
+		                            </target>
+		                        </configuration>
+		                        <goals>
+		                            <goal>run</goal>
+		                        </goals>
+		                    </execution>
+		                </executions>
+		            </plugin>
+					
+                    <plugin>
+                        <groupId>org.digitalmediaserver</groupId>
+                        <artifactId>nsis-maven-plugin</artifactId>
+                        <version>1.0.6</version>
+                        <executions>
+                            <execution>
+                                <id>build-windows-installer</id>
+                                <configuration>
+                                    <scriptFile>${basedir}/src/main/nsis/tnfsj.nsi</scriptFile>
+                                    <outputFile>${sdk.assembly.finalName}.exe</outputFile>
+                                    <attachArtifact>false</attachArtifact>
+                                </configuration>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>generate-headerfile</goal>
+                                    <goal>make</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+		
 		<profile>
 			<id>upload-distribution</id>
 			
@@ -215,7 +290,6 @@
 		                        <phase>package</phase>
 		                        <configuration>
 		                            <target>
-		                                  <echo>TARG:</echo>
 		                                <ftp action="mkdir"
 		                                     server="${build.uploadHostname}"
 		                                     remotedir="${build.uploadPath}"
