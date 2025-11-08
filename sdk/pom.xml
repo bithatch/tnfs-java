@@ -242,7 +242,8 @@
 		                        <configuration>
 		                            <target>
 		                            	<unzip src="${basedir}/target/${sdk.assembly.finalName}-distribution.zip" dest="${basedir}/target/sdk"/>
-		                            	<deltree dir="${basedir}/target/sdk/${sdk.assembly.finalName}/src"/>
+		                            	<zip destfile="${basedir}/target/tnfs-java-src.zip" basedir="${basedir}/target/sdk/${sdk.assembly.finalName}" includes="src/**/*"/>
+		                            	<delete dir="${basedir}/target/sdk/${sdk.assembly.finalName}/src"/>
 		                            </target>
 		                        </configuration>
 		                        <goals>

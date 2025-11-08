@@ -17,7 +17,7 @@
   ;OutFile ..\..\target\release\TNFSJ_Installer.exe
 
   ;Default installation folder
-  InstallDir "$PROGRAMFILES\TNFSJ"
+  InstallDir "$PROGRAMFILES64\TNFSJ"
   
   ;Get installation folder from registry if available
   InstallDirRegKey HKLM  "Software\TNFSJ" ""
@@ -134,8 +134,8 @@ Section "TNFSJ Server (Service)" TNFSJ_Server
   File tnfsjd-service.exe
   File tnfsjd-service.xml 
   
-  ExecWait '"$INSTDIR\tnfsjd-service.exe" install'
-  ExecWait '"$INSTDIR\tnfsjd-service.exe" start'
+  ExecShellWait "" "$INSTDIR\tnfsjd-service.exe" "install" SW_HIDE
+  ExecShellWait "" "$INSTDIR\tnfsjd-service.exe" "start" SW_HIDE
 SectionEnd
 
 Section "TNFSJ Web Basd File Browser (Service)" TNFSJ_Web
@@ -147,10 +147,16 @@ Section "TNFSJ Web Basd File Browser (Service)" TNFSJ_Web
   File tnfsjd-web-service.exe
   File tnfsjd-web-service.xml
   
-  ExecWait '"$INSTDIR\tnfsjd-web-service.exe" install'
-  ExecWait '"$INSTDIR\tnfsjd-web-service.exe" start'
+  ExecShellWait "" "$INSTDIR\tnfsjd-web-service.exe" "install" SW_HIDE
+  ExecShellWait "" "$INSTDIR\tnfsjd-web-service.exe" "start" SW_HIDE
 SectionEnd
 
+Section /o "Source (Zipped)" TNFSJ_Source
+
+  SetOutPath "$INSTDIR"
+  File /r ..\..\..\target\tnfs-java-src.zip
+  
+SectionEnd
 ;--------------------------------
 ;Functions
 
@@ -187,10 +193,46 @@ FunctionEnd
 
 Section "Uninstall"
 
+  ExecShellWait "" "$INSTDIR\tnfsjd-service.exe" "stop" SW_HIDE
+  ExecShellWait "" "$INSTDIR\tnfsjd-service.exe" "uninstall" SW_HIDE  
+  ExecShellWait "" "$INSTDIR\tnfsjd-web-service.exe" "stop" SW_HIDE
+  ExecShellWait "" "$INSTDIR\tnfsjd-web-service.exe" "uninstall" SW_HIDE
+  
+  Sleep 3000
+  
   ;ADD YOUR OWN FILES HERE...
 
   Delete "$INSTDIR\Uninstall.exe"
 
+  DELETE "$INSTDIR\sbin\tnfsjd.exe"
+  DELETE "$INSTDIR\sbin\tnfsjd-web.exe"
+  DELETE "$INSTDIR\sbin\tnfs-user.exe"
+  DELETE "$INSTDIR\bin\tnfscp.exe"
+  DELETE "$INSTDIR\bin\tnfstp.exe"
+  DELETE "$INSTDIR\bin\tnfsfuse.exe"  
+  DELETE "$INSTDIR\lib\*.jar"
+  DELETE "$INSTDIR\doc\*.html"    
+  DELETE "$INSTDIR\etc\*.sample"        
+  DELETE "$INSTDIR\etc\tnfsjd\*.sample"
+  DELETE "$INSTDIR\etc\tnfsjd-web\*.sample"
+  DELETE "$INSTDIR\tnfsjd-service.exe"
+  DELETE "$INSTDIR\tnfsjd-service.xml"
+  DELETE "$INSTDIR\tnfsjd-web-service.exe"
+  DELETE "$INSTDIR\tnfsjd-web-service.xml"
+  DELETE "$INSTDIR\icon.ico"
+  DELETE "$INSTDIR\README.md"
+  DELETE "$INSTDIR\log\*.log"
+  DELETE "$INSTDIR\LICENSE"
+  DELETE "$INSTDIR\tnfs-java-src.zip"
+  RMDir "$INSTDIR\bin"  
+  RMDir "$INSTDIR\sbin"
+  RMDir "$INSTDIR\doc"
+  RMDir "$INSTDIR\etc\tnfsjd-web"  
+  RMDir "$INSTDIR\etc\tnfsjd"
+  RMDir "$INSTDIR\etc"
+  RMDir "$INSTDIR\lib"
+  RMDir "$INSTDIR\log"
+  RMDir "$INSTDIR\logs"
   RMDir "$INSTDIR"
 
   !insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder

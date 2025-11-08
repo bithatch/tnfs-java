@@ -191,7 +191,7 @@ pipeline {
 								withCredentials([usernamePassword(credentialsId: 'bithatch-ftp-upload', passwordVariable: 'FTP_UPLOAD_PASSWORD', usernameVariable: 'FTP_UPLOAD_USERNAME')]) {			 		  	
 	                                bat '''
 	                                mvn "-Dbuild.projectProperties=%BUILD_PROPERTIES%" \
-	                                    -U -P native-image,upload-distribution clean package \
+	                                    -U -P native-image,installer,upload-distribution clean package \
 				                        -Dbuild.uploadPassword="%FTP_UPLOAD_PASSWORD%" -Dbuild.uploadUsername=%FTP_UPLOAD_USERNAME%
 	                                '''
 	                            }
