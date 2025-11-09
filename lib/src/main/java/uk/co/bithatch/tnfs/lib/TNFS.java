@@ -24,7 +24,9 @@ public final class TNFS {
 	
 	public static final int DEFAULT_PORT = 16384;
 	public static final int DEFAULT_UDP_MESSAGE_SIZE = 532;
+	public static final int MAX_UDP_MESSAGE_SIZE = 65535;
 	public static final int DEFAULT_TCP_MESSAGE_SIZE = 532;
+	public static final int MAX_TCP_MESSAGE_SIZE = 65535;
 	
 	public static final Version PROTOCOL_VERSION = Version.fromString("1.2");
 	
@@ -32,4 +34,6 @@ public final class TNFS {
 	public static final String UNIX_SEPARATOR = "/";
 	public static final int DEFAULT_REPLY_TIMEOUT_SECONDS = 5;
 	public static final int DEFAULT_TIMEOUT_SECONDS = 5;
+	public static final int DEFAULT_CLIENT_BUFFERS = 10;
+	public static final int DEFAULT_SERVER_BUFFERS = 100;
 }

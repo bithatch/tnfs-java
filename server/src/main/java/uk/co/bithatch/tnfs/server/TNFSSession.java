@@ -26,11 +26,16 @@ import java.security.Principal;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import uk.co.bithatch.tnfs.lib.Protocol;
+import uk.co.bithatch.tnfs.lib.TNFS;
 import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
 import uk.co.bithatch.tnfs.lib.Version;
 
 public final class TNFSSession implements Closeable {
-//	private final static Logger LOG = LoggerFactory.getLogger(TNFSSession.class);
+	private final static Logger LOG = LoggerFactory.getLogger(TNFSSession.class);
 
 	private static final int MAX_HANDLES = 256;
 
@@ -50,6 +55,7 @@ public final class TNFSSession implements Closeable {
 	private final Map<String, Object> state = new ConcurrentHashMap<>();
 	
 	private boolean authenticated;
+	private int size;
 	
 	TNFSSession(TNFSUserMount userMount, int id, TNFSServer<?> server, Version version) {
 		this.mount = userMount.fileSystem();
@@ -57,6 +63,7 @@ public final class TNFSSession implements Closeable {
 		this.id = id;
 		this.server = server;
 		this.version = version;
+		this.size = server.protocol() == Protocol.TCP ? TNFS.DEFAULT_TCP_MESSAGE_SIZE : TNFS.DEFAULT_UDP_MESSAGE_SIZE;
 	}
 	
 	public boolean authenticated() {
@@ -91,6 +98,22 @@ public final class TNFSSession implements Closeable {
 		return mount;
 	}
 	
+	public int size() {
+		return size;
+	}
+
+	public void size(int size) {
+		if(size < 16 || size > 65535)
+			throw new IllegalArgumentException();
+		
+		
+		var newSize = Math.min(size, server.size());
+		if(newSize != this.size) {
+			LOG.info("Client changed packet size from {} to {} (originally requested {})", this.size, newSize, size);
+			this.size = size;
+		}
+	}
+
 	@Override
 	public void close() throws IOException {
 		try {

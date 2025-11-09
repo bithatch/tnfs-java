@@ -32,8 +32,10 @@ import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.AbstractSelectableChannel;
 import java.nio.file.AccessDeniedException;
+import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystemLoopException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.ReadOnlyFileSystemException;
 import java.time.Duration;
@@ -47,6 +49,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.co.bithatch.tnfs.lib.AbstractBuilder;
+import uk.co.bithatch.tnfs.lib.ByteBufferPool;
 import uk.co.bithatch.tnfs.lib.Command;
 import uk.co.bithatch.tnfs.lib.Command.Result;
 import uk.co.bithatch.tnfs.lib.Debug;
@@ -81,49 +84,43 @@ public final class TNFSClient implements Closeable {
 		 * @return client
 		 */
 		public TNFSClient build() throws IOException {
-			return new TNFSClient(port, messageSize, protocol, hostname, timeout);
+			return new TNFSClient(port, size, protocol, hostname, timeout, bufferPool);
 		}
 	}
 	
 	public record MessageResult<RESULT extends Result>(Message mesage, RESULT result) {}
 	
 	final AbstractSelectableChannel channel;
-	final int messageSize;
-	final int payloadSize;
 	
 	private final InetSocketAddress address;
 	private final Protocol protocol;
 	private final Optional<Duration> timeout;
 	private byte seq = 0;
 	private final Map<Class<? extends TNFSClientExtension>, TNFSClientExtension> extensions;
-	private Object lock = new Object();
+	private final Object lock = new Object();
+	private final ByteBufferPool bufferPool;
+	
+	private int size;
 
-	private TNFSClient(Optional<Integer> port, Optional<Integer> messageSize, Protocol protocol,
-			Optional<String> hostname, Optional<Duration> timeout)  throws  IOException {
+	private TNFSClient(Optional<Integer> port, Optional<Integer> size, Protocol protocol,
+			Optional<String> hostname, Optional<Duration> timeout, Optional<ByteBufferPool> bufferPool)  throws  IOException {
 		
 		this.protocol = protocol;
 		this.timeout = timeout;
+		this.bufferPool = bufferPool.orElseGet(() -> new ByteBufferPool(TNFS.DEFAULT_CLIENT_BUFFERS, ByteBufferPool.DIRECT));
 		
 		address = new InetSocketAddress(hostname.orElse("localhost"), port.orElse(TNFS.DEFAULT_PORT));
 		
+		LOG.info("Will connect to {}", address);
+		
 		if(protocol == Protocol.UDP) {
-			this.messageSize = messageSize.orElse(TNFS.DEFAULT_UDP_MESSAGE_SIZE);
-			
-			var dchannel =  DatagramChannel.open();
-			channel = dchannel;
-			
-			dchannel.setOption(StandardSocketOptions.SO_SNDBUF, this.messageSize);
-			dchannel.setOption(StandardSocketOptions.SO_RCVBUF, this.messageSize);
+			channel=  DatagramChannel.open();
+			size(size.orElse(TNFS.DEFAULT_UDP_MESSAGE_SIZE));
 		}
 		else {
-			this.messageSize = messageSize.orElse(TNFS.DEFAULT_TCP_MESSAGE_SIZE);
-			var tchannel = SocketChannel.open(address);
-			tchannel.setOption(StandardSocketOptions.SO_SNDBUF, this.messageSize);
-			tchannel.setOption(StandardSocketOptions.SO_RCVBUF, this.messageSize);
-			channel = tchannel;
+			channel = SocketChannel.open(address);
+			size(size.orElse(TNFS.DEFAULT_TCP_MESSAGE_SIZE));
 		}
-		
-		payloadSize = this.messageSize - Message.HEADER_SIZE;
 		
 		extensions = ServiceLoader.load(TNFSClientExtension.class).stream().map(p -> p.get()).peek(ext -> {
 			ext.init(this);
@@ -182,7 +179,7 @@ public final class TNFSClient implements Closeable {
 				throw new IOException(path.map( s-> "I/O Error on " + s).orElse("I/O Error."));
 			}
 			else if(res.result() == ResultCode.NOENT) {
-				throw new FileNotFoundException(path.orElse("Path Unknown"));
+				throw new NoSuchFileException(path.orElse("Path Unknown"));
 			}
 			else if(res.result() == ResultCode.EXIST) {
 				throw new FileAlreadyExistsException(path.orElse("Path Unknown"));
@@ -202,6 +199,9 @@ public final class TNFSClient implements Closeable {
 			else if(res.result() == ResultCode.NOMEM) {
 				throw new OutOfMemoryError("Server reported out of memory.");
 			}
+			else if(res.result() == ResultCode.NOTEMPTY) {
+				throw new DirectoryNotEmptyException(path.orElse("Path unknown"));
+			}
 			else if(res.result() == ResultCode.ROFS) {
 				throw new ReadOnlyFileSystemException();
 			}
@@ -217,64 +217,32 @@ public final class TNFSClient implements Closeable {
 	}
 
 	Message write(Message pkt) throws IOException, EOFException {
-		var buf = Message.allocateLE(messageSize);
-		pkt.encode(buf);
-		buf.flip();
-		
-		if(LOG.isDebugEnabled()) {
-			LOG.debug(">: [{}] {}", buf.remaining(), Debug.dump(buf));
-		}
-		
-		if(channel instanceof DatagramChannel dchannel) {
-			var wrtn = dchannel.send(buf, address);
-			
-			if(LOG.isDebugEnabled()) {
-				LOG.debug("Written {}", wrtn);
-			}
-			
-			buf.clear();
-			
-			if(timeout.isPresent())
-				Interrupt.ioInterrupt(() -> dchannel.receive(buf), timeout.get());
-			else
-				dchannel.receive(buf);
-			
+		try(var buflease = bufferPool.acquire(size)) {
+			var buf  = buflease.buffer();
+			pkt.encode(buf);
 			buf.flip();
-			if(buf.hasRemaining()) {
-				var msg = Message.decode(buf);
-				if(msg.seq() == pkt.seq()) {
-					return msg;
-				}
-				else {
-					throw new IllegalStateException(String.format("Out of sequence (newer) response, lost a message. Expected %d, got %d", pkt.seq(), msg.seq()));
-				}
-			}
-			else {
-				throw new SocketTimeoutException();
-			}
-		}
-		else if(channel instanceof SocketChannel tchannel) {
-			tchannel.write(buf);
-			buf.clear();
 			
-			while(true) {
+			if(channel instanceof DatagramChannel dchannel) {
+				var wrtn = dchannel.send(buf, address);
 				
-				var rd = timeout.isPresent() 
-						? Interrupt.ioCall(() -> tchannel.read(buf), timeout.get())
-						: tchannel.read(buf);
-				if(rd == -1)
-					throw new EOFException();
+				if(LOG.isDebugEnabled()) {
+					LOG.debug("Written {} byte to UDP", wrtn);
+				}
 				
-				if(rd == 0)
-					Thread.yield();
-				else {
+				buf.clear();
 				
-					buf.flip();
-
-					if(LOG.isDebugEnabled()) {
-						LOG.debug("<: [{}] {}", buf.remaining(), Debug.dump(buf));
-					}
-					
+				if(timeout.isPresent())
+					Interrupt.ioInterrupt(() -> dchannel.receive(buf), timeout.get());
+				else
+					dchannel.receive(buf);
+				
+				buf.flip();
+				
+				if(LOG.isDebugEnabled()) {
+					LOG.debug("<: [{}] {}", buf.remaining(), Debug.dump(buf));
+				}
+				
+				if(buf.hasRemaining()) {
 					var msg = Message.decode(buf);
 					if(msg.seq() == pkt.seq()) {
 						return msg;
@@ -283,10 +251,49 @@ public final class TNFSClient implements Closeable {
 						throw new IllegalStateException(String.format("Out of sequence (newer) response, lost a message. Expected %d, got %d", pkt.seq(), msg.seq()));
 					}
 				}
+				else {
+					throw new SocketTimeoutException();
+				}
 			}
-		}
-		else {
-			throw new UnsupportedOperationException();
+			else if(channel instanceof SocketChannel tchannel) {
+				var wrtn = tchannel.write(buf);
+				
+				if(LOG.isDebugEnabled()) {
+					LOG.debug("Written {} byte to TCP", wrtn);
+				}
+				buf.clear();
+				
+				while(true) {
+					
+					var rd = timeout.isPresent() 
+							? Interrupt.ioCall(() -> tchannel.read(buf), timeout.get())
+							: tchannel.read(buf);
+					if(rd == -1)
+						throw new EOFException();
+					
+					if(rd == 0)
+						Thread.yield();
+					else {
+					
+						buf.flip();
+	
+						if(LOG.isDebugEnabled()) {
+							LOG.debug("<: [{}] {}", buf.remaining(), Debug.dump(buf));
+						}
+						
+						var msg = Message.decode(buf);
+						if(msg.seq() == pkt.seq()) {
+							return msg;
+						}
+						else {
+							throw new IllegalStateException(String.format("Out of sequence (newer) response, lost a message. Expected %d, got %d", pkt.seq(), msg.seq()));
+						}
+					}
+				}
+			}
+			else {
+				throw new UnsupportedOperationException();
+			}
 		}
 	}
 	
@@ -321,8 +328,24 @@ public final class TNFSClient implements Closeable {
 		}
 	}
 
-	public int messageSize() {
-		return messageSize;
+
+	public int size() {
+		return size;
+	}
+	
+	public void size(int size) throws IOException {
+		if(size != this.size) {
+			this.size = size;
+			
+			if(protocol == Protocol.UDP) {
+				((DatagramChannel)channel).setOption(StandardSocketOptions.SO_SNDBUF, this.size);
+				((DatagramChannel)channel).setOption(StandardSocketOptions.SO_RCVBUF, this.size);
+			}
+			else {
+				((SocketChannel)channel).setOption(StandardSocketOptions.SO_SNDBUF, this.size);
+				((SocketChannel)channel).setOption(StandardSocketOptions.SO_RCVBUF, this.size);
+			}
+		}
 	}
 	
 	public Protocol protocol() {
@@ -331,5 +354,9 @@ public final class TNFSClient implements Closeable {
 
 	public InetSocketAddress address() {
 		return address;
+	}
+
+	public ByteBufferPool bufferPool() {
+		return bufferPool;
 	}	
 }

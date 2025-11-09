@@ -22,6 +22,7 @@ import uk.co.bithatch.tnfs.client.TNFSClientExtension;
 import uk.co.bithatch.tnfs.client.TNFSMountExtension;
 import uk.co.bithatch.tnfs.client.extensions.Copy;
 import uk.co.bithatch.tnfs.client.extensions.Mounts;
+import uk.co.bithatch.tnfs.client.extensions.PktSz;
 import uk.co.bithatch.tnfs.client.extensions.SecureMount;
 import uk.co.bithatch.tnfs.client.extensions.Sum;
 
@@ -33,5 +34,5 @@ module uk.co.bithatch.tnfs.client.extensions {
 	exports uk.co.bithatch.tnfs.client.extensions;
 	
 	provides TNFSClientExtension with Mounts, SecureMount;
-	provides TNFSMountExtension with Sum, Copy;
+	provides TNFSMountExtension with Sum, Copy, PktSz;
 }

@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.BufferUnderflowException;
 import java.nio.file.AccessDeniedException;
+import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystemLoopException;
 import java.nio.file.NoSuchFileException;
@@ -79,6 +80,9 @@ public class Tasks {
 		} catch (NotDirectoryException e) {
 			LOG.error("ENOTDIR. ", e);
 			return (T)func.apply(ResultCode.NOTDIR);
+		} catch (DirectoryNotEmptyException dne) {
+			LOG.error("ENOTEMPTY. ", dne);
+			return (T)func.apply(ResultCode.NOTEMPTY);
 		} catch (FileSystemLoopException e) {
 			LOG.error("ELOOP. ", e);
 			return (T)func.apply(ResultCode.LOOP);

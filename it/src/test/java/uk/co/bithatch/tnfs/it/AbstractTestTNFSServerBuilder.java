@@ -18,8 +18,8 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-module uk.co.bithatch.tnfs.lib {
-	exports uk.co.bithatch.tnfs.lib;
-	requires java.xml;
-	requires org.slf4j;
+package uk.co.bithatch.tnfs.it;
+
+public abstract class AbstractTestTNFSServerBuilder {
+
 }

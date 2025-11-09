@@ -58,6 +58,7 @@
 		<module>nio</module>
 		<module>web</module>
 		<module>extensions</module>
+		<module>it</module>
 		<module>sdk</module>
 	</modules>
 	<inceptionYear>2025</inceptionYear>
@@ -397,6 +398,22 @@
 		                        </goals>
 		                    </execution>
 		                </executions>
+		            </plugin>
+				</plugins>
+			</build>
+		</profile>
+		
+		<profile>
+			<id>upload-distribution</id>
+			
+			<build>
+				<plugins>
+				  <plugin>
+		                <groupId>org.apache.maven.plugins</groupId>
+		                <artifactId>maven-deploy-plugin</artifactId>
+		                <configuration>
+		                	<skip>true</skip>
+		                </configuration>
 		            </plugin>
 				</plugins>
 			</build>

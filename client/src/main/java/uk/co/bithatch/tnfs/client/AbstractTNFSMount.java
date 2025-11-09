@@ -381,7 +381,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 			@Override
 			public int read(ByteBuffer dst) throws IOException {
 				try {
-					var max = client.payloadSize - 3;
+					var max = client.size() - Message.HEADER_SIZE - 3;
 					if(dst.remaining() < max) {
 						max = dst.remaining();
 					}
@@ -414,7 +414,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 
 			@Override
 			public int write(ByteBuffer src) throws IOException {
-				var max = client.payloadSize - 3;
+				var max = client.size() - Message.HEADER_SIZE - 3;
 				var waslimit = -1;
 				if(src.remaining() > max) {
 					waslimit = src.limit();

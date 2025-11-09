@@ -21,6 +21,7 @@
 import uk.co.bithatch.tnfs.server.TNFSMessageHandler;
 import uk.co.bithatch.tnfs.server.extensions.CopyHandler;
 import uk.co.bithatch.tnfs.server.extensions.MountsHandler;
+import uk.co.bithatch.tnfs.server.extensions.PktSzHandler;
 import uk.co.bithatch.tnfs.server.extensions.ScramClientFinishHandler;
 import uk.co.bithatch.tnfs.server.extensions.ScramClientFirstHandler;
 import uk.co.bithatch.tnfs.server.extensions.ServerCapsHandler;
@@ -35,5 +36,6 @@ module uk.co.bithatch.tnfs.server.extensions {
 	provides TNFSMessageHandler with ServerCapsHandler,
 									 ScramClientFirstHandler,
 									 ScramClientFinishHandler,
-									 SumHandler, CopyHandler, MountsHandler;
+									 SumHandler, CopyHandler, MountsHandler,
+									 PktSzHandler;
 }

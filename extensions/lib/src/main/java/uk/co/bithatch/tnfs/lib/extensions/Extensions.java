@@ -44,6 +44,7 @@ public class Extensions {
 	public final static Command<Sum,SumResult> SUM = new Command<>(0x90, "SUM", Sum::decode, Sum::encode, SumResult::decode);
 	public final static Command<Copy,HeaderOnlyResult> COPY = new Command<>(0x91, "COPY", Copy::decode, Copy::encode, HeaderOnlyResult::decode);
 	public final static Command<Mounts,HandleResult> MOUNTS = new Command<>(0x92, "MOUNTS", Mounts::decode, Mounts::encode, HandleResult::decode);
+	public final static Command<PktSize,PktSizeResult> PKTSZ = new Command<>(0x93, "PKTSZ", PktSize::decode, PktSize::encode, PktSizeResult::decode);
 
 	public record ServerCaps() implements Encodeable {
 		
@@ -256,6 +257,37 @@ public class Extensions {
 			Encodeable.cString(path, buf);
 			Encodeable.cString(targetPath, buf);
 			buf.put((byte)CopyFlag.encode(flags));
+			return buf;
+		}
+	}
+	
+	public record PktSize(int size) implements Encodeable {
+		public static PktSize decode(ByteBuffer buf) {
+			return new PktSize(
+				Short.toUnsignedInt(buf.getShort())
+			);
+		}
+
+		@Override
+		public ByteBuffer encode(ByteBuffer buf) {
+			buf.putShort((short)size);
+			return buf;
+		}
+	}
+
+	public record PktSizeResult(ResultCode result, int size) implements Result  {
+		
+		public static PktSizeResult decode(ByteBuffer buf) {
+			var res = Result.decodeResult(buf);
+			return new PktSizeResult(
+				res, 
+				Short.toUnsignedInt(buf.getShort())
+			);
+		}
+
+		@Override
+		public ByteBuffer encodeResult(ByteBuffer buf) {
+			buf.putShort((short)size);
 			return buf;
 		}
 	}

@@ -18,8 +18,40 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-module uk.co.bithatch.tnfs.lib {
-	exports uk.co.bithatch.tnfs.lib;
-	requires java.xml;
-	requires org.slf4j;
+package uk.co.bithatch.tnfs.server;
+
+import java.security.Principal;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Optional;
+
+import uk.co.bithatch.tnfs.server.TNFSMounts.TNFSMountRef;
+
+public final class DefaultInMemoryFileSystemService implements TNFSFileSystemService {
+	
+	private TNFSInMemoryFileSystem defaultMount = new TNFSInMemoryFileSystem("/");
+	private TNFSMountRef ref = new TNFSMountRef(defaultMount, Optional.empty());
+
+	@Override
+	public TNFSUserMount createMount(String path, Optional<? extends Principal> user) {
+		if(path.equals("/")) {
+			return new TNFSUserMount(defaultMount, TNFSMounts.GUEST);
+		} else {
+			throw new IllegalArgumentException("No such mount.");
+		}
+	}
+
+	@Override
+	public TNFSMountRef mountDetails(String path) {
+		if(path.equals("/")) {
+			return ref;
+		} else {
+			throw new IllegalArgumentException("No such mount.");
+		}
+	}
+
+	@Override
+	public Collection<TNFSMountRef> mounts() {
+		return Arrays.asList(ref);
+	}
 }

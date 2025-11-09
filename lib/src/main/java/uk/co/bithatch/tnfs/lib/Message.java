@@ -21,7 +21,6 @@
 package uk.co.bithatch.tnfs.lib;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Optional;
 
 public final class Message {
@@ -73,7 +72,8 @@ public final class Message {
 		}
 
 		private Builder remainingAsPayload(ByteBuffer buffer) {
-			var buf = allocateLE(buffer.remaining());
+			var buf = buffer.isDirect() ? ByteBuffer.allocateDirect(buffer.remaining()) : ByteBuffer.allocate(buffer.remaining());
+			buf.order(buffer.order());
 			buf.put(buffer);
 			buf.flip();
 			return withPayload(buf);
@@ -177,19 +177,6 @@ public final class Message {
 			});
 		}); 
 		return buffer;
-	}
-
-	/**
-	 * Allocate buffer for use with network protocol, that uses {@link ByteOrder#LITTLE_ENDIAN} to make
-	 * it easier on the spectrum for multi-byte data elements.
-	 * 
-	 * @param len
-	 * @return little endian buffer
-	 */
-	public static ByteBuffer allocateLE(int len) {
-		var bbuf =  ByteBuffer.allocateDirect(len);
-		bbuf.order(ByteOrder.LITTLE_ENDIAN);
-		return bbuf;
 	}
 
 	public static <E extends Encodeable> Message of(Command<?, ?> op, E enc) {

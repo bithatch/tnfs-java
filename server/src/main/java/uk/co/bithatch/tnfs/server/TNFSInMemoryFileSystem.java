@@ -21,7 +21,6 @@
 package uk.co.bithatch.tnfs.server;
 
 import static uk.co.bithatch.tnfs.lib.Util.dirname;
-import static uk.co.bithatch.tnfs.lib.Util.normalPath;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -30,6 +29,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NonReadableChannelException;
 import java.nio.channels.NonWritableChannelException;
 import java.nio.channels.SeekableByteChannel;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.NoSuchFileException;
@@ -122,7 +122,10 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 		}
 		
 		checkReadOnly();
-		var p = Util.normalPath(path, '/');
+		var p = processPath(path, '/');
+		if(p.equals("/")) {
+			throw new AccessDeniedException(path);
+		}
 		synchronized(fs) {
 			var s = fs.get(p);
 			if(s != null) {
@@ -132,7 +135,6 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 							throw new DirectoryNotEmptyException(p);
 						}
 					}
-					fs.remove(p);	
 				}
 				fs.remove(p);
 			}
@@ -157,7 +159,10 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 
 	@Override
 	public StatResult stat(String path) throws IOException {
-		var p = Util.normalPath(path, '/');
+		if(path.equals("mydir/")) {
+			System.out.println("brk");
+		}
+		var p = processPath(path, '/');
 		var f = fs.get(p);
 		if(f == null) {
 			throw new NoSuchFileException(path);
@@ -183,12 +188,12 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 		}
 		
 		checkReadOnly();
-		var p = Util.normalPath(path, '/');
+		var p = processPath(path, '/');
 		synchronized(fs) {
 			if(fs.containsKey(p)) {
 				throw new FileAlreadyExistsException(path);
 			}
-			fs.put(p, new MemoryFile(path));
+			fs.put(p, new MemoryFile(p));
 		}
 	}
 
@@ -200,7 +205,7 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 		}
 		
 		checkReadOnly();
-		var p = Util.normalPath(path, '/');
+		var p = processPath(path, '/');
 		synchronized(fs) {
 			var f = fs.get(p);
 			if(f == null) {
@@ -233,7 +238,7 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 			throw new ReadOnlyFileSystemException();
 		}
 
-		var p = Util.normalPath(path, '/');
+		var p = processPath(path, '/');
 		var f = fs.get(p);
 		
 		var create = flgs.contains(OpenFlag.CREATE);
@@ -272,7 +277,7 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 		return new SeekableByteChannel() {
 			
 			boolean open = true;
-			ByteBuffer buf = ff.output.slice();
+			ByteBuffer buf = Util.sliceAndOrder(ff.output);
 			
 			@Override
 			public boolean isOpen() {
@@ -287,7 +292,7 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 				if(LOG.isDebugEnabled()) {
 					LOG.debug("Closing file handle {} for {} at {} bytes", hashCode(), path, buf.limit());
 				}
-				fs.put(p, new MemoryFile(path, buf, ff.mode, ff.created(),FileTime.from(Instant.now()), FileTime.from(Instant.now())));
+				fs.put(p, new MemoryFile(p, buf, ff.mode, ff.created(),FileTime.from(Instant.now()), FileTime.from(Instant.now())));
 			}
 			
 			@Override
@@ -358,7 +363,7 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 					throw new IllegalArgumentException("Negative size.");
 				var wasPos = buf.position();
 				if(size < buf.limit()) {
-					buf = buf.slice(0, (int)size);
+					buf = Util.sliceAndOrder(buf, 0, (int)size);
 				}
 				buf.position(Math.min(buf.limit(), wasPos));
 				return this;
@@ -416,8 +421,8 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 					LOG.debug("Updating underlying file {} of {}, limited to {}, at position {}", path, buf.capacity(), buf.limit(), buf.position());
 				}
 				
-				var newbuf = buf.slice();
-				fs.put(p, new MemoryFile(path, newbuf, ff.mode, ff.created(),FileTime.from(Instant.now()), FileTime.from(Instant.now())));
+				var newbuf = Util.sliceAndOrder(buf);
+				fs.put(p, new MemoryFile(p, newbuf, ff.mode, ff.created(),FileTime.from(Instant.now()), FileTime.from(Instant.now())));
 				
 				
 			}
@@ -426,7 +431,7 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 
 	@Override
 	public Stream<String> list(String path) throws IOException {
-		var p = Util.normalPath(path, '/');
+		var p = processPath(path, '/');
 		var stat = stat(path);
 		if(Arrays.asList(stat.mode()).contains(ModeFlag.IFDIR)) {
 			if(p.equals("/")) {
@@ -434,11 +439,12 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 						filter(f -> !f.path.equals("/") && f.path.startsWith("/") && f.path.indexOf('/', 1) == -1).
 						map(f -> f.path.substring(1));
 			}
+			
 			return fs.values().stream().
-					filter(f ->  f.path.startsWith(p + "/")).
-					map(f -> f.path.substring(p.length() + 1)).
-					filter(s -> s.indexOf('/') == -1
-			);
+				filter(f ->  f.path.startsWith(p + "/")).
+				map(f -> f.path.substring(p.length() + 1)).
+				filter(s -> s.indexOf('/') == -1);
+			
 		}
 		else {
 			throw new NotDirectoryException(path);
@@ -477,8 +483,8 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 		
 		checkReadOnly();
 
-		var p = normalPath(path, '/');
-		var tp = normalPath(targetPath, '/');
+		var p = processPath(path, '/');
+		var tp = processPath(targetPath, '/');
 		
 		var pd = dirname(p);
 		var tdd = dirname(tp);
@@ -624,5 +630,12 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 						p);
 			}
 		}
+	}
+	
+	private static String processPath(String p, char sep) {
+		var np = Util.normalPath(p, '/');
+		if(!np.startsWith("/"))
+			np = "/" + np;
+		return np;
 	}
 }

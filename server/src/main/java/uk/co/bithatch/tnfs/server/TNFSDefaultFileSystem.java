@@ -23,6 +23,7 @@ package uk.co.bithatch.tnfs.server;
 import java.io.File;
 import java.io.IOException;
 import java.nio.channels.SeekableByteChannel;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
@@ -45,6 +46,14 @@ import uk.co.bithatch.tnfs.lib.OpenFlag;
 import uk.co.bithatch.tnfs.lib.ResultCode;
 import uk.co.bithatch.tnfs.lib.TNFSDirectory;
 
+/**
+ * Default file system implementation based on {@link Path}, i.e. any supported
+ * NIO VFS provider.
+ * <p>
+ * Note, TNFS does not support symbolic links, so these will be presented as special
+ * files that cannot be traversed. This is to prevent symbolic links being followed
+ * when deleting a file system contents.
+ */
 public class TNFSDefaultFileSystem implements TNFSFileSystem {
 	private final static Logger LOG = LoggerFactory.getLogger(TNFSDefaultFileSystem.class);
 	
@@ -70,7 +79,9 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 	@Override
 	public void chmod(String path, ModeFlag... modes) throws IOException {
 		checkReadOnly();
-		Files.setPosixFilePermissions(resolve(path), Set.of(ModeFlag.permissions(modes)));
+		var resolved = resolve(path); 
+		checkFileSymbolicLink(resolved, path);
+		Files.setPosixFilePermissions(resolved, Set.of(ModeFlag.permissions(modes)));
 	}
 
 	@Override
@@ -83,6 +94,9 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 		
 		if(LOG.isDebugEnabled()) {
 			LOG.debug("Listing entries for `{}` (resolved at `{}`), wildcard pattern of `{}`", path, resolved, wildcard);
+		}
+		if(isSymbolicLink(resolved)) {
+			throw new NotDirectoryException(path);
 		}
 		
 		Stream<Entry> str;
@@ -134,13 +148,19 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 
 	@Override
 	public Stream<String> list(String path) throws IOException {
-		return Files.list(resolve(path)).map(p -> p.getFileName().toString()).sorted();
+		var rpath = resolve(path);
+		if(isSymbolicLink(rpath)) {
+			throw new NotDirectoryException(path);
+		}
+		return Files.list(rpath).map(p -> p.getFileName().toString()).sorted();
 	}
 
 	@Override
 	public void mkdir(String path) throws IOException {
 		checkReadOnly();
-		Files.createDirectory(resolve(path));
+		var rpath = resolve(path);
+		checkFileSymbolicLink(rpath, path);
+		Files.createDirectory(rpath);
 	}
 
 	@Override
@@ -155,7 +175,10 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 			throw new ReadOnlyFileSystemException();
 		}
 		
-		SeekableByteChannel chnl = Files.newByteChannel(resolve(path), OpenFlag.encodeOptions(flags));
+		var rpath = resolve(path);
+		checkFileSymbolicLink(rpath, path);
+		var chnl = Files.newByteChannel(rpath, OpenFlag.encodeOptions(flags));
+		
 		if(Arrays.asList(flags).contains(OpenFlag.CREATE)) {
 			/* TODO umask? */
 			chmod(path, mode);
@@ -166,13 +189,25 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 	@Override
 	public void rename(String path, String targetPath) throws IOException {
 		checkReadOnly();
-		Files.move(resolve(path), resolve(targetPath));
+		
+		var rpath1 = resolve(path);
+		checkFileSymbolicLink(rpath1, path);
+		
+		var rpath2 = resolve(targetPath);
+		checkFileSymbolicLink(rpath2, targetPath);
+		
+		Files.move(rpath1, rpath2);
 	}
 
 	@Override
 	public void rmdir(String path) throws IOException {
 		checkReadOnly();
-		Files.delete(resolve(path));
+		var dpath = resolve(path);
+		checkFileSymbolicLink(dpath, path);
+		if(dpath.equals(root))
+			Files.delete(dpath);
+		else
+			throw new AccessDeniedException(path);
 	}
 	
 	@Override
@@ -183,6 +218,7 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 	@Override
 	public StatResult stat(String path) throws IOException {
 		var p = resolve(path);
+		checkFileSymbolicLink(p, path);
 		var basicAttrView = Files.getFileAttributeView(p, BasicFileAttributeView.class);
 		var posixAttrView = Files.getFileAttributeView(p, PosixFileAttributeView.class);
 		var dosAttrView = Files.getFileAttributeView(p, DosFileAttributeView.class);
@@ -238,7 +274,9 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 	@Override
 	public void unlink(String path) throws IOException {
 		checkReadOnly();
-		Files.delete(resolve(path));
+		var rpath = resolve(path);
+		checkFileSymbolicLink(rpath, path);
+		Files.delete(rpath);
 	}
 	
 	private void checkReadOnly() {
@@ -279,6 +317,21 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 		else {
 			return Entry.forPath(p);
 		}
+	}
+
+	private void checkFileSymbolicLink(Path path, String strpath) throws IOException {
+		if(isSymbolicLink(path.getParent())) {
+			throw new NoSuchFileException(strpath);
+		}
+	}
+
+	private boolean isSymbolicLink(Path path) {
+		while(path != null && !path.toUri().equals(root.toUri())) {
+			if(Files.isSymbolicLink(path)) {
+				return true;
+			}			
+		}
+		return false;
 	}
 
 }

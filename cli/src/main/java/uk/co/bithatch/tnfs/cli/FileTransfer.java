@@ -21,7 +21,6 @@
 package uk.co.bithatch.tnfs.cli;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -40,6 +39,7 @@ import me.tongfei.progressbar.ProgressBarBuilder;
 import me.tongfei.progressbar.ProgressBarStyle;
 import uk.co.bithatch.tnfs.client.TNFSFile;
 import uk.co.bithatch.tnfs.client.TNFSMount;
+import uk.co.bithatch.tnfs.lib.ByteBufferPool;
 import uk.co.bithatch.tnfs.lib.OpenFlag;
 import uk.co.bithatch.tnfs.lib.Util;
 
@@ -50,9 +50,11 @@ public final class FileTransfer {
 	private final boolean progress;
 	private final boolean recursive;
 	private final String sep;
+	private final ByteBufferPool bufferPool;
 
-	public FileTransfer(boolean force, boolean progress, boolean recursive, String sep) {
+	public FileTransfer(ByteBufferPool bufferPool, boolean force, boolean progress, boolean recursive, String sep) {
 		super();
+		this.bufferPool = bufferPool;
 		this.force = force;
 		this.progress = progress;
 		this.recursive = recursive;
@@ -176,14 +178,16 @@ public final class FileTransfer {
 
 	private void copyStreams(TNFSMount mount, ProgressBar pb, SeekableByteChannel o, SeekableByteChannel f)
 			throws IOException {
-		var buf = ByteBuffer.allocate(mount.client().messageSize());
-		var rd = 0;
-		while ((rd = f.read(buf)) != -1) {
-			buf.flip();
-			o.write(buf);
-			buf.clear();
-			if (pb != null)
-				pb.stepBy(rd);
+		try(var lease = bufferPool.acquire(mount.client().size())) {
+			var buf = lease.buffer();
+			var rd = 0;
+			while ((rd = f.read(buf)) != -1) {
+				buf.flip();
+				o.write(buf);
+				buf.clear();
+				if (pb != null)
+					pb.stepBy(rd);
+			}	
 		}
 	}
 

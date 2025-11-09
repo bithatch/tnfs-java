@@ -20,6 +20,7 @@
  */
 package uk.co.bithatch.tnfs.lib;
 
+import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -32,6 +33,35 @@ public class Util {
 
 	private static final long MS_IN_HOUR = TimeUnit.HOURS.toMillis(1);
 	private static final long MS_IN_MINUTE = TimeUnit.MINUTES.toMillis(1);
+
+
+	/**
+	 * {@link ByteBuffer#slice()} does not preserve byte order which
+	 * we general need to do. 
+	 * 
+	 * @param buffer original buffer
+	 * @param offset offset
+	 * @param length length
+	 * @return sliced buffer with same byte order
+	 */
+	public static ByteBuffer sliceAndOrder(ByteBuffer buffer, int offset, int length) {
+		var slice = buffer.slice(offset, length);
+		slice.order(buffer.order());
+		return slice;
+	}
+
+	/**
+	 * {@link ByteBuffer#slice()} does not preserve byte order which
+	 * we general need to do. 
+	 * 
+	 * @param buffer original buffer
+	 * @return sliced buffer with same byte order
+	 */
+	public static ByteBuffer sliceAndOrder(ByteBuffer buffer) {
+		var slice = buffer.slice();
+		slice.order(buffer.order());
+		return slice;
+	}
 
 	public static Optional<String> emptyOptionalIfBlank(String str) {
 		return "".equals(str) ? Optional.empty() : Optional.ofNullable(str);

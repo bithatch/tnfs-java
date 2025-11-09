@@ -26,19 +26,39 @@ import java.util.Optional;
 
 public class AbstractBuilder<BLDR extends AbstractBuilder<BLDR>> {
 
-	protected Optional<Integer> port = Optional.empty();
-	protected Optional<Integer> messageSize = Optional.empty();
+	protected Optional<Integer> port = Optional.of(TNFS.DEFAULT_PORT);
+	protected Optional<Integer> size = Optional.empty();
 	protected Optional<String> hostname = Optional.empty();
 	protected Protocol protocol = Protocol.UDP;
+	protected Optional<ByteBufferPool> bufferPool = Optional.empty();
 
 	/**
-	 * Set the maximum size of a single message. By default, this will be
+	 * Set the maximum size of a read or write i.e. a packet being being received
+	 * from the peer and sent to one. Only use this method if you are working with
+	 * non-standard clients that use the same value. For other cases, it is
+	 * recommended you use the client extension <code>PKTRSZ</code> to negotiate
+	 * packet sizes after a connection is made. The default will be
+	 * {@link TNFS#DEFAULT_UDP_MESSAGE_SIZE} or
+	 * {@link TNFS#DEFAULT_TCP_MESSAGE_SIZE}.
 	 * 
 	 * @return this for chaining
 	 */
 	@SuppressWarnings("unchecked")
-	public BLDR withMessageSize(int messageSize) {
-		this.messageSize = Optional.of(messageSize);
+	public BLDR withSize(int size) {
+		this.size = Optional.of(size);
+		return (BLDR)this;
+	}
+
+	/**
+	 * Use a particular {@link ByteBufferPool}. If not set, a pool will be created
+	 * for this peer, and closed when the peer is closed. 
+	 * 
+	 * @param bufferPool buffer pool
+	 * @return this for chaining
+	 */
+	@SuppressWarnings("unchecked")
+	public BLDR withBufferPool(ByteBufferPool bufferPool) {
+		this.bufferPool = Optional.of(bufferPool);
 		return (BLDR)this;
 	}
 

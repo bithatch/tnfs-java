@@ -58,7 +58,7 @@ public class ReadHandler implements TNFSMessageHandler {
 			}
 			else {
 				dh.buffer().clear();
-				var maxBytes = context.session().server().messageSize() - Message.HEADER_SIZE - 3;
+				var maxBytes = context.session().size() - Message.HEADER_SIZE - 3;
 				dh.buffer().limit(Math.min(read.size(), maxBytes));
 				var rd = dh.channel().read(dh.buffer());
 				if(rd == -1) {

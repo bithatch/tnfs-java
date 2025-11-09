@@ -63,11 +63,17 @@ public class ReadDirXHandler implements TNFSMessageHandler {
 			else {
 				if(dh.hasNext()) {
 					var l = new ArrayList<Entry>();
-					var sz = context.session().server().messageSize() - 5 - Message.HEADER_SIZE;
+					var sz = context.session().size() - 5 - Message.HEADER_SIZE;
 
 					while(dh.hasNext() && (dirx.entries() == 0 || l.size() < dirx.entries())) {
 						var entry = dh.next();
 						sz -= entry.encodedSize();
+
+
+						if(LOG.isDebugEnabled()) {
+							LOG.debug("Entry {} ({} bytes), leaves {} bytes", entry.name(), entry.encodedSize(), sz);
+						}
+						
 						if(sz < 0) {
 							dh.setNext(entry);
 							break;

@@ -67,7 +67,7 @@ public class Get extends TNFSTPCommand implements Callable<Integer> {
 
 		var localFile = Files.isDirectory(localDest) ? localDest.resolve(Util.basename(file)) : localDest;
 		
-		new FileTransfer(force, !noProgress, recursive, container.getSeparator()).remoteToLocal(mount, file, localFile);
+		new FileTransfer(mount.client().bufferPool(), force,  !noProgress, recursive, container.getSeparator()).remoteToLocal(mount, file, localFile);
 			System.out.println("Downloaded " + file + " to " + localFile);
 
 		return 0;

@@ -22,21 +22,57 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<parent>
 		<groupId>uk.co.bithatch</groupId>
 		<artifactId>tnfs-java</artifactId>
 		<version>0.9.0-SNAPSHOT</version>
 		<relativePath>../</relativePath>
 	</parent>
-	<artifactId>tnfs-java-client</artifactId>
-	<name>Java TNFS - Client Library</name>
+	<modelVersion>4.0.0</modelVersion>
+	<properties>
+		<!--<maven.compiler.release>22</maven.compiler.release>-->
+	</properties>
+	<artifactId>tnfs-java-it</artifactId>
+	<name>Java TNFS - Integration Tests</name>
+	<description>Tests the server and client, either with each other or with an external TNFS server (e.g. reference implementation).</description>
 	<dependencies>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
-			<artifactId>tnfs-java-lib</artifactId>
+			<artifactId>tnfs-java-client</artifactId>
 			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>tnfs-java-server</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<version>5.14.1</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.junit.platform</groupId>
+			<artifactId>junit-platform-launcher</artifactId>
+			<version>1.14.1</version>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<release>17</release>
+					<testRelease>17</testRelease>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
 </project>

@@ -18,61 +18,36 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package uk.co.bithatch.tnfs.server.handlers;
-
-import java.nio.ByteBuffer;
-import java.util.Arrays;
+package uk.co.bithatch.tnfs.server.extensions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.co.bithatch.tnfs.lib.Command;
-import uk.co.bithatch.tnfs.lib.Command.Open;
 import uk.co.bithatch.tnfs.lib.Command.Result;
 import uk.co.bithatch.tnfs.lib.Message;
 import uk.co.bithatch.tnfs.lib.ResultCode;
-import uk.co.bithatch.tnfs.server.FileHandle;
+import uk.co.bithatch.tnfs.lib.extensions.Extensions;
+import uk.co.bithatch.tnfs.lib.extensions.Extensions.PktSize;
 import uk.co.bithatch.tnfs.server.TNFSMessageHandler;
 import uk.co.bithatch.tnfs.server.Tasks;
 
-public class OpenHandler implements TNFSMessageHandler {
-	public final static Logger LOG = LoggerFactory.getLogger(OpenHandler.class);
+public class PktSzHandler implements TNFSMessageHandler {
+	public final static Logger LOG = LoggerFactory.getLogger(PktSzHandler.class);
 
 	@Override
 	public Result handle(Message message, HandlerContext context) {
-
+		PktSize sum = message.payload();
 		return Tasks.ioCall(() -> {
-			
-			Open open = message.payload();
-			
-			if(LOG.isDebugEnabled()) {
-				LOG.debug("{}. Path: {} Mode: {} Flags: {}",
-						Command.OPEN.name(),
-						open.path(), 
-						Arrays.asList(open.mode()), Arrays.asList(open.flags()));
-			}
-			
-			var fh = context.session().mount().open(
-					open.path(),
-					open.mode(),
-					open.flags()
-					);
-			
-			int key;
-			synchronized(context.fileHandles()) {
-				key = context.nextFileHandle();
-				context.fileHandles().put(key, new FileHandle(fh, ByteBuffer.allocate(context.session().size())));
-			}
+			context.session().size(sum.size());
+			return new Extensions.PktSizeResult(ResultCode.SUCCESS, context.session().size());
 
-				
-			LOG.info("Opened file {}, handle {} (flags {}, mode {})", open.path(), key, Arrays.asList(open.mode()), Arrays.asList(open.flags()));
-			return new Command.HandleResult(ResultCode.SUCCESS, key);
 		});
 	}
 
 	@Override
 	public Command<?, ?> command() {
-		return Command.OPEN;
+		return Extensions.PKTSZ;
 	}
-	
+
 }

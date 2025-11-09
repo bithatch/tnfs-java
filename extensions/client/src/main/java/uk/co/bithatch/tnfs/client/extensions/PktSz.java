@@ -18,8 +18,22 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-module uk.co.bithatch.tnfs.lib {
-	exports uk.co.bithatch.tnfs.lib;
-	requires java.xml;
-	requires org.slf4j;
+package uk.co.bithatch.tnfs.client.extensions;
+
+import java.io.IOException;
+
+import uk.co.bithatch.tnfs.client.TNFSMountExtension.AbstractTNFSMountExtension;
+import uk.co.bithatch.tnfs.lib.Message;
+import uk.co.bithatch.tnfs.lib.extensions.Extensions;
+import uk.co.bithatch.tnfs.lib.extensions.Extensions.PktSizeResult;
+
+public class PktSz extends AbstractTNFSMountExtension {
+
+	public PktSizeResult packetSize(int size) throws IOException {
+		var client = mount.client();
+		var res = client.sendMessage(Extensions.PKTSZ, Message.of(mount.sessionId(), Extensions.PKTSZ, new Extensions.PktSize(size)));
+		client.size(res.size());
+		return res;
+	}
+
 }

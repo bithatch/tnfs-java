@@ -39,8 +39,12 @@ pipeline {
 									withCredentials([usernamePassword(credentialsId: 'bithatch-ftp-upload', passwordVariable: 'FTP_UPLOAD_PASSWORD', usernameVariable: 'FTP_UPLOAD_USERNAME')]) {
 										sh '''
 									        gpg --import $GPGKEY
+									        
 			                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" \
-			                                    -U clean deploy -P sign,upload-distribution \
+			                                    -U clean deploy -P sign
+			                                    
+			                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" \
+			                                    -U deploy -P upload-distribution \
 			                                    -Dbuild.uploadPassword="$FTP_UPLOAD_PASSWORD" -Dbuild.uploadUsername=$FTP_UPLOAD_USERNAME
 			                                '''
 										}
@@ -78,8 +82,8 @@ pipeline {
 					 		) {		
 								withCredentials([usernamePassword(credentialsId: 'bithatch-ftp-upload', passwordVariable: 'FTP_UPLOAD_PASSWORD', usernameVariable: 'FTP_UPLOAD_USERNAME')]) {			 		  	
 	                                sh '''
-	                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" \
-	                                    -U -P native-image,upload-distribution clean package \
+	                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" -DskipTests \
+	                                    -U -P native-image,upload-distribution clean deploy \
 			                            -Dbuild.uploadPassword="$FTP_UPLOAD_PASSWORD" -Dbuild.uploadUsername=$FTP_UPLOAD_USERNAME
 	                                '''
 	                            }
@@ -115,8 +119,8 @@ pipeline {
 					 		) {
 								withCredentials([usernamePassword(credentialsId: 'bithatch-ftp-upload', passwordVariable: 'FTP_UPLOAD_PASSWORD', usernameVariable: 'FTP_UPLOAD_USERNAME')]) {					 		  	
 	                                sh '''
-	                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" \
-	                                    -U -P native-image,upload-distribution clean package \
+	                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" -DskipTests \
+	                                    -U -P native-image,upload-distribution clean deploy \
 				                        -Dbuild.uploadPassword="$FTP_UPLOAD_PASSWORD" -Dbuild.uploadUsername=$FTP_UPLOAD_USERNAME
 	                                '''
 	                            }
@@ -152,8 +156,8 @@ pipeline {
 					 		) {	
 								withCredentials([usernamePassword(credentialsId: 'bithatch-ftp-upload', passwordVariable: 'FTP_UPLOAD_PASSWORD', usernameVariable: 'FTP_UPLOAD_USERNAME')]) {			 		  	
 	                                sh '''
-	                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" \
-	                                    -U -P native-image,upload-distribution clean package \
+	                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" -DskipTests \
+	                                    -U -P native-image,upload-distribution clean deploy \
 				                        -Dbuild.uploadPassword="$FTP_UPLOAD_PASSWORD" -Dbuild.uploadUsername=$FTP_UPLOAD_USERNAME
 	                                '''
 	                            }
@@ -190,8 +194,8 @@ pipeline {
 					 		) {	
 								withCredentials([usernamePassword(credentialsId: 'bithatch-ftp-upload', passwordVariable: 'FTP_UPLOAD_PASSWORD', usernameVariable: 'FTP_UPLOAD_USERNAME')]) {			 		  	
 	                                bat '''
-	                                mvn "-Dbuild.projectProperties=%BUILD_PROPERTIES%" \
-	                                    -U -P native-image,installer,upload-distribution clean package \
+	                                mvn "-Dbuild.projectProperties=%BUILD_PROPERTIES%" -DskipTests \
+	                                    -U -P native-image,installer,upload-distribution clean deploy \
 				                        -Dbuild.uploadPassword="%FTP_UPLOAD_PASSWORD%" -Dbuild.uploadUsername=%FTP_UPLOAD_USERNAME%
 	                                '''
 	                            }

@@ -24,6 +24,9 @@ import java.io.IOException;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -114,10 +117,10 @@ public interface TNFSMount extends TNFSFileAccess {
 	/**
 	 * Recursively visit all all entries at the specified path.
 	 *
-	 * @param path
-	 * @param visitor
-	 * @return
-	 * @throws IOException
+	 * @param path path to visit
+	 * @param visitor visitor
+	 * @return result
+	 * @throws IOException on I/O error
 	 */
 	FileVisitResult visit(String path, FileVisitor<TNFSFile> visitor) throws IOException;
 
@@ -129,4 +132,63 @@ public interface TNFSMount extends TNFSFileAccess {
 	 * @return username
 	 */
 	Optional<String> username();
+
+	/**
+	 * Create a new file, throwing an exception if it already exists. The file handle
+	 * is immediately closed if successful.
+	 * 
+	 * @param path
+	 * @throws IOException on I/O error
+	 */
+	default void newFile(String path) throws IOException {
+		open(path, OpenFlag.CREATE, OpenFlag.EXCLUSIVE).close();;
+	}
+	
+	/**
+	 * Recursively delete this folder (or file). Obviously, use with caution! TNFS
+	 * does not support symbolic links, so they will not be followed.
+	 * 
+	 * @param path path to delete
+	 * @throws IOException on I/O error
+	 */
+	default void deleteRecursively(String path) throws IOException {
+		visit(path, new SimpleFileVisitor<TNFSFile>() {
+			@Override
+			public FileVisitResult preVisitDirectory(TNFSFile dir, BasicFileAttributes attrs) throws IOException {
+				if (attrs.isSymbolicLink()) {
+					return FileVisitResult.SKIP_SUBTREE;
+				}
+				return super.preVisitDirectory(dir, attrs);
+			}
+
+			@Override
+			public FileVisitResult visitFile(TNFSFile file, BasicFileAttributes attrs) throws IOException {
+				unlink(file.path());
+				return FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult postVisitDirectory(TNFSFile dir, IOException exc) throws IOException {
+				rmdir(dir.path());
+				return FileVisitResult.CONTINUE;
+			}
+		});
+	}
+
+	/**
+	 * Convenience method to test if a file exists.
+	 * 
+	 * @param path path 
+	 * @return exists
+	 * @throws IOException on I/O error
+	 */
+	default boolean exists(String path) throws IOException {
+		try {
+			stat(path);
+			return true;
+		}
+		catch(NoSuchFileException nsfe) {
+			return false;
+		}
+	}
 }
