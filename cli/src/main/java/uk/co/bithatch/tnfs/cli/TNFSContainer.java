@@ -141,4 +141,18 @@ public interface TNFSContainer {
 	 * @return translated path
 	 */
 	String localToNativePath(String path);
+
+	/**
+	 * Unmount.
+	 * 
+	 * @throws IOException on error
+	 */
+	void unmount() throws IOException;
+
+	/**
+	 * Get if mounted.
+	 * 
+	 * @return mounted
+	 */
+	boolean isMounted();
 }

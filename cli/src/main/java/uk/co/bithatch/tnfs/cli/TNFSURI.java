@@ -223,6 +223,8 @@ public class TNFSURI {
 		   !uri.toLowerCase().startsWith("tnfst:") && 
 		   ( uri.matches("^[a-zA-Z\\.-]+:.*") || ( uri.matches("^[a-zA-Z\\.-]+$") ) ) ) {
 			
+			uri = uri.replace('\\', '/');
+			
 			if(!uri.startsWith("//")) {
 				uri = "//" + uri;
 			}

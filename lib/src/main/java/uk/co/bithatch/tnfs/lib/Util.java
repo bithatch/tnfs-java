@@ -305,12 +305,12 @@ public class Util {
 	 * @return concatenated path
 	 */
 	public static String concatenatePaths(String path, String filename, String sep) {
-		if (filename.startsWith("./"))
+		if (filename.startsWith("." + sep))
 			filename = filename.substring(2);
-		while (path.endsWith("/")) {
+		while (path.endsWith(sep)) {
 			path = path.substring(0, path.length() - 1);
 		}
-		return path + "/" + filename;
+		return path + sep + filename;
 	}
 
 	/**

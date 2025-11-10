@@ -187,6 +187,11 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 	}
 
 	@Override
+	public String getSeparator() {
+		return getSeparator(false);
+	}
+
+	@Override
 	public TNFSMount getMount() {
 		return mount;
 	}
@@ -262,6 +267,11 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 	}
 
 	@Override
+	public boolean isMounted() {
+		return mount != null;
+	}
+
+	@Override
 	public void startIfNotStarted() throws Exception {
 		if(uri == null) {
 			setupLogging();
@@ -272,20 +282,33 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 	@Override
 	public String nativeToLocalPath(String cwd) {
 		/* TODO what if path has escaped forward slash? */
-		var sep = getSeparator();
-		if(!sep.equals("/"))
-			return cwd.replace("/", sep);
-		else
-			return cwd.replace("\\", sep);
+		if(isWindowsParsing()) {
+			return cwd.replace("/", getSeparator(false));
+		}
+		return cwd;
 	}
+	
 	@Override
 	public String localToNativePath(String cwd) {
 		/* TODO what if path has escaped forward slash? */
-		var sep = getSeparator();
-		if(sep.equals("/"))
-			return cwd.replace("/", sep);
-		else
-			return cwd.replace("\\", sep);
+		if(isWindowsParsing())
+			return cwd.replace("\\", "/");
+		return cwd;
+	}
+
+	@Override
+	public void unmount() throws IOException {
+		if(mount == null) {
+			throw new IllegalStateException("Not mounted.");
+		}
+		else {
+			try {
+				mount.close();
+			}
+			finally {
+				mount = null;
+			}
+		}
 	}
 
 	protected void onStart() throws IOException {
@@ -531,11 +554,6 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 			configureCommandLine(cl);
 			cl.execute(args);
 		}
-	}
-
-
-	public String getSeparator() {
-		return getSeparator(reader.isSet(LineReader.Option.USE_FORWARD_SLASH));
 	}
 	
 

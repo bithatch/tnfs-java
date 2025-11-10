@@ -41,7 +41,7 @@ public class Mounts extends TNFSTPCommand implements Callable<Integer> {
 		var cntnr = getContainer();
 		var wtr = cntnr.getTerminal().writer();
 		var ext = cntnr.getClient().extension(uk.co.bithatch.tnfs.client.extensions.Mounts.class);
-		ext.mounts().forEach(wtr::println);
+		ext.mounts().forEach(m -> wtr.println(cntnr.nativeToLocalPath(m)));
 		wtr.flush();
 		
 		return 0;

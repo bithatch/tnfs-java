@@ -20,12 +20,13 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
+import static uk.co.bithatch.tnfs.lib.Util.relativizePath;
+
 import java.util.concurrent.Callable;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
-import uk.co.bithatch.tnfs.lib.Util;
 
 /**
  * Remove file command.
@@ -44,8 +45,8 @@ public class Rm extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var sftp = container.getMount();
-		file = Util.relativizePath(container.getCwd(), file, container.getSeparator());
-		sftp.unlink(file);
+		file = relativizePath(container.getCwd(), file, container.getSeparator());
+		sftp.unlink(container.localToNativePath(file));
 		return 0;
 	}
 }

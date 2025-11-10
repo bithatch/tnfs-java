@@ -20,6 +20,8 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
+import static uk.co.bithatch.tnfs.lib.Util.relativizePath;
+
 import java.util.concurrent.Callable;
 
 import picocli.CommandLine.Command;
@@ -27,7 +29,6 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
 import uk.co.bithatch.tnfs.client.extensions.Sum;
-import uk.co.bithatch.tnfs.lib.Util;
 import uk.co.bithatch.tnfs.lib.extensions.Extensions.Checksum;
 
 /**
@@ -50,8 +51,8 @@ public class ChkSum extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var sum = container.getMount().extension(Sum.class);
-		file = Util.relativizePath(container.getCwd(), file, container.getSeparator());
-		System.out.format("%s %s%n", sum.sum(type, file), file);
+		file = relativizePath(container.getCwd(), file, container.getSeparator());
+		System.out.format("%s %s%n", sum.sum(type, container.localToNativePath(file)), file);
 		return 0;
 	}
 }

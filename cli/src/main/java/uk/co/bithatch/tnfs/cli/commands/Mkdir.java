@@ -20,12 +20,13 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
+import static uk.co.bithatch.tnfs.lib.Util.relativizePath;
+
 import java.util.concurrent.Callable;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
-import uk.co.bithatch.tnfs.lib.Util;
 
 /**
  * Make directory command.
@@ -44,8 +45,8 @@ public class Mkdir extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var sftp = container.getMount();
-		directory = Util.relativizePath(container.getCwd(), directory, container.getSeparator());
-		sftp.mkdir(directory);
+		directory = relativizePath(container.getCwd(), directory, container.getSeparator());
+		sftp.mkdir(container.localToNativePath(directory));
 		return 0;
 	}
 }

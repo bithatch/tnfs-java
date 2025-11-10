@@ -22,6 +22,7 @@ package uk.co.bithatch.tnfs.cli;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.concurrent.Delayed;
 
 import org.jline.terminal.Terminal;
 
@@ -140,5 +141,15 @@ public class InteractiveConsole implements Runnable, TNFSContainer {
 	@Override
 	public String localToNativePath(String path) {
 		return cntr.localToNativePath(path);
+	}
+
+	@Override
+	public void unmount() throws IOException {
+		cntr.unmount();
+	}
+
+	@Override
+	public boolean isMounted() {
+		return cntr.isMounted();
 	}
 }

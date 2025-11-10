@@ -21,10 +21,9 @@
 package uk.co.bithatch.tnfs.client.extensions;
 
 import java.io.IOException;
-import java.util.Optional;
+import java.util.Arrays;
 import java.util.stream.Stream;
 
-import uk.co.bithatch.tnfs.client.AbstractTNFSMount.ReadDirIterator;
 import uk.co.bithatch.tnfs.client.TNFSClientExtension.AbstractTNFSClientExtension;
 import uk.co.bithatch.tnfs.lib.Message;
 import uk.co.bithatch.tnfs.lib.extensions.Extensions;
@@ -32,11 +31,7 @@ import uk.co.bithatch.tnfs.lib.extensions.Extensions;
 public class Mounts extends AbstractTNFSClientExtension {
 
 	public Stream<String> mounts() throws IOException {
-		return ReadDirIterator.stream(
-				client,
-				0, 
-				client.sendMessage(Extensions.MOUNTS, Message.of(0, Extensions.MOUNTS, new Extensions.Mounts())), 
-				Optional.empty()
-			);
+		return Arrays.asList(client.sendMessage(Extensions.MOUNTS,
+				Message.of(0, Extensions.MOUNTS, new Extensions.Mounts())).mounts()).stream();
 	}
 }

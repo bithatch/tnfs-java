@@ -20,13 +20,14 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
+import static uk.co.bithatch.tnfs.lib.Util.relativizePath;
+
 import java.util.concurrent.Callable;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
 import uk.co.bithatch.tnfs.client.extensions.Copy;
-import uk.co.bithatch.tnfs.lib.Util;
 
 /**
  * Copy (remote) file command.
@@ -48,9 +49,9 @@ public class Cp extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var ext = container.getMount().extension(Copy.class);
-		file = Util.relativizePath(container.getCwd(), file, container.getSeparator());
-		targetFile = Util.relativizePath(container.getCwd(), targetFile, container.getSeparator());
-		ext.copy(file, targetFile);
+		file = relativizePath(container.getCwd(), file, container.getSeparator());
+		targetFile = relativizePath(container.getCwd(), targetFile, container.getSeparator());
+		ext.copy(container.localToNativePath(file), container.localToNativePath(targetFile));
 		return 0;
 	}
 }

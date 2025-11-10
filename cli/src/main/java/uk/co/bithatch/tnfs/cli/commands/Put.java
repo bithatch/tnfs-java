@@ -20,6 +20,9 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
+import static uk.co.bithatch.tnfs.lib.Util.basename;
+import static uk.co.bithatch.tnfs.lib.Util.relativizePath;
+
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
@@ -31,7 +34,6 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
 import uk.co.bithatch.tnfs.lib.OpenFlag;
-import uk.co.bithatch.tnfs.lib.Util;
 
 /**
  * Put file command.
@@ -58,15 +60,15 @@ public class Put extends TNFSTPCommand implements Callable<Integer> {
 		var path =  container.getLcwd().resolve(file);
 
 		try(var f = Files.newByteChannel(path, StandardOpenOption.READ)) {
-			var base = Util.basename(file);
-    		var target = Util.relativizePath(container.getCwd(), base, container.getSeparator());
+			var base = basename(file);
+    		var target = relativizePath(container.getCwd(), base, container.getSeparator());
 
 //			var transfers = getContainer().getTransferHost();
 
     		try (ProgressBar pb = new ProgressBar(base, Files.size(path))) {
 //			transfers.startedTransfer(path.toString(), target, Files.size(path));
     		
-				try(var o = mnt.open(target, OpenFlag.WRITE, OpenFlag.TRUNCATE, OpenFlag.CREATE)) {
+				try(var o = mnt.open(container.localToNativePath(target), OpenFlag.WRITE, OpenFlag.TRUNCATE, OpenFlag.CREATE)) {
 					var buf = ByteBuffer.allocate(LOCAL_READ_BUFFER_SIZE);
 					while( ( f.read(buf) ) != -1) {
 						buf.flip();

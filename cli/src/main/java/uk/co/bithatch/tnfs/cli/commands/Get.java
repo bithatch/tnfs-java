@@ -20,6 +20,8 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
+import static uk.co.bithatch.tnfs.lib.Util.relativizePath;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -35,16 +37,16 @@ import uk.co.bithatch.tnfs.lib.Util;
 /**
  * Get command.
  */
-@Command(name = "get", aliases = { "download"}, mixinStandardHelpOptions = true, description = "Download remote file.")
+@Command(name = "get", aliases = { "download" }, mixinStandardHelpOptions = true, description = "Download remote file.")
 public class Get extends TNFSTPCommand implements Callable<Integer> {
-	
-	@Option(names = {"-r", "--recursive"}, description = "Recursively copy directories.")
+
+	@Option(names = { "-r", "--recursive" }, description = "Recursively copy directories.")
 	private boolean recursive;
-	
-	@Option(names = {"-f", "--force"}, description = "Force overwriting existing local files.")
+
+	@Option(names = { "-f", "--force" }, description = "Force overwriting existing local files.")
 	private boolean force;
-	
-	@Option(names = {"-g", "--no-progress-bar"}, description = "No progress bar.")
+
+	@Option(names = { "-g", "--no-progress-bar" }, description = "No progress bar.")
 	private boolean noProgress = false;
 
 	@Parameters(index = "0", arity = "1", description = "Remote file or directory to retrieve.")
@@ -52,7 +54,7 @@ public class Get extends TNFSTPCommand implements Callable<Integer> {
 
 	@Parameters(index = "0", arity = "0..1", description = "Path to download file to.")
 	private Optional<Path> destination;
-	
+
 	public Get() {
 		super(FilenameCompletionMode.REMOTE);
 	}
@@ -61,14 +63,22 @@ public class Get extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var mount = container.getMount();
-		var localDest =  destination.map(d -> container.getLcwd().resolve(d)).orElseGet(container::getLcwd);
-		
-		file = Util.relativizePath(container.getCwd(), file, container.getSeparator());
+		var localDest = destination.map(d -> container.getLcwd().resolve(d)).orElseGet(container::getLcwd);
 
-		var localFile = Files.isDirectory(localDest) ? localDest.resolve(Util.basename(file)) : localDest;
+		file = relativizePath(container.getCwd(), file, container.getSeparator());
+
+		var localFile = Files.isDirectory(localDest) 
+				? localDest.resolve(Util.basename(file)) 
+				: localDest;
+
+		new FileTransfer(
+				mount.client().bufferPool(), 
+				force, 
+				!noProgress, 
+				recursive, 
+				container.getSeparator()).remoteToLocal(mount, container.localToNativePath(file), localFile);
 		
-		new FileTransfer(mount.client().bufferPool(), force,  !noProgress, recursive, container.getSeparator()).remoteToLocal(mount, file, localFile);
-			System.out.println("Downloaded " + file + " to " + localFile);
+		System.out.println("Downloaded " + file + " to " + localFile);
 
 		return 0;
 	}

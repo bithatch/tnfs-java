@@ -48,23 +48,29 @@ public class Mount extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var oldUri = container.getURI();
-		var newUri = TNFSURI.parse(oldUri, destination);
+		var newUri = TNFSURI.parse(oldUri, container.localToNativePath(destination));
 		
 		if(!newUri.isSameServer(oldUri)) {
 			try {
-				container.getClient().close();
+				if(getContainer().isMounted()) {
+					getContainer().unmount();
+				}
 			}
-			catch(Exception e) {
-				var cmdline = getContainer().getSpec().commandLine(); 
-				cmdline.getExecutionExceptionHandler().handleExecutionException(e, cmdline, null);
+			finally {
+				try {
+					container.getClient().close();
+				}
+				catch(Exception e) {
+					var cmdline = getContainer().getSpec().commandLine(); 
+					cmdline.getExecutionExceptionHandler().handleExecutionException(e, cmdline, null);
+				}
+	
+				container.connect(newUri);
 			}
-
-			container.connect(newUri);
 		}
-
-		if(unmountFirst) {
+		else if(unmountFirst && getContainer().isMounted()) {
 			try {
-				getContainer().getMount().close();
+				getContainer().unmount();
 			}
 			catch(Exception e) {
 				var cmdline = getContainer().getSpec().commandLine(); 

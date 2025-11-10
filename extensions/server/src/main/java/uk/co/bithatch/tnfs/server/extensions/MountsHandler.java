@@ -28,7 +28,6 @@ import uk.co.bithatch.tnfs.lib.Command.Result;
 import uk.co.bithatch.tnfs.lib.Message;
 import uk.co.bithatch.tnfs.lib.ResultCode;
 import uk.co.bithatch.tnfs.lib.extensions.Extensions;
-import uk.co.bithatch.tnfs.server.DirHandle;
 import uk.co.bithatch.tnfs.server.TNFSMessageHandler;
 import uk.co.bithatch.tnfs.server.Tasks;
 
@@ -44,15 +43,7 @@ public class MountsHandler implements TNFSMessageHandler {
 			}
 			
 			var stream = context.server().fileSystemService().mounts().stream().map(m -> m.fs().mountPath());
-			
-			int key;
-			synchronized(context.dirHandles()) {
-				key = context.nextDirHandle();
-				context.dirHandles().put(key, new DirHandle(stream));
-			}
-			
-			LOG.info("Opened mmounts listing. Handle: {} [{}]", key, String.format("%04x", key));
-			return new Command.HandleResult(ResultCode.SUCCESS, key);
+			return new Extensions.MountsResult(ResultCode.SUCCESS, stream.toList().toArray(new String[0]));
 		});
 	}
 

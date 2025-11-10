@@ -20,13 +20,14 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
+import static uk.co.bithatch.tnfs.lib.Util.relativizePath;
+
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
-import uk.co.bithatch.tnfs.lib.Util;
 
 /**
  * Stat file.
@@ -45,9 +46,12 @@ public class Stat extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var mount = container.getMount();
-		file = Util.relativizePath(container.getCwd(), file, container.getSeparator());
-		var stat = mount.stat(file);
+		
+		file = relativizePath(container.getCwd(), file, container.getSeparator());
+		
+		var stat = mount.stat(container.localToNativePath(file));
 		var wtr = getContainer().getTerminal().writer();
+		
 		wtr.println(String.format("%s %7d %7d %10d %10d %10d \"%s\" \"%s\"", stat.isDirectory() ? "d" : "-", stat.uid(), stat.gid(), stat.atime().to(TimeUnit.SECONDS), stat.ctime().to(TimeUnit.SECONDS), stat.mtime().to(TimeUnit.SECONDS), stat.uidString(), stat.gidString()));
 		return 0;
 	}

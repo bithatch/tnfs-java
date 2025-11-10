@@ -20,6 +20,8 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
+import static uk.co.bithatch.tnfs.lib.Util.basename;
+
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
@@ -92,7 +94,7 @@ public class Ls extends TNFSTPCommand implements Callable<Integer> {
 		var dirOptions = new ArrayList<DirOptionFlag>();
 		var dirSort = new ArrayList<DirSortFlag>();
 		var apath = container.localToNativePath(path.orElseGet(container::getCwd));
-		var base = Util.basename(apath);
+		var base = basename(apath);
 		var wildcard = "";
         var resolver = Styles.lsStyle();
 		

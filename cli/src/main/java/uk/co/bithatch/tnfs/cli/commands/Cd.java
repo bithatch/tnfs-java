@@ -20,13 +20,14 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
+import static uk.co.bithatch.tnfs.lib.Util.relativizePath;
+
 import java.nio.file.NotDirectoryException;
 import java.util.concurrent.Callable;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
-import uk.co.bithatch.tnfs.lib.Util;
 
 /**
  * Change directory.
@@ -47,7 +48,7 @@ public class Cd extends TNFSTPCommand implements Callable<Integer> {
 		var mount = container.getMount();
 
 		if (directory != null && directory.length() > 0) {
-			directory = Util.relativizePath(container.getCwd(), directory, container.getSeparator());
+			directory = relativizePath(container.getCwd(), directory, container.getSeparator());
 			var file = mount.stat(container.localToNativePath(directory));
 			if (file.isDirectory()) {
 				container.setCwd(directory);

@@ -85,6 +85,9 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 
     @Option(names = { "-L", "--log-level" }, paramLabel = "LEVEL", description = "Logging level for trouble-shooting.")
     private Optional<AppLogLevel> level;
+
+    @Option(names = { "-F", "--log-file" }, paramLabel = "LOGFILE", description = "Path to the log file.")
+    private Optional<Path> logFile;
     
     @Spec
     private CommandSpec spec;
@@ -125,8 +128,10 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 		        }
 	        }
     		
-	    	/* Logging */
+	    	/* Logging. Must happen before ANY loggers are created  */
 			System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", level.orElse(AppLogLevel.WARN).name());
+			System.setProperty("org.slf4j.simpleLogger.logFile", logFile.map(Path::toString).orElse("System.out"));
+			
 			log = LoggerFactory.getLogger(TNFSDaemon.class);
     		
     		configuration = new Configuration(monitor, configurationDir, userConfiguration);

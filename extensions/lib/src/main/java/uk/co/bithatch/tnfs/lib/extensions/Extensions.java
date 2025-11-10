@@ -22,9 +22,9 @@ package uk.co.bithatch.tnfs.lib.extensions;
 
 import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.util.ArrayList;
 
 import uk.co.bithatch.tnfs.lib.Command;
-import uk.co.bithatch.tnfs.lib.Command.HandleResult;
 import uk.co.bithatch.tnfs.lib.Command.HeaderOnlyResult;
 import uk.co.bithatch.tnfs.lib.Command.Result;
 import uk.co.bithatch.tnfs.lib.Encodeable;
@@ -43,7 +43,7 @@ public class Extensions {
 	public final static Command<ClientFinal,ServerFinal> CLNTFINL = new Command<>(0x82, "CLNTFINL", ClientFinal::decode, ClientFinal::encode, ServerFinal::decode);
 	public final static Command<Sum,SumResult> SUM = new Command<>(0x90, "SUM", Sum::decode, Sum::encode, SumResult::decode);
 	public final static Command<Copy,HeaderOnlyResult> COPY = new Command<>(0x91, "COPY", Copy::decode, Copy::encode, HeaderOnlyResult::decode);
-	public final static Command<Mounts,HandleResult> MOUNTS = new Command<>(0x92, "MOUNTS", Mounts::decode, Mounts::encode, HandleResult::decode);
+	public final static Command<Mounts,MountsResult> MOUNTS = new Command<>(0x92, "MOUNTS", Mounts::decode, Mounts::encode, MountsResult::decode);
 	public final static Command<PktSize,PktSizeResult> PKTSZ = new Command<>(0x93, "PKTSZ", PktSize::decode, PktSize::encode, PktSizeResult::decode);
 
 	public record ServerCaps() implements Encodeable {
@@ -222,6 +222,31 @@ public class Extensions {
 
 		@Override
 		public ByteBuffer encode(ByteBuffer buf) {
+			return buf;
+		}
+	}
+
+	public record MountsResult(ResultCode result, String... mounts) implements Result  {
+		
+		public static MountsResult decode(ByteBuffer buf) {
+			var res = Result.decodeResult(buf);
+			var mounts = new ArrayList<String>();
+			var sz = Byte.toUnsignedInt(buf.get());
+			for(var i = 0 ; i < sz; i++) {
+				mounts.add(Encodeable.cString(buf));
+			}
+			return new MountsResult(
+				res,
+				mounts.toArray(new String[0])
+			);
+		}
+
+		@Override
+		public ByteBuffer encodeResult(ByteBuffer buf) {
+			buf.put((byte)mounts.length);
+			for(var m : mounts) {
+				Encodeable.cString(m, buf);
+			}
 			return buf;
 		}
 	}
