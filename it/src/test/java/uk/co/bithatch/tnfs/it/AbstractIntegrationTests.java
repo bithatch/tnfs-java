@@ -20,6 +20,7 @@
  */
 package uk.co.bithatch.tnfs.it;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -27,17 +28,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.nio.ByteBuffer;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.FileAlreadyExistsException;
 
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import uk.co.bithatch.tnfs.client.TNFSClient;
 import uk.co.bithatch.tnfs.client.TNFSClient.Builder;
 import uk.co.bithatch.tnfs.client.TNFSMount;
+import uk.co.bithatch.tnfs.lib.OpenFlag;
+import uk.co.bithatch.tnfs.lib.TNFS;
 
 public abstract class AbstractIntegrationTests {
+	
+	final static Logger LOG = LoggerFactory.getLogger(AbstractIntegrationTests.class);
 	
 	interface TestTask {
 		void run(TNFSClient clnt, ITNFSServer svr) throws Exception;
@@ -49,6 +57,10 @@ public abstract class AbstractIntegrationTests {
 	
 	static {
 //		System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "TRACE");
+		
+		Thread.setDefaultUncaughtExceptionHandler((t,e) -> {
+			LOG.error("Uncaught error in thread.", e);
+		});
 	}
 
 	@Test
@@ -142,6 +154,43 @@ public abstract class AbstractIntegrationTests {
 			assertTrue(items.contains("file1_a"));			
 			assertTrue(items.contains("file2_a"));			
 			assertTrue(items.contains("file3_a"));
+		});
+	}
+
+
+	@Test
+	public void testPutAndGetFile() throws Exception {
+		testPutAndGetFile(16);
+		testPutAndGetFile(255);
+		testPutAndGetFile(256);
+		testPutAndGetFile(TNFS.DEFAULT_UDP_MESSAGE_SIZE);
+		testPutAndGetFile(1024);
+		testPutAndGetFile(1024 * 10);
+		testPutAndGetFile(1024 * 1024);
+		testPutAndGetFile(1024 * 1024 * 6);
+	}
+
+	protected void testPutAndGetFile(long size) throws Exception {
+		LOG.info("Test put then get of {} bytes", size);
+		runMountTest((mnt, clnt, svr) -> {
+			var buf = ByteBuffer.allocateDirect(256);
+			try(var rc = new RandomReadableChannel(256, size, false)) {
+				try(var fc = mnt.open("file1", OpenFlag.CREATE, OpenFlag.WRITE)) {
+					while(rc.read(buf) != -1) {
+						buf.flip();
+						fc.write(buf);
+						buf.clear();
+					}
+				}	
+				
+				try(var dc = new DigestReadableChannel(mnt.open("file1", OpenFlag.READ))) {
+					while(dc.read(buf) != -1) {
+						buf.clear();
+					}
+					
+					assertArrayEquals(rc.digest(), dc.digest());
+				}	
+			}
 		});
 	}
 

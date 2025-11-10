@@ -28,6 +28,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.Channel;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
@@ -349,6 +350,16 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 						LOG.error("UDP message failed.", e);
 					}
 				}
+				
+				LOG.info("Clean exit of UDP server");
+			}
+			catch(AsynchronousCloseException ace) {
+				if(!closed) {
+					throw ace;
+				}
+			}
+			catch(Exception e) {
+				LOG.info("UDP listener failed.", e);
 			}
 
 		}
@@ -381,7 +392,9 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 //	protected final Map<SocketAddress, TNFSPeer> peers = new HashMap<>();
 
 	private final int size;
+	
 	protected final ByteBufferPool bufferPool;
+	protected boolean closed;
 
 	private TNFSServer(
 			Optional<Integer> port,
@@ -427,6 +440,7 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 
 	@Override
 	public void close() throws IOException {
+		closed = true;
 		socketChannel.close();
 	}
 
@@ -451,7 +465,7 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 
 	@Override
 	public void run() {
-		LOG.info("Listening on {} {}:{}", address().getHostString(), address().getPort(), protocol());
+		LOG.info("Listening on {} {}:{}", address().getHostString(), port(), protocol());
 		try {
 			doRun();
 		} catch(RuntimeException re) {
