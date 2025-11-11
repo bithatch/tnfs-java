@@ -32,6 +32,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.FileAlreadyExistsException;
+import java.util.ArrayList;
 
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -135,47 +136,135 @@ public abstract class AbstractIntegrationTests {
 			mnt.newFile("file5");
 			mnt.newFile("file6");
 			mnt.mkdir("newdir_a");
+			mnt.mkdir("newdir_b");
 			mnt.newFile("newdir_a/file1_a");
 			mnt.newFile("newdir_a/file2_a");
 			mnt.newFile("newdir_a/file3_a");
 			
 			var items  = mnt.list().toList();
 			
-			assertEquals(7, items.size());			
+			assertEquals(8, items.size());			
 			assertTrue(items.contains("file1"));			
 			assertTrue(items.contains("file2"));			
 			assertTrue(items.contains("file3"));			
 			assertTrue(items.contains("file4"));			
 			assertTrue(items.contains("file5"));			
-			assertTrue(items.contains("file6"));
+			assertTrue(items.contains("file6"));			
+			assertTrue(items.contains("newdir_a"));			
+			assertTrue(items.contains("newdir_b"));
 
 			items  = mnt.list("/newdir_a").toList();
 			assertEquals(3, items.size());		
 			assertTrue(items.contains("file1_a"));			
 			assertTrue(items.contains("file2_a"));			
 			assertTrue(items.contains("file3_a"));
+
+			items  = mnt.list("/newdir_b").toList();
+			assertEquals(0, items.size());
+
 		});
 	}
 
+	@Test
+	public void testDirectoryList() throws Exception {
+		runMountTest((mnt, clnt, svr) -> {
+			mnt.newFile("file1");
+			mnt.newFile("file2");
+			mnt.newFile("file3");
+			mnt.newFile("file4");
+			mnt.newFile("file5");
+			mnt.newFile("file6");
+			mnt.mkdir("newdir_a");
+			mnt.mkdir("newdir_b");
+			mnt.newFile("newdir_a/file1_a");
+			mnt.newFile("newdir_a/file2_a");
+			mnt.newFile("newdir_a/file3_a");
+			
+			try(var dir = mnt.directory()) {
+				var items = dir.stream().toList();
+				assertEquals(8, items.size());			
+				var names = items.stream().map(i -> i.name()).toList();
+				assertTrue(names.contains("file1"));			
+				assertTrue(names.contains("file2"));			
+				assertTrue(names.contains("file3"));			
+				assertTrue(names.contains("file4"));			
+				assertTrue(names.contains("file5"));			
+				assertTrue(names.contains("file6"));			
+				assertTrue(names.contains("newdir_a"));			
+				assertTrue(names.contains("newdir_b"));
+			}
+			
+			try(var dir = mnt.directory("/newdir_a")) {
+				var items = dir.stream().toList();
+				var names = items.stream().map(i -> i.name()).toList();
+				assertEquals(3, items.size());		
+				assertTrue(names.contains("file1_a"));			
+				assertTrue(names.contains("file2_a"));			
+				assertTrue(names.contains("file3_a"));
+			}
+			
+			try(var dir = mnt.directory("/newdir_b")) {
+				var items = dir.stream().toList();
+				assertEquals(0, items.size());
+			}
+			
+			try(var dir = mnt.directory("/newdir_b/")) {
+				var items = dir.stream().toList();
+				assertEquals(0, items.size());
+			}
+
+		});
+	}
 
 	@Test
 	public void testPutAndGetFile() throws Exception {
-		testPutAndGetFile(16);
-		testPutAndGetFile(255);
-		testPutAndGetFile(256);
-		testPutAndGetFile(TNFS.DEFAULT_UDP_MESSAGE_SIZE);
-		testPutAndGetFile(1024);
-		testPutAndGetFile(1024 * 10);
-		testPutAndGetFile(1024 * 1024);
-		testPutAndGetFile(1024 * 1024 * 6);
+		testPutAndGetFile("file1", 16);
+		testPutAndGetFile("file1", 255);
+		testPutAndGetFile("file1", 256);
+		testPutAndGetFile("file1", TNFS.DEFAULT_UDP_MESSAGE_SIZE);
+		testPutAndGetFile("file1", 1024);
+		testPutAndGetFile("file1", 1024 * 10);
+		testPutAndGetFile("file1", 1024 * 1024);
+		testPutAndGetFile("file1", 1024 * 1024 * 6);
 	}
 
-	protected void testPutAndGetFile(long size) throws Exception {
+	@Test
+	public void testPutAndGetFileThreads() throws Exception {
+		var l = new ArrayList<Thread>();
+		var e = new ArrayList<Exception>();
+		for(int i = 0 ; i < 10 ; i++) {
+			var t = new Thread(() -> {
+				try {
+					testPutAndGetFile("file1", 16);
+					testPutAndGetFile("file1", 255);
+					testPutAndGetFile("file1", 256);
+					testPutAndGetFile("file1", TNFS.DEFAULT_UDP_MESSAGE_SIZE);
+					testPutAndGetFile("file1", 1024);
+					testPutAndGetFile("file1", 1024 * 10);
+					testPutAndGetFile("file1", 1024 * 1024);
+					testPutAndGetFile("file1", 1024 * 1024 * 2);
+				}
+				catch(Exception ex) {
+					ex.printStackTrace();
+					e.add(ex);
+				}
+				
+			}, "testPutAndGetFileThreads-" + i);
+			l.add(t);
+			t.start();
+		}
+		
+		for(var t : l) {
+			t.join(1000 * 60 * 5);
+		}
+	}
+
+	protected void testPutAndGetFile(String filename, long size) throws Exception {
 		LOG.info("Test put then get of {} bytes", size);
 		runMountTest((mnt, clnt, svr) -> {
 			var buf = ByteBuffer.allocateDirect(256);
 			try(var rc = new RandomReadableChannel(256, size, false)) {
-				try(var fc = mnt.open("file1", OpenFlag.CREATE, OpenFlag.WRITE)) {
+				try(var fc = mnt.open(filename, OpenFlag.CREATE, OpenFlag.WRITE)) {
 					while(rc.read(buf) != -1) {
 						buf.flip();
 						fc.write(buf);

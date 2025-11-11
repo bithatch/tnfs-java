@@ -85,8 +85,10 @@ public abstract class AbstractConfiguration {
 		});
 		
 
-		if(!scopes.isEmpty())
+		if(!scopes.isEmpty()) {
 			bldr.withScopes(scopes.toArray(new Scope[0]));
+			bldr.withWriteScope(scopes.get(0));
+		}
 		
 		monitor.ifPresent(bldr::withMonitor);
 		

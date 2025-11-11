@@ -169,7 +169,7 @@ public class TNFSMountVolume implements Volume {
 				catch(IOException ioe) {
 				}
 			}
-			return dir;
+			return dir == null ? false : dir;
 		}
 
 		@Override
@@ -179,7 +179,7 @@ public class TNFSMountVolume implements Volume {
 					stat();
 				} catch (IOException e) { }
 			}
-			return exists;
+			return exists == null ? false : exists;
 		}
 		
 		private StatResult stat() throws IOException {

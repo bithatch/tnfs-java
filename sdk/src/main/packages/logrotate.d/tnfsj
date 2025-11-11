@@ -1,0 +1,9 @@
+/var/log/tnfsj/*.log {
+        daily
+        rotate 7
+        copytruncate
+        missingok
+        create 640 root root
+        compress
+        sharedscripts
+}

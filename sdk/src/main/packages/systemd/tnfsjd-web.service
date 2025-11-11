@@ -1,0 +1,13 @@
+[Unit]
+Description=TNFS Web Server
+
+[Service]
+Type=simple
+ExecStart=/sbin/tnfsjd-web -F /var/log/tnfsj/tnfsjd-web.log -L INFO -C /etc
+User=tnfsj
+Group=tnfsj
+SuccessExitStatus=0
+TimeoutSec=600
+
+[Install]
+WantedBy=multi-user.target

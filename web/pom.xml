@@ -159,6 +159,23 @@
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<configuration>
+					<includeProjectDependencies>true</includeProjectDependencies>
+					<includePluginDependencies>true</includePluginDependencies>
+					<mainClass>picocli.codegen.docgen.manpage.ManPageGenerator</mainClass>
+					<arguments>
+						<argument>--outdir=${project.build.directory}/generated-picocli-docs</argument>
+						<argument>uk.co.bithatch.tnfs.web.TNFSWeb</argument>
+					</arguments>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.asciidoctor</groupId>
+				<artifactId>asciidoctor-maven-plugin</artifactId>
+			</plugin>
         </plugins>
     </build>
     

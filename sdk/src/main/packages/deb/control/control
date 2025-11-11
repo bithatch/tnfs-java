@@ -1,0 +1,23 @@
+Package: [[project.artifactId]]
+Version: [[project.version]]
+Section: comm 
+Priority: optional
+Architecture: [[sdk.assembly.arch]]
+Essential: no
+Installed-Size: 1024
+Recommends: libfuse3-3
+Homepage: https://bithatch.co.uk
+Maintainer: Bithatch <brett@bithatch.co.uk>
+Description: TNFSJ SDK
+ TNFS is a lightweight file system protocol designed for use with retro computers such
+ as Atari, ZX Spectrum and more.
+ 
+ A complete SDK comprising a server, clients, a web based front-end and set of libraries
+ to build your own TNFS applications in Java.
+ 
+  * tnfscp - A file copy tool like cp
+  * tnfstp - An interactive file transfer tool like FTP
+  * tnfsfuse - Mount fuse file systems (requires libfuse3)
+  * tnfsjd - A TNFS server
+  * tnfsjd-web - A web front for browser and manipulating file resources
+  * tnfs-user - User management tool for server

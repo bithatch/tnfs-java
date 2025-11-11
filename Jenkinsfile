@@ -83,7 +83,7 @@ pipeline {
 								withCredentials([usernamePassword(credentialsId: 'bithatch-ftp-upload', passwordVariable: 'FTP_UPLOAD_PASSWORD', usernameVariable: 'FTP_UPLOAD_USERNAME')]) {			 		  	
 	                                sh '''
 	                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" -DskipTests \
-	                                    -U -P native-image,upload-distribution clean deploy \
+	                                    -U -P native-image,package,upload-distribution clean deploy \
 			                            -Dbuild.uploadPassword="$FTP_UPLOAD_PASSWORD" -Dbuild.uploadUsername=$FTP_UPLOAD_USERNAME
 	                                '''
 	                            }
@@ -120,7 +120,7 @@ pipeline {
 								withCredentials([usernamePassword(credentialsId: 'bithatch-ftp-upload', passwordVariable: 'FTP_UPLOAD_PASSWORD', usernameVariable: 'FTP_UPLOAD_USERNAME')]) {					 		  	
 	                                sh '''
 	                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" -DskipTests \
-	                                    -U -P native-image,upload-distribution clean deploy \
+	                                    -U -P native-image,package,upload-distribution clean deploy \
 				                        -Dbuild.uploadPassword="$FTP_UPLOAD_PASSWORD" -Dbuild.uploadUsername=$FTP_UPLOAD_USERNAME
 	                                '''
 	                            }

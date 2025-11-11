@@ -1,0 +1,82 @@
+#!/bin/sh
+# preinst script for [[project.id]]
+
+set -e
+
+# source debconf stuff
+. /usr/share/debconf/confmodule
+
+case "$1" in
+
+	install|upgrade)
+	
+	  # If the package has default file it could be sourced, so that
+	  # the local admin can overwrite the defaults
+	
+	  [ -f "/etc/default/tnfsj" ] && . /etc/default/tnfsj
+	
+	  # Sane defaults:
+	
+	  [ -z "$SERVER_HOME" ] && SERVER_HOME=/usr/share/tnfsj
+	  [ -z "$SERVER_USER" ] && SERVER_USER=tnfsj
+	  [ -z "$SERVER_NAME" ] && SERVER_NAME="TJNFSJ File System and Web Server"
+	  [ -z "$SERVER_GROUP" ] && SERVER_GROUP=tnfsj
+	
+	  # Groups that the user will be added to, if undefined, then none.
+	  ADDGROUP=""
+	
+	  # create user to avoid running server as root
+	  # 1. create group if not existing
+	  echo "Loooking for group $SERVER_GROUP"
+	  if ! getent group | grep -q "^$SERVER_GROUP:" ; then
+	     echo -n "Adding group $SERVER_GROUP.."
+	     addgroup --quiet --system $SERVER_GROUP 2>/dev/null ||true
+	     echo "..done"
+	  fi
+	  
+	  # 2. create homedir if not existing
+	  test -d $SERVER_HOME || mkdir -p $SERVER_HOME	 
+	  mkdir -p $SERVER_HOME/public	 
+	  
+	  # 3. create user if not existing
+	  echo "Loooking for user $SERVER_USER"
+	  if ! getent passwd | grep -q "^$SERVER_USER:"; then
+	    echo -n "Adding system user $SERVER_USER.."
+	    adduser --quiet \
+	            --system \
+	            --ingroup $SERVER_GROUP \
+	            --no-create-home \
+	            --disabled-password \
+	            $SERVER_USER 2>/dev/null || true
+	    echo "..done"
+	  fi
+	  
+	  # 4. adjust passwd entry
+	  usermod -c "$SERVER_NAME" \
+	          -d $SERVER_HOME   \
+	          -g $SERVER_GROUP  \
+	             $SERVER_USER
+	             
+	  # 5. adjust file and directory permissions
+	  if ! dpkg-statoverride --list $SERVER_HOME >/dev/null
+	  then
+		  chown "$SERVER_USER":"$SERVER_GROUP" $SERVER_HOME $SERVER_HOME/public
+		  chmod ug+rwx $SERVER_HOME $SERVER_HOME/public
+	  fi
+	  
+	  # 6. Add the user to the ADDGROUP group
+	  if test -n "$ADDGROUP"
+	  then
+	      if ! groups $SERVER_USER | cut -d: -f2 | \
+	         grep -qw $ADDGROUP; then
+	           adduser $SERVER_USER $ADDGROUP
+	      fi
+	  fi
+	  
+	  mkdir -p /var/log/tnfsj
+	  chown -R "$SERVER_USER":"$SERVER_GROUP" /var/log/tnfsj
+	  ;;
+  
+esac
+
+exit 0

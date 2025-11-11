@@ -329,7 +329,8 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 		while(path != null && !path.toUri().equals(root.toUri())) {
 			if(Files.isSymbolicLink(path)) {
 				return true;
-			}			
+			}	
+			path = path.getParent();
 		}
 		return false;
 	}

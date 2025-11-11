@@ -1,0 +1,13 @@
+[Unit]
+Description=TNFS Server
+
+[Service]
+Type=simple
+ExecStart=/sbin/tnfsjd -F /var/log/tnfsj/tnfsjd.log -L INFO -C /etc
+User=tnfsj
+Group=tnfsj
+SuccessExitStatus=0
+TimeoutSec=600
+
+[Install]
+WantedBy=multi-user.target
