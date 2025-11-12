@@ -34,6 +34,8 @@ package uk.co.bithatch.tnfs.web.elfinder.core.impl;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -220,6 +222,11 @@ public class NIO2FileSystemVolume implements Volume {
     }
 
     @Override
+	public SeekableByteChannel openChannel(Target target, OpenOption... options) throws IOException {
+        return NioHelper.openChannel(fromTarget(target), options);
+	}
+
+	@Override
     public void rename(Target origin, Target destination) throws IOException {
         NioHelper.rename(fromTarget(origin), fromTarget(destination));
     }

@@ -34,6 +34,8 @@ package uk.co.bithatch.tnfs.web.elfinder.core;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.file.OpenOption;
 import java.util.List;
 
 public interface Volume {
@@ -77,6 +79,8 @@ public interface Volume {
     InputStream openInputStream(Target target) throws IOException;
 
     OutputStream openOutputStream(Target target) throws IOException;
+
+    SeekableByteChannel openChannel(Target target, OpenOption... options) throws IOException;
 
     void rename(Target origin, Target destination) throws IOException;
 

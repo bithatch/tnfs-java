@@ -34,12 +34,21 @@ package uk.co.bithatch.tnfs.web.elfinder.support.nio;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.*;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.file.DirectoryStream;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+
+import uk.co.bithatch.tnfs.lib.OpenFlag;
 
 /**
  * Helper class for NIO file system operations.
@@ -335,6 +344,18 @@ public final class NioHelper {
      */
     public static OutputStream openOutputStream(Path path) throws IOException {
         return Files.newOutputStream(path);
+    }
+
+    /**
+     * Opens or creates a file, returning a channel stream that may be used to read bytes from or write bytes to the file.
+     *
+     * @param path the path to the file to open or create.
+     * @param options open options
+     * @return a new channel
+     * @throws IOException if something goes wrong.
+     */
+    public static SeekableByteChannel openChannel(Path path, OpenOption... options) throws IOException {
+        return Files.newByteChannel(path, options);
     }
 
     /**

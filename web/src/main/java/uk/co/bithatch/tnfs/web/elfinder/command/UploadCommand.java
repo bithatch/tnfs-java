@@ -31,8 +31,11 @@
  */
 package uk.co.bithatch.tnfs.web.elfinder.command;
 
-import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -53,53 +56,146 @@ public class UploadCommand extends AbstractJsonCommand implements ElfinderComman
 
 		var added = new ArrayList<VolumeHandler>();
 		var content = tx.request();
-//       	var target = content.asFormData(ElFinderConstants.ELFINDER_PARAMETER_TARGET).asString();
 
-//		LOG.info("Upload request for target {}", target);
-		LOG.info("Upload request");
+		if(LOG.isDebugEnabled()) {
+			LOG.debug("Upload request");
+		}
 
 		VolumeHandler parentDir = null;
 		String target = null;
-		String tempName = null;
+		String filename = null;
+		
+		// TODO
+		FileTime mtime = null;
+		
+		FormData uploadPart = null;
+		long[] chunkData = null;
 
-		// TODO something not right in uhttpd. (earlier parts already ready from content
-		// in TNFSWeb.apiPost
 		for (var part : content.asBufferedParts(FormData.class)) {
-			LOG.info("   Part name: {}", part.name());
-			if (part.name().startsWith("target")) {
+			if(LOG.isDebugEnabled()) {
+				LOG.debug("   Part name: {}", part.name());
+			}
+			if (part.name().equals("target")) {
 				target = part.asString();
 				parentDir = findTarget(elfinderStorage, target);
-				LOG.info("        Parent Dir: {}", parentDir);
-			} else if (part.name().startsWith("upload")) {
-				
-				var filename = part.filename().get();
-				LOG.info("        Receiving upload: {}", filename);
-				
-				if(filename.equals("blob")) {
-					if(tempName == null)
-						tempName = "upload-" + Integer.toUnsignedLong(tx.hashCode());
-					filename = tempName;
+
+				if(LOG.isDebugEnabled()) {
+					LOG.debug("        Parent Dir: {}", parentDir.getName());
 				}
+			} else if (part.name().equals("upload[]")) {
 				
-				var newFile = new VolumeHandler(parentDir, filename);
-				if (!newFile.exists()) {
-					newFile.createFile();
+				if(part.filename().get().equals("blob")) {
+					/* Might be a chunk. Unfortunately it seems we can't tell until we
+					 * have read further form data coming after the upload, so we keep 
+					 * hold of a reference to the part and deal with it later 
+					 * (it will be buffered anyway so the stream will still exist)
+					 */
+					uploadPart = part;
 				}
-				try (var is = part.asStream()) {
-					try (var os = newFile.openOutputStream()) {
-						is.transferTo(os);
+				else {
+					filename = part.filename().get();
+
+					if(LOG.isDebugEnabled()) {
+						LOG.debug("        Receiving upload: {}", filename);
+					}
+					var newFile = new VolumeHandler(parentDir, filename);
+					if (!newFile.exists()) {
+						newFile.createFile();
+					}
+					try (var is = part.asStream()) {
+						try (var os = newFile.openOutputStream()) {
+							is.transferTo(os);
+						}
+					}
+					added.add(newFile);
+				}
+			} else if (part.name().equals("mtime[]")) {
+				mtime = FileTime.from(part.asLong(), TimeUnit.SECONDS);
+				if(LOG.isDebugEnabled()) {
+					LOG.debug("        Mtime: {}", part.asString());
+				}
+			} else if (part.name().equals("range")) {
+				if(LOG.isDebugEnabled()) {
+					LOG.debug("        Range: {}", part.asString());
+				}
+				var data = part.asString().split(",");
+				chunkData = new long[] { Long.parseLong(data[0]), Long.parseLong(data[1]), Long.parseLong(data[2]) }; 
+			} else if (part.name().equals("chunk")) {
+				if(LOG.isDebugEnabled()) {
+					LOG.debug("        Chunk: {}", part.asString());
+				}
+				var chunkName = part.asString();
+				if(chunkName.endsWith(".part")) {
+					filename = chunkName.substring(0, chunkName.lastIndexOf('.', chunkName.lastIndexOf('.') - 1));
+				}
+			} else {
+				if(LOG.isDebugEnabled()) {
+					LOG.debug("        Content: {}", part.asString());
+				}
+			}
+		}
+		
+		if(uploadPart != null) {
+			if(chunkData  == null) {
+				throw new IllegalStateException("Expected `range` data.");
+			}
+			if(filename  == null) {
+				throw new IllegalStateException("Expected `chunk[]` data.");
+			}
+
+			if(LOG.isDebugEnabled()) {
+				LOG.debug("        Receiving upload: {} @ {}", filename, chunkData[0]);
+			}
+
+			var newFile = new VolumeHandler(parentDir, filename);
+			if (!newFile.exists()) {
+				newFile.createFile();
+			}
+			var buf = ByteBuffer.allocate(8192);
+			var wrtn = 0;
+			try (var is = uploadPart.asChannel()) {
+				try (var os = newFile.openChannel(StandardOpenOption.WRITE)) {
+					os.position(chunkData[0]);
+					while(is.read(buf) != -1) {
+						buf.flip();
+						while(buf.hasRemaining()) {
+							wrtn += os.write(buf);
+						}
+						buf.clear();
 					}
 				}
+			}
+			
+			if(wrtn != chunkData[1]) {
+				throw new IllegalStateException("Chunk of " + wrtn + " not expected size of " + chunkData[1]);
+			}
+			
+			newFile = new VolumeHandler(parentDir, filename);
+			if(newFile.getSize() == chunkData[2]) {
+				if(LOG.isDebugEnabled()) {
+					LOG.debug("        Have complete file of {} at {} bytes", filename, chunkData[2]);
+				}
 				added.add(newFile);
-			} else {
-				LOG.info("        Content: {}", part.asString());
+			}
+			else {
+				if(LOG.isDebugEnabled()) {
+					LOG.debug("        Don't yet have complete file of {} and {} bytes at a current size of {} bytes", filename, newFile.getSize(), chunkData[2]);
+				}
 			}
 		}
 
+//Part name: chunk
+//-         Content: sbpsite.zip.2_5.part
+//-    Part name: cid
+//-         Content: 946170856
+// -    Part name: range
+//-         Content: 4177924,2088962,11895928
 //			var newFile = uploadPart(parentDir, content.asFormData("upload[]"));
 //			added.add(newFile);
 
-		LOG.info("Upload complete target {}", target);
+		if(LOG.isDebugEnabled()) {
+			LOG.debug("Upload complete target {}", target);
+		}
 
 		json.put(ElFinderConstants.ELFINDER_JSON_RESPONSE_ADDED, buildJsonFilesArray(tx, added));
 	}

@@ -34,9 +34,12 @@ package uk.co.bithatch.tnfs.web.elfinder.service;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.file.OpenOption;
 import java.util.ArrayList;
 import java.util.List;
 
+import uk.co.bithatch.tnfs.lib.OpenFlag;
 import uk.co.bithatch.tnfs.web.elfinder.ElFinderConstants;
 import uk.co.bithatch.tnfs.web.elfinder.core.Target;
 import uk.co.bithatch.tnfs.web.elfinder.core.Volume;
@@ -150,6 +153,10 @@ public class VolumeHandler {
 
     public OutputStream openOutputStream() throws IOException {
         return volume.openOutputStream(target);
+    }
+
+    public SeekableByteChannel openChannel(OpenOption flags) throws IOException {
+        return volume.openChannel(target, flags);
     }
 
     public void renameTo(VolumeHandler dst) throws IOException {

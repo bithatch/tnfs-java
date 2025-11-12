@@ -33,6 +33,7 @@ import uk.co.bithatch.tnfs.client.AbstractTNFSMount.AbstractBuilder;
 import uk.co.bithatch.tnfs.client.TNFSClient;
 import uk.co.bithatch.tnfs.client.TNFSClientExtension.AbstractTNFSClientExtension;
 import uk.co.bithatch.tnfs.lib.Message;
+import uk.co.bithatch.tnfs.lib.Version;
 import uk.co.bithatch.tnfs.lib.extensions.Extensions;
 import uk.co.bithatch.tnfs.lib.extensions.Extensions.ServerFinal;
 
@@ -83,6 +84,7 @@ public class SecureMount extends AbstractTNFSClientExtension {
 	public final static class SecureTNFSMount extends AbstractTNFSMount {
 
 		private final int sessionId;
+		private final Version serverVersion;
 
 		private SecureTNFSMount(Builder bldr) throws IOException {
 			super(bldr);
@@ -111,6 +113,7 @@ public class SecureMount extends AbstractTNFSClientExtension {
 			var res = srvRes.result();
 			
 			try {
+				serverVersion = res.version();
 				sessionId  = srvRes.mesage().connectionId();
 				System.out.println("SFIR: " + res.serverFirstMessage());
 				scramClient.serverFirstMessage(res.serverFirstMessage());
@@ -135,6 +138,11 @@ public class SecureMount extends AbstractTNFSClientExtension {
 		@Override
 		public int sessionId() {
 			return sessionId;
+		}
+
+		@Override
+		public Version serverVersion() {
+			return serverVersion;
 		}
 		
 	}

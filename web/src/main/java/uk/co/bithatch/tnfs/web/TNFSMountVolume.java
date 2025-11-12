@@ -25,8 +25,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.Channels;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.NotDirectoryException;
+import java.nio.file.OpenOption;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -244,25 +246,33 @@ public class TNFSMountVolume implements Volume {
 
 	@Override
 	public void createFile(Target target) throws IOException {
-		Lazy.LOG.info("Create new file {}", target);
+		if(Lazy.LOG.isDebugEnabled()) {
+			Lazy.LOG.debug("Create new file {}", target);
+		}
 		mount.open(((TNFSTarget)target).getPath(), OpenFlag.WRITE, OpenFlag.EXCLUSIVE, OpenFlag.CREATE).close();
 	}
 
 	@Override
 	public void createFolder(Target target) throws IOException {
-		Lazy.LOG.info("Create new folder {}", target);
+		if(Lazy.LOG.isDebugEnabled()) {
+			Lazy.LOG.debug("Create new folder {}", target);
+		}
 		mount.mkdir(((TNFSTarget)target).getPath());
 	}
 
 	@Override
 	public void deleteFile(Target target) throws IOException {
-		Lazy.LOG.info("Delete file {}", target);
+		if(Lazy.LOG.isDebugEnabled()) {
+			Lazy.LOG.debug("Delete file {}", target);
+		}
 		mount.unlink(((TNFSTarget)target).getPath());
 	}
 
 	@Override
 	public void deleteFolder(Target target) throws IOException {
-		Lazy.LOG.info("Delete folder {}", target);
+		if(Lazy.LOG.isDebugEnabled()) {
+			Lazy.LOG.debug("Delete folder {}", target);
+		}
 		mount.rmdir(((TNFSTarget)target).getPath());
 	}
 
@@ -367,19 +377,30 @@ public class TNFSMountVolume implements Volume {
 
 	@Override
 	public InputStream openInputStream(Target target) throws IOException {
-		Lazy.LOG.info("Open input stream {}", target);
+		if(Lazy.LOG.isDebugEnabled()) {
+			Lazy.LOG.debug("Open input stream {}", target);
+		}
 		return Channels.newInputStream(mount.open(((TNFSTarget)target).getPath(), OpenFlag.READ));
 	}
 
 	@Override
 	public OutputStream openOutputStream(Target target) throws IOException {
-		Lazy.LOG.info("Open output stream {}", target);
+		if(Lazy.LOG.isDebugEnabled()) {
+			Lazy.LOG.debug("Open output stream {}", target);
+		}
 		return Channels.newOutputStream(mount.open(((TNFSTarget)target).getPath(), OpenFlag.WRITE, OpenFlag.TRUNCATE));
 	}
 
 	@Override
+	public SeekableByteChannel openChannel(Target target, OpenOption... options) throws IOException {
+		return mount.open(((TNFSTarget)target).getPath(), OpenFlag.decodeOptions(options));
+	}
+
+	@Override
 	public void rename(Target origin, Target destination) throws IOException {
-		Lazy.LOG.info("Rename {} to {}", origin, destination);
+		if(Lazy.LOG.isDebugEnabled()) {
+			Lazy.LOG.debug("Rename {} to {}", origin, destination);
+		}
 		mount.rename(((TNFSTarget)origin).getPath(), ((TNFSTarget)destination).getPath());
 	}
 

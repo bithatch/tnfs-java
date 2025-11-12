@@ -37,6 +37,7 @@ import uk.co.bithatch.tnfs.lib.ModeFlag;
 import uk.co.bithatch.tnfs.lib.OpenFlag;
 import uk.co.bithatch.tnfs.lib.TNFSDirectory;
 import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
+import uk.co.bithatch.tnfs.lib.Version;
 
 public interface TNFSMount extends TNFSFileAccess {
 
@@ -199,4 +200,11 @@ public interface TNFSMount extends TNFSFileAccess {
 			return false;
 		}
 	}
+
+	/**
+	 * Get the version of the server that is mounted.
+	 * 
+	 * @return version
+	 */
+	Version serverVersion();
 }

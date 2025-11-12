@@ -59,12 +59,14 @@ import uk.co.bithatch.tnfs.lib.ModeFlag;
 import uk.co.bithatch.tnfs.lib.OpenFlag;
 import uk.co.bithatch.tnfs.lib.TNFS;
 import uk.co.bithatch.tnfs.lib.TNFSDirectory;
+import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
 import uk.co.bithatch.tnfs.lib.Util;
 
 public abstract class AbstractTNFSMount implements TNFSMount {
 	
 	private final static Logger LOG = LoggerFactory.getLogger(AbstractTNFSMount.class);
 
+	private record NamedEntry(String name, StatResult stat) {}
 
 	public static final class ReadDirIterator implements Iterator<String> {
 		
@@ -271,6 +273,98 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 		if(LOG.isDebugEnabled()) {
 			LOG.debug("Open directory `{}` at `{}` for max results `{}`, wildcard of `{}` and `{}` options", path, mountPath, maxResults,  wildcard, String.join(", ", Arrays.asList(dirOptions).stream().map(d -> d.name()).toList()));
 		}
+		
+		if(serverVersion().lt(TNFS.READ_DIRX_REQUIRES_VERSION)) {
+			
+			var dirOpts = Arrays.asList(dirOptions);
+			var sortOpts = Arrays.asList(sortOptions);
+			var dir = list(path);
+
+			/* Filter */
+			var stream = dir.filter(s -> !s.equals(".") && !s.equals("..")).map(s ->  {
+				try {
+					return stat((path.equals("/") ? "" : "/") + s).toEntry(s);
+				} catch (IOException e) {
+					throw new UncheckedIOException(e);
+				}
+			}).filter(entry -> {
+				var flgs = Arrays.asList(entry.flags());
+
+				if (flgs.contains(DirEntryFlag.HIDDEN)) {
+
+					/* Maybe skip hidden */
+					if (flgs.contains(DirEntryFlag.HIDDEN) && !dirOpts.contains(DirOptionFlag.NO_SKIPHIDDEN)) {
+						return false;
+					}	
+				}
+				else {
+
+					/* Maybe skip directory */
+					if (wildcard.length() > 0 && flgs.contains(DirEntryFlag.DIR)
+							&& !dirOpts.contains(DirOptionFlag.DIR_PATTERN)) {
+						/*
+						 * Is a wildcard match that is a directory, but directories should not be
+						 * matched according to dir option flags
+						 */
+						return false;
+					}
+					
+					/* Maybe skip special */
+					if (flgs.contains(DirEntryFlag.SPECIAL) && !dirOpts.contains(DirOptionFlag.NO_SKIPSPECIAL)) {
+						return false;
+					}	
+				}
+
+				return true;
+			});
+			
+			/* Limit what remains */
+			if (maxResults > 0) {
+				stream = stream.limit(maxResults);
+			}
+
+			/* Finally sort */
+			if (!sortOpts.contains(DirSortFlag.NONE)) {
+				stream = stream.sorted((e1, e2) -> {
+					var r = TNFSFileAccess.compare(dirOpts, sortOpts, e1, e2);
+					if (sortOpts.contains(DirSortFlag.DESCENDING))
+						r *= -1;
+					return r;
+				});
+			}
+
+			var fStream = stream;
+			return new TNFSDirectory() {
+
+				@Override
+				public void close() throws IOException {
+					fStream.close();
+				}
+
+				@Override
+				public Stream<Entry> stream() {
+					return fStream;
+				}
+
+				@Override
+				public void seek(long position) throws IOException {
+					throw new UnsupportedOperationException("Fallback directory streaming does not support seek(). Use a later TNFS server.");
+				}
+
+				@Override
+				public long tell() throws IOException {
+					throw new UnsupportedOperationException("Fallback directory streaming does not support tell(). Use a later TNFS server.");
+				}
+				
+			};
+		}
+		else {
+			return directoryExtended(maxResults, path, wildcard, dirOptions, sortOptions);
+		}
+	}
+	
+
+	private TNFSDirectory directoryExtended(int maxResults, String path, String wildcard, DirOptionFlag[] dirOptions, DirSortFlag[] sortOptions) throws IOException {	
 		var dir = client.sendMessage(Command.OPENDIRX, Message.of(sessionId(), Command.OPENDIRX, new Command.OpenDirX(dirOptions, sortOptions, maxResults, wildcard, path)), path);
 		var it = new Iterator<Entry>() {
 

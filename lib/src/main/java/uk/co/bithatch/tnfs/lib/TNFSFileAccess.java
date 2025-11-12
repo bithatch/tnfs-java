@@ -168,7 +168,6 @@ public interface TNFSFileAccess extends Closeable {
 	 */
 	default TNFSDirectory directory(int maxResults, String path, String wildcard, DirOptionFlag[] dirOptions,
 			DirSortFlag[] sortOptions) throws IOException {
-		/* TODO filtering, sorting etc */
 		var dirOpts = Arrays.asList(dirOptions);
 		var sortOpts = Arrays.asList(sortOptions);
 		var dir = directory(path, wildcard);
@@ -247,7 +246,7 @@ public interface TNFSFileAccess extends Closeable {
 		};
 	}
 
-	static int compare(List<DirOptionFlag> dirOpts, List<DirSortFlag> sortOpts, Entry e1, Entry e2) {
+	public static int compare(List<DirOptionFlag> dirOpts, List<DirSortFlag> sortOpts, Entry e1, Entry e2) {
 		var flgs1 = Arrays.asList(e1.flags());
 		var flgs2 = Arrays.asList(e2.flags());
 

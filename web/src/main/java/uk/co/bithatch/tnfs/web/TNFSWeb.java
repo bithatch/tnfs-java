@@ -170,7 +170,7 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 					var ref = new DefaultVolumeRef( String.valueOf(Integer.toUnsignedLong(name.hashCode())), vol);
 					
 					bldr.addVolumes(ref);
-					log.info("Mounted {} [{}] to {} @ {}", name, ref.getId(), path, hostname);
+					log.info("Mounted {} [{}] to {} @ {} [{}]", name, ref.getId(), path, hostname, tnfsmnt.serverVersion());
 					mountCount.addAndGet(1);
 	
 				} catch (IOException ioe) {
