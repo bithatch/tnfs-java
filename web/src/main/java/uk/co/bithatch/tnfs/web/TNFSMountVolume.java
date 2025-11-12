@@ -164,7 +164,7 @@ public class TNFSMountVolume implements Volume {
 		public boolean isFolder() {
 			if(dir == null) {
 				try {
-					dir = stat().isDirectory();
+					stat();
 				}
 				catch(IOException ioe) {
 				}
@@ -177,7 +177,8 @@ public class TNFSMountVolume implements Volume {
 			if(exists == null) {
 				try {
 					stat();
-				} catch (IOException e) { }
+				} catch (IOException e) { 
+				}
 			}
 			return exists == null ? false : exists;
 		}
@@ -186,6 +187,8 @@ public class TNFSMountVolume implements Volume {
 			if(stat == null) {
 				try {
 					stat = volume.mount.stat(path);
+					exists = true;
+					dir = stat.isDirectory();
 				}
 				catch(FileNotFoundException nfe) {
 					exists = false;
@@ -371,7 +374,7 @@ public class TNFSMountVolume implements Volume {
 	@Override
 	public OutputStream openOutputStream(Target target) throws IOException {
 		Lazy.LOG.info("Open output stream {}", target);
-		return Channels.newOutputStream(mount.open(((TNFSTarget)target).getPath(), OpenFlag.WRITE, OpenFlag.CREATE, OpenFlag.TRUNCATE));
+		return Channels.newOutputStream(mount.open(((TNFSTarget)target).getPath(), OpenFlag.WRITE, OpenFlag.TRUNCATE));
 	}
 
 	@Override

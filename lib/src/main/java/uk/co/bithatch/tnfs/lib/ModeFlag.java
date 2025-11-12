@@ -40,6 +40,10 @@ public enum ModeFlag implements BitSet {
 		IRUSR, IXUSR, IRGRP, IXGRP
 	};
 	
+	public static ModeFlag[] DEFAULT_WRITABLE_FLAGS = {
+		IRUSR, IWUSR, IXUSR, IRGRP, IWGRP, IXGRP
+	};
+	
 	public static ModeFlag[] ALL_FLAGS = {
 		IRUSR, IWUSR, IXUSR,
 		IRGRP, IWGRP, IXGRP,

@@ -27,6 +27,7 @@ import java.nio.file.FileVisitor;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -109,7 +110,14 @@ public interface TNFSMount extends TNFSFileAccess {
 	 * @throws IOException on error
 	 */
 	default SeekableByteChannel open(String path, OpenFlag... flags) throws IOException {
-		return open(path, ModeFlag.DEFAULT_FLAGS, flags);
+		var flgs = Arrays.asList(flags);
+		return open(
+			path, 
+			flgs.contains(OpenFlag.CREATE) 
+				? ModeFlag.DEFAULT_WRITABLE_FLAGS 
+				: ModeFlag.DEFAULT_FLAGS, 
+			flags
+		);
 	}
 
 	<EXT extends TNFSMountExtension> EXT extension(Class<EXT> extension);

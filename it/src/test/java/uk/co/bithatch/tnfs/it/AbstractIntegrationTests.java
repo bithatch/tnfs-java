@@ -217,6 +217,17 @@ public abstract class AbstractIntegrationTests {
 	}
 
 	@Test
+	public void createNewFileThenWriteToIt() throws Exception {
+
+		runMountTest((mnt, clnt, svr) -> {
+			mnt.newFile("abc");
+			try(var out = mnt.open("abc", OpenFlag.WRITE)) {
+				out.write(ByteBuffer.wrap("Test123".getBytes()));
+			}
+		});
+	}
+
+	@Test
 	public void testPutAndGetFile() throws Exception {
 		testPutAndGetFile("file1", 16);
 		testPutAndGetFile("file1", 255);

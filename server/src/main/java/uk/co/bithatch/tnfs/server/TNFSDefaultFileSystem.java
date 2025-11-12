@@ -179,7 +179,7 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 		checkFileSymbolicLink(rpath, path);
 		var chnl = Files.newByteChannel(rpath, OpenFlag.encodeOptions(flags));
 		
-		if(Arrays.asList(flags).contains(OpenFlag.CREATE)) {
+		if(flgs.contains(OpenFlag.CREATE)) {
 			/* TODO umask? */
 			chmod(path, mode);
 		}
