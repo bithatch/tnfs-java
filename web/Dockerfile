@@ -34,12 +34,12 @@ RUN mvn -f $HOME/pom.xml clean package -Dbuild.native.web=true -DskipTests
 # Package stage
 #
 
-ENV TNFS_MOUNT_HOSTNAME localhost
-ENV TNFS_MOUNT_PORT 16384
-ENV TNFS_MOUNT_PATH /
-ENV TNFS_MOUNT_PROTOCOL UDP
-ENV TNFS_MOUNT_NAME Local TNFS
-ENV LOG_LEVEL INFO
+ENV TNFS_MOUNT_HOSTNAME=localhost
+ENV TNFS_MOUNT_PORT=16384
+ENV TNFS_MOUNT_PATH=/
+ENV TNFS_MOUNT_PROTOCOL=UDP
+ENV TNFS_MOUNT_NAME=Local TNFS
+ENV LOG_LEVEL=INFO
 
 FROM debian:stable-slim 
 COPY --from=build /usr/app/web/target/tnfsjd-web /app/tnfsjd-web

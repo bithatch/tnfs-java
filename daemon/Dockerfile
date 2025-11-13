@@ -34,7 +34,7 @@ RUN mvn -f $HOME/pom.xml clean package -Dbuild.native.daemon=true -DskipTests
 # Package stage
 #
 FROM debian:stable-slim 
-ENV TNFS_LOG_LEVEL INFO
+ENV TNFS_LOG_LEVEL=INFO
 COPY --from=build /usr/app/daemon/target/tnfsjd /app/tnfsjd
 COPY --from=build /usr/app/daemon/target/tnfs-user /app/tnfs-user
 COPY --from=build /usr/app/daemon/src/main/docker/configuration /etc/tnfsjd
