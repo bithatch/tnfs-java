@@ -45,31 +45,34 @@ public class TNFSMounts implements TNFSFileSystemService {
 			}
 		};
 	}
-	
+
 	public static final String GUEST_NAME = "<guest>";
 	public static final Principal GUEST = TNFSMounts.simpleUser(GUEST_NAME);
-	
+
 	@FunctionalInterface
 	public interface TNFSAuthenticator {
 		Optional<Principal> authenticate(TNFSFileAccess fs, Optional<String> username, Optional<char[]> password);
 	}
-	
-	public record TNFSMountRef(TNFSFileAccess fs, Optional<TNFSAuthenticator> auth) {} 
+
+	public record TNFSMountRef(TNFSFileAccess fs, Optional<TNFSAuthenticator> auth) {
+	}
 
 	private Map<String, TNFSMountRef> mounts = Collections.synchronizedMap(new LinkedHashMap<>());
 
 	public TNFSMounts mount(String path, Path root) throws IOException {
 		return mount(path, root, false);
 	}
+
 	public TNFSMounts mount(String path, Path root, boolean readOnly) throws IOException {
 		return mount(path, new TNFSDefaultFileSystem(root, path, readOnly));
 	}
 
 	public TNFSMounts mount(String path, Path root, TNFSAuthenticator authenticator) throws IOException {
-		return mount(path, root, authenticator, false);		
+		return mount(path, root, authenticator, false);
 	}
-	
-	public TNFSMounts mount(String path, Path root, TNFSAuthenticator authenticator, boolean readOnly) throws IOException {
+
+	public TNFSMounts mount(String path, Path root, TNFSAuthenticator authenticator, boolean readOnly)
+			throws IOException {
 		return mount(path, new TNFSDefaultFileSystem(root, path, readOnly), authenticator);
 	}
 
@@ -80,13 +83,38 @@ public class TNFSMounts implements TNFSFileSystemService {
 	public TNFSMounts mount(String path, TNFSFileAccess mount, TNFSAuthenticator authenticator) {
 		return mount(path, mount, Optional.of(authenticator));
 	}
-	
+
 	private TNFSMounts mount(String path, TNFSFileAccess mount, Optional<TNFSAuthenticator> authenticator) {
-		synchronized(mounts) {
-			if(mounts.containsKey(path))
+		synchronized (mounts) {
+			if (mounts.containsKey(path))
 				throw new IllegalArgumentException("Already mounted to " + path);
 			mounts.put(path, new TNFSMountRef(mount, authenticator));
 			return this;
+		}
+	}
+
+	public void unmountAll() {
+		synchronized (mounts) {
+			mounts.forEach((k,v) -> {
+				LOG.info("Unmounting {}", k);
+				try {
+					v.fs.close();
+				} catch (IOException e) {
+				}
+			});
+			mounts.clear();
+		}
+	}
+
+	public void unmount(String path) throws IOException {
+		synchronized (mounts) {
+			if (mounts.containsKey(path)) {
+				 LOG.info("Unmounting {}", path);
+				 mounts.remove(path).fs.close();
+			}
+			else {
+				throw new IllegalArgumentException("Not mounted to " + path);
+			}
 		}
 	}
 
@@ -94,29 +122,29 @@ public class TNFSMounts implements TNFSFileSystemService {
 	public Collection<TNFSMountRef> mounts() {
 		return mounts.values();
 	}
+
 	@Override
 	public TNFSUserMount createMount(String path, Optional<? extends Principal> user) {
 		var ref = mountDetails(path);
-		if(LOG.isDebugEnabled()) {
-			user.ifPresentOrElse(
-				un -> LOG.debug("Request to mount {} as {}", path, un.getName()), 
-				() -> LOG.debug("Request to mount {} as guest", path));
+		if (LOG.isDebugEnabled()) {
+			user.ifPresentOrElse(un -> LOG.debug("Request to mount {} as {}", path, un.getName()),
+					() -> LOG.debug("Request to mount {} as guest", path));
 			;
 		}
-		
-		return new TNFSUserMount(ref.fs, user.map(p -> (Principal)p).orElse(GUEST));
+
+		return new TNFSUserMount(ref.fs, user.map(p -> (Principal) p).orElse(GUEST));
 	}
-	
+
 	@Override
 	public TNFSMountRef mountDetails(String path) {
-		if(path.equals("")) {
-			if(mounts.isEmpty()) 
+		if (path.equals("")) {
+			if (mounts.isEmpty())
 				throw new IllegalArgumentException(path);
-			
+
 			return mounts.values().iterator().next();
 		}
 		var mnt = mounts.get(path);
-		if(mnt == null)
+		if (mnt == null)
 			throw new IllegalArgumentException(path);
 		return mnt;
 	}

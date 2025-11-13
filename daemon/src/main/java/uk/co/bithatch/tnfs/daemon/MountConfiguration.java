@@ -25,7 +25,9 @@ import java.io.UncheckedIOException;
 import java.nio.channels.Channels;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -42,9 +44,14 @@ public class MountConfiguration extends AbstractConfiguration {
 		private static Logger LOG = LoggerFactory.getLogger(MountConfiguration.class);
 	}
 	
+	public interface Listener {
+		void run();
+	}
+	
 	private final TNFSMounts mounts;
 	private final Authentication auth;
 	private boolean demo;
+	private final List<Listener> listeners = new ArrayList<>();
 
 	public MountConfiguration(Monitor monitor, Configuration configuration, Optional<Path> configurationDir, Optional<Path> userConfigDir) {
 		super(MountConfiguration.class, "mounts", Optional.of(monitor), configurationDir, userConfigDir);
@@ -53,6 +60,32 @@ public class MountConfiguration extends AbstractConfiguration {
 		
 		auth = new Authentication(Optional.of(monitor), configurationDir, userConfigDir);
 		
+		document().onValueUpdate(vu -> {
+			configChanged();
+		});
+		
+		document().onSectionUpdate(su -> {
+			configChanged();
+		});
+		
+		remountAll();
+	}
+	
+	public void addListener(Listener listener) {
+		this.listeners.add(listener);
+	}
+	
+	public void removeListener(Listener listener) {
+		this.listeners.remove(listener);
+	}
+
+	protected void configChanged() {
+		mounts.unmountAll();
+		remountAll();
+		listeners.forEach(Listener::run);
+	}
+
+	protected void remountAll() {
 		document().allSectionsOr(Constants.MOUNT_KEY).ifPresentOrElse(mntsec-> {
 			Arrays.asList(mntsec).forEach(sec -> {
 				

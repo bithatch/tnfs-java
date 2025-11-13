@@ -10,3 +10,4 @@
 /web/etc/
 /daemon/etc/
 /sdk/src/main/packages/configuration/tnfsjd/server-key.b64
+/docker.sh

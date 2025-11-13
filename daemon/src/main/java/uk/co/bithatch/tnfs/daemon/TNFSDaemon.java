@@ -108,6 +108,15 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
     private Configuration configuration;
     private Logger log;
 	private MountConfiguration mountConfiguration;
+    
+	private final AtomicBoolean deregistered = new AtomicBoolean();
+
+	private TNFSServer<?> udpSrvr;
+	private TNFSServer<?> tcpSrvr;
+
+	private MDNS jmdns;
+
+	private Thread shutdownHook;
 
 	@Override
     public Integer call() throws Exception {
@@ -135,60 +144,103 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 			log = LoggerFactory.getLogger(TNFSDaemon.class);
     		
     		configuration = new Configuration(monitor, configurationDir, userConfiguration);
-    		
+
     		mountConfiguration = new MountConfiguration(monitor, configuration, configurationDir, userConfiguration);
     		var tnfsMounts = mountConfiguration.mounts();
-    	
-	    	
-	        /* Get actual address to listen on */
-	    	actualAddress = configuration.server().getOr(Constants.ADDRESS_KEY).map(t ->Net.parseAddress(t, t)).
-	    			orElseGet(() -> {
-	    				if(mountConfiguration.isDemo()) {
-	    					log.warn("Listening on LAN address because demonstration mount is active. When you define your own mounts, you will also need to configure the listening address.");
-	    					return Net.getIpAddress();
+    		mountConfiguration.addListener(() -> {
+    			if(jmdns != null) {
+    				deregisterMdns();
+
+    				try {
+	    				try {
+							Thread.sleep(2000);
+						} catch (InterruptedException e) {
+							throw new IllegalStateException(e);
+						}
+	    				
+	    				var protocols = getProtocols();
+	    				if(protocols.isEmpty() || protocols.size() == Protocol.values().length) {
+	    					
+							registerMDNS(tnfsMounts, Protocol.TCP);
+							registerMDNS(tnfsMounts, Protocol.UDP);
+	    						
 	    				}
 	    				else {
-	    					return InetAddress.getLoopbackAddress();
+	    					if(protocols.get(0) == Protocol.TCP) {
+	    						registerMDNS(tnfsMounts, Protocol.TCP);
+	    					}
+	    					else if(protocols.get(0) == Protocol.UDP) {
+	    						registerMDNS(tnfsMounts, Protocol.UDP);
+	    					}
+	    					else {
+	    						throw new IllegalStateException();
+	    					}
 	    				}
-	    			});
-	    	
-	    	log.info("Will listen on {}", actualAddress);
-	    	
-	    	if(configuration.server().getBoolean(Constants.UPNP_KEY) && actualAddress.isLoopbackAddress()) {
-	    		throw new IllegalStateException("Cannot map port using UPnP if only listening to loopback address. Use --addresss argument to specify address to bind to.");
-	    	}
-
-	    	/* Announce to everyone else we exist */
-			if(configuration.mdns().getBoolean(Constants.ANNOUNCE_KEY)) {
-
-				var jmdns = new MDNS(configuration.mdns().getOr(Constants.ADDRESS_KEY).map(t ->Net.parseAddress(t, t)).
-		    			orElse(actualAddress));
-	            
-	            var deregistered = new AtomicBoolean();
-	            try {
-		            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-	            		jmdns.unregisterAllServices();
-	            		deregistered.set(true);
-		            }, "MDNSDeregister"));
-	
-					runServer(tnfsMounts, Optional.of(jmdns));
-					
-	            }
-	            finally {
-	            	if(!deregistered.get()) {
-	            		jmdns.unregisterAllServices();
-	            		deregistered.set(true);
-	            	}
-	            }
-			}
-			else {
-				runServer(tnfsMounts, Optional.empty());	            
-			}
-			
-	        return 0;
+    				}
+    				finally {
+    					deregistered.set(false);
+    				}
+    			}
+    		});
+    		
+    		configuration.document().onValueUpdate(vu -> {
+    			if(udpSrvr != null) {
+    				try {
+						udpSrvr.close();
+					} catch (IOException e) {
+					}
+    			}
+    			
+    			if(tcpSrvr != null) {
+    				try {
+    					tcpSrvr.close();
+					} catch (IOException e) {
+					}
+    			}
+    		});
+    		
+    		while(true) {
+    			startServer(tnfsMounts, monitor);
+    		}
 		
     	}
     }
+
+	private void startServer(TNFSMounts tnfsMounts, Monitor monitor) throws IOException, InterruptedException {
+  	
+		
+		/* Get actual address to listen on */
+		actualAddress = getActualAddress();
+		
+		log.info("Will listen on {}", actualAddress);
+		
+		if(configuration.server().getBoolean(Constants.UPNP_KEY) && actualAddress.isLoopbackAddress()) {
+			throw new IllegalStateException("Cannot map port using UPnP if only listening to loopback address. Use --addresss argument to specify address to bind to.");
+		}
+
+		/* Announce to everyone else we exist */
+		if(configuration.mdns().getBoolean(Constants.ANNOUNCE_KEY)) {
+
+			jmdns = new MDNS(configuration.mdns().getOr(Constants.ADDRESS_KEY).map(t ->Net.parseAddress(t, t)).
+					orElse(actualAddress));
+		    try {
+		        shutdownHook = new Thread(() -> deregisterMdns(), "MDNSDeregister");
+				Runtime.getRuntime().addShutdownHook(shutdownHook);
+				runServer(tnfsMounts);
+		    }
+		    finally {
+		    	deregisterMdns();
+		    }
+		}
+		else {
+			if(shutdownHook != null) {
+				Runtime.getRuntime().removeShutdownHook(shutdownHook);
+				shutdownHook = null;
+			}
+			jmdns = null;
+			runServer(tnfsMounts, Optional.empty());	            
+		}
+	}
 
 	@Override
 	public CommandSpec spec() {
@@ -199,6 +251,27 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 	public boolean verboseExceptions() {
         return verboseExceptions;
     }
+
+	private InetAddress getActualAddress() {
+		return configuration.server().getOr(Constants.ADDRESS_KEY).map(t ->Net.parseAddress(t, t)).
+				orElseGet(() -> {
+					if(mountConfiguration.isDemo()) {
+						log.warn("Listening on LAN address because demonstration mount is active. When you define your own mounts, you will also need to configure the listening address.");
+						return Net.getIpAddress();
+					}
+					else {
+						return InetAddress.getLoopbackAddress();
+					}
+				});
+	}
+
+	private void deregisterMdns() {
+		if(!deregistered.get()) {
+			log.info("De-registering mDNS");
+			jmdns.unregisterAllServices();
+			deregistered.set(true);
+		}
+	}
 
 	private InetAddress getPublicAddress() {
     	if(actualAddress.isAnyLocalAddress())
@@ -235,29 +308,29 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 		}
 	}
 	
-	private void registerMDNS(TNFSMounts tnfsMounts, Optional<MDNS> mDNS, Protocol protocol) {
-		mDNS.ifPresent(m -> {
-			try {
-				var txtname = configuration.server().get(Constants.NAME_KEY).
-					replace("{hostname}", 
-						normalize(getPublicAddress())).
-					replace("{protocol}", protocol.name());
-				log.info("Registering mDNS for {} as {}", protocol, txtname);
-				m.registerService(ServiceInfo.create(
-						String.format("_tnfs._%s.local.", protocol.name().toLowerCase()), 
-						txtname, 
-						configuration.server().getInt(Constants.PORT_KEY), 
-						String.join(";", String.format("path=%s", mountNames(tnfsMounts)))));
-			} catch (IOException e) {
-				throw new UncheckedIOException(e);
-			}
-		});
+	private void registerMDNS(TNFSMounts tnfsMounts, Protocol protocol) {
+		try {
+			var txtname = configuration.server().get(Constants.NAME_KEY).
+				replace("{hostname}", 
+					normalize(getPublicAddress())).
+				replace("{protocol}", protocol.name());
+			log.info("Registering mDNS for {} as {}", protocol, txtname);
+			ServiceInfo srv = ServiceInfo.create(
+					String.format("_tnfs._%s.local.", protocol.name().toLowerCase()), 
+					txtname, 
+					configuration.server().getInt(Constants.PORT_KEY), 
+					String.join(";", String.format("path=%s", mountNames(tnfsMounts))));
+			
+			jmdns.registerService(srv);
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
 	}
 
-	private void runServer(TNFSMounts tnfsMounts, Optional<Gateway> gateway, Optional<MDNS> mDNS) throws IOException, InterruptedException {
+	private void runServer(TNFSMounts tnfsMounts, Optional<Gateway> gateway) throws IOException, InterruptedException {
 		
 		var port = configuration.server().getInt(Constants.PORT_KEY);
-		var protocols = Arrays.asList(configuration.server().getAllEnum(Protocol.class, Constants.PROTOCOLS_KEY));
+		var protocols = getProtocols();
 		
 		/* Servers */		
 		if(protocols.isEmpty() || protocols.size() == Protocol.values().length) {
@@ -279,7 +352,9 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 						withTcp().
 						build()
 			) {
-				
+
+				this.tcpSrvr = tcpSrvr;
+				this.udpSrvr = udpSrvr;
 
 				gateway.ifPresent(gw -> {  
 					try {
@@ -289,8 +364,8 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 						gw.map(port, UPnP.Protocol.UDP);
 					}
 				});
-				registerMDNS(tnfsMounts, mDNS, Protocol.TCP);
-				registerMDNS(tnfsMounts, mDNS, Protocol.UDP);
+				registerMDNS(tnfsMounts, Protocol.TCP);
+				registerMDNS(tnfsMounts, Protocol.UDP);
 				
 				var t1 = new Thread(udpSrvr::run, "UDPTNFS");
 				t1.start();
@@ -306,7 +381,7 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 			if(protocols.get(0) == Protocol.TCP) {
 
 				gateway.ifPresent(gw -> gw.map(port, UPnP.Protocol.TCP));
-				registerMDNS(tnfsMounts, mDNS, Protocol.TCP);
+				registerMDNS(tnfsMounts, Protocol.TCP);
 				
 				/* TCP */
 				try(var tcpSrvr = new TNFSServer.Builder().
@@ -317,13 +392,14 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 							withTcp().
 							build()
 				) {
+					this.tcpSrvr = tcpSrvr;
 					tcpSrvr.run();
 				}
 			}
 			else if(protocols.get(0) == Protocol.UDP) {
 
 				gateway.ifPresent(gw -> gw.map(port, UPnP.Protocol.UDP));
-				registerMDNS(tnfsMounts, mDNS, Protocol.UDP);
+				registerMDNS(tnfsMounts, Protocol.UDP);
 				
 				/* UDP */
 				try(var udpSrvr = new TNFSServer.Builder().
@@ -333,6 +409,7 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 							withHost(actualAddress).
 							build()
 				) {
+					this.udpSrvr = udpSrvr;
 					udpSrvr.run();
 				}
 			}
@@ -342,12 +419,16 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 		}
 	}
 
-	private void runServer(TNFSMounts tnfsMounts, Optional<MDNS> mDNS) throws IOException, InterruptedException {
+	private List<Protocol> getProtocols() {
+		return Arrays.asList(configuration.server().getAllEnum(Protocol.class, Constants.PROTOCOLS_KEY));
+	}
+
+	private void runServer(TNFSMounts tnfsMounts) throws IOException, InterruptedException {
 		if(configuration.server().getBoolean(Constants.UPNP_KEY)) {
-			runServer(tnfsMounts, UPnP.gateway(), mDNS);
+			runServer(tnfsMounts, UPnP.gateway());
 		}
 		else {
-			runServer(tnfsMounts, Optional.empty(), mDNS);
+			runServer(tnfsMounts, Optional.empty());
 		}
 	}
 }

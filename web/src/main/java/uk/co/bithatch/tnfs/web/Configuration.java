@@ -36,6 +36,8 @@ import org.slf4j.LoggerFactory;
 
 import com.sshtools.jini.INI;
 import com.sshtools.jini.INI.Section;
+import com.sshtools.jini.INIReader;
+import com.sshtools.jini.Interpolation;
 import com.sshtools.jini.config.INISet;
 import com.sshtools.jini.config.INISet.CreateDefaultsMode;
 import com.sshtools.jini.config.INISet.Scope;
@@ -50,6 +52,30 @@ public final class Configuration {
 	public Configuration(Monitor monitor, Optional<Path> configDir, Optional<Path> userConfigDir) {
 		var bldr =  new INISet.Builder("tnfsjd-web").
 				withApp("tnfsjd-web").
+				withReaderFactory(() ->
+					new INIReader.Builder().
+						withInterpolator((data, k) -> {
+							if(k.startsWith("env:")) {
+								var vk = k.substring(4);
+								var idx = vk.indexOf(":-");
+								String defaultVal = null;
+								if(idx != -1) {
+									defaultVal = vk.substring(idx + 2);
+									vk = vk.substring(0, idx);
+								}
+								var val = System.getenv(vk);
+								if(val == null) {
+									return defaultVal;
+								}
+								else {
+									return val;
+								}
+							}
+							else
+								return null;
+						})
+				).
+				withSystemPropertyOverrides(true).
 				withCreateDefaults(CreateDefaultsMode.valueOf(System.getProperty("tnfsjd-web.create-defaults-mode", "NONE"))).
 				withSchema(Configuration.class);
 		

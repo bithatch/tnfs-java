@@ -66,6 +66,7 @@
 							<goal>single</goal>
 						</goals>
 						<configuration>
+							<attach>false</attach>
 							<finalName>tnfs-java-sdk-xplatform-anycpu</finalName>
 							<descriptors>
 								<descriptor>src/assembly/xplatform-bin.xml</descriptor>
@@ -192,6 +193,7 @@
 									<goal>single</goal>
 								</goals>
 								<configuration>
+									<attach>false</attach>
 									<finalName>${sdk.assembly.finalName}</finalName>
 									<descriptors>
 										<descriptor>${sdk.assembly.bin}</descriptor>

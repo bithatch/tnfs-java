@@ -45,6 +45,7 @@ import com.sshtools.porter.UPnP.Gateway;
 import com.sshtools.porter.UPnP.Protocol;
 import com.sshtools.uhttpd.UHTTPD;
 import com.sshtools.uhttpd.UHTTPD.NCSALoggerBuilder;
+import com.sshtools.uhttpd.UHTTPD.RootContext;
 import com.sshtools.uhttpd.UHTTPD.Status;
 import com.sshtools.uhttpd.UHTTPD.Transaction;
 
@@ -111,6 +112,10 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 	private Optional<MDNS> mdns;
 	private Logger log;
 
+	private RootContext httpd;
+
+	private Thread shutdownHook;
+
 	public TNFSWeb() {
 
 	}
@@ -138,141 +143,46 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 			System.setProperty("org.slf4j.simpleLogger.logFile", logFile.map(Path::toString).orElse("System.out"));
 
 			log = LoggerFactory.getLogger(TNFSWeb.class);
+			
+			SLF4JBridgeHandler.removeHandlersForRootLogger();
+			SLF4JBridgeHandler.install();
 	        
 			configuration = new Configuration(monitor, configurationDir, userConfiguration);
+			configuration.document().onValueUpdate(vu -> {
+				if(httpd != null)
+					httpd.close();
+			});
 	
 			commandFactory = new ServiceCommandFactory();
 			storageFactory = new DefaultElfinderStorageFactory();
-	
-			var bldr = new DefaultElfinderStorage.Builder();
-			var mountCount = new AtomicInteger();
-	
-			/* Mounts from config files */
 			
-			configuration.mounts().forEach(mnt -> {
-				var hostname = Net.parseAddress(mnt.get(Constants.HOSTNAME_KEY)).getHostAddress();
-				var port = mnt.getInt(Constants.PORT_KEY);
-				var path = mnt.get(Constants.PATH_KEY);
-				var name = mnt.getOr(Constants.NAME_KEY).orElseGet(() -> {
-					var b = new StringBuilder(hostname);
-					if (port != TNFS.DEFAULT_PORT) {
-						b.append(":");
-						b.append(port);
-					}
-					b.append(path);
-					return b.toString();
-				});
+			while(true) {
 	
-				try {
-					var clnt = new TNFSClient.Builder().withAddress(hostname, port).build();
-					var tnfsmnt = clnt.mount(path).build();
-					var vol = new TNFSMountVolume(tnfsmnt, name);
-					var ref = new DefaultVolumeRef( String.valueOf(Integer.toUnsignedLong(name.hashCode())), vol);
-					
-					bldr.addVolumes(ref);
-					log.info("Mounted {} [{}] to {} @ {} [{}]", name, ref.getId(), path, hostname, tnfsmnt.serverVersion());
-					mountCount.addAndGet(1);
-	
-				} catch (IOException ioe) {
-					if(log.isDebugEnabled())
-						log.error(MessageFormat.format("Failed to mount TNFS resource {0} @ {1}.", hostname, path), ioe);
-					else
-						log.error(MessageFormat.format("Failed to mount TNFS resource {0} @ {1}. {2}", hostname, path, ioe.getMessage()));
-				}
-			});
-			
-			/* Setup mDNS if needed */
-			
-			if(configuration.mountConfiguration().getBoolean(Constants.DISCOVER_KEY) ||
-			   configuration.mdns().getBoolean(Constants.ANNOUNCE_KEY)) {
-				try {
-					
-					var mdnsAddress = configuration.mdns().getOr(Constants.ADDRESS_KEY).map(a -> Net.parseAddress(a, "localhost")).orElseGet(() -> {
-						var http = configuration.http();
-						var https = configuration.https();
-						var httpOn = http.getInt(Constants.PORT_KEY, 0) > 0;
-						var httpsOn = https.getInt(Constants.PORT_KEY, 0) > 0;
-						var httpAddr =  http.get(Constants.ADDRESS_KEY, "%");
-						var httpsAddr =  https.get(Constants.ADDRESS_KEY, "%");
-						
-						if(httpOn  && httpsOn && !httpAddr.equals(httpsAddr)) {
-							return Net.parseAddress("*");
-						}
-						else {
-							if(httpsOn) {
-								return Net.parseAddress(httpsAddr);
-							}
-							else if(httpOn) {
-								return Net.parseAddress(httpAddr);
-							}
-							else {
-								return null;
-							}
-						}	
-					});
-					mdns = Optional.of(new MDNS(mdnsAddress));
-					
-				} catch (IOException e) {
-					throw new UncheckedIOException(e);
-				}
-			}
-			else {
-				mdns = Optional.empty();
-			}
-			
-			try {
-	
-				/* Discover other mounts */
+				reconfigureStorage();
 				
-				if(configuration.mountConfiguration().getBoolean(Constants.DISCOVER_KEY)) {
-					for(var srv : mdns.get().list("_tnfs._tcp.local.")) {
-						try {
-							for(var addr : srv.getHostAddresses()) {
-		
-								var clnt = new TNFSClient.Builder().
-										withHostname(addr).
-										withPort(srv.getPort()).
-										build();
-								
-								for(var path : parseArray(srv.getPropertyString("path"))) {
-									try {
-										var name = path + " on " + addr;
-										log.info("Mounting {} to {} @ {}", name, addr, path);
-										var tnfsmnt = clnt.mount(path).build();
-										var vol = new TNFSMountVolume(tnfsmnt, srv.getName());
-										bldr.addVolumes(new DefaultVolumeRef(name, vol));
-										log.info("Mounted {} to {} @ {}", name, addr, path);
-										mountCount.addAndGet(1);	
-									}
-									catch(IOException | TNFSException ioe) {
-										log.warn("Failed to connect to mDNS advertised mount {} on {}", path, addr);
-									}
-								}
-									
-							}
-						}
-						catch(IOException ioe) {
-							log.warn("Failed to connect to mDNS advertised server {}", srv);
-						}
+				if (configuration.mdns().getBoolean(Constants.ANNOUNCE_KEY)) {
+	
+					var deregistered = new AtomicBoolean();
+					try {
+						shutdownHook = new Thread(() -> {
+							mdns.get().unregisterAllServices();
+							deregistered.set(true);
+						}, "MDNSDeregister");
+						Runtime.getRuntime().addShutdownHook(shutdownHook);
+	
+						runServer(mdns);
+	
+					} finally {
+						deregisterFromMdns(deregistered);
 					}
 				}
-		
-				if (mountCount.get() == 0)
-					throw new IllegalStateException("No valid mounts defined in configuration.");
-		
-				var storage = bldr.build();
-		
-				storageFactory.setElfinderStorage(storage);
-			}
-			catch(RuntimeException re) {
-				mdns.ifPresent(dns -> { 
-					dns.unregisterAllServices();
-					try {
-						dns.close();
-					} catch (IOException e) {
+				else {
+					if(shutdownHook != null) {
+						Runtime.getRuntime().removeShutdownHook(shutdownHook);
+						shutdownHook = null;
 					}
-				});
-				throw re;
+					runServer(Optional.empty());
+				}
 			}
 		}
 		catch(RuntimeException re) {
@@ -282,33 +192,149 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 			}
 			throw re;
 		}
+
+	}
+
+	private void deregisterFromMdns(AtomicBoolean deregistered) {
+		if (!deregistered.get()) {
+			log.info("De-registering mDNS");
+			mdns.get().unregisterAllServices();
+			deregistered.set(true);
+		}
+	}
+
+	private void reconfigureStorage() {
+		var bldr = new DefaultElfinderStorage.Builder();
+		var mountCount = new AtomicInteger();
+
+		/* Mounts from config files */
 		
-		SLF4JBridgeHandler.removeHandlersForRootLogger();
-		SLF4JBridgeHandler.install();
-
-		if (configuration.mdns().getBoolean(Constants.ANNOUNCE_KEY)) {
-
-			var deregistered = new AtomicBoolean();
-			try {
-				Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-					mdns.get().unregisterAllServices();
-					deregistered.set(true);
-				}, "MDNSDeregister"));
-
-				runServer(mdns);
-
-			} finally {
-				if (!deregistered.get()) {
-					mdns.get().unregisterAllServices();
-					deregistered.set(true);
+		configuration.mounts().forEach(mnt -> {
+			var hostname = Net.parseAddress(mnt.get(Constants.HOSTNAME_KEY)).getHostAddress();
+			var port = mnt.getInt(Constants.PORT_KEY);
+			var path = mnt.get(Constants.PATH_KEY);
+			var name = mnt.getOr(Constants.NAME_KEY).orElseGet(() -> {
+				if (port != TNFS.DEFAULT_PORT) {
+					return "{hostname}:{port}{path}";
 				}
+				else {
+					return "{hostname}:{path}";
+				}
+			}).replace("{hostname}", hostname)
+				.replace("{port}", String.valueOf(port))
+				.replace("{path}", String.valueOf(path));
+
+			try {
+				var clnt = new TNFSClient.Builder().withAddress(hostname, port).build();
+				var tnfsmnt = clnt.mount(path).build();
+				var vol = new TNFSMountVolume(tnfsmnt, name);
+				var ref = new DefaultVolumeRef( String.valueOf(Integer.toUnsignedLong(name.hashCode())), vol);
+				
+				bldr.addVolumes(ref);
+				log.info("Mounted {} [{}] to {} @ {} [{}]", name, ref.getId(), path, hostname, tnfsmnt.serverVersion());
+				mountCount.addAndGet(1);
+
+			} catch (IOException ioe) {
+				if(log.isDebugEnabled())
+					log.error(MessageFormat.format("Failed to mount TNFS resource {0} @ {1}.", hostname, path), ioe);
+				else
+					log.error(MessageFormat.format("Failed to mount TNFS resource {0} @ {1}. {2}", hostname, path, ioe.getMessage()));
+			}
+		});
+		
+		/* Setup mDNS if needed */
+		
+		if(configuration.mountConfiguration().getBoolean(Constants.DISCOVER_KEY) ||
+		   configuration.mdns().getBoolean(Constants.ANNOUNCE_KEY)) {
+			try {
+				
+				var mdnsAddress = configuration.mdns().getOr(Constants.ADDRESS_KEY).map(a -> Net.parseAddress(a, "localhost")).orElseGet(() -> {
+					var http = configuration.http();
+					var https = configuration.https();
+					var httpOn = http.getInt(Constants.PORT_KEY, 0) > 0;
+					var httpsOn = https.getInt(Constants.PORT_KEY, 0) > 0;
+					var httpAddr =  http.get(Constants.ADDRESS_KEY, "%");
+					var httpsAddr =  https.get(Constants.ADDRESS_KEY, "%");
+					
+					if(httpOn  && httpsOn && !httpAddr.equals(httpsAddr)) {
+						return Net.parseAddress("*");
+					}
+					else {
+						if(httpsOn) {
+							return Net.parseAddress(httpsAddr);
+						}
+						else if(httpOn) {
+							return Net.parseAddress(httpAddr);
+						}
+						else {
+							return null;
+						}
+					}	
+				});
+				mdns = Optional.of(new MDNS(mdnsAddress));
+				
+			} catch (IOException e) {
+				throw new UncheckedIOException(e);
 			}
 		}
 		else {
-			runServer(Optional.empty());
+			mdns = Optional.empty();
 		}
+		
+		try {
 
-		return 0;
+			/* Discover other mounts */
+			
+			if(configuration.mountConfiguration().getBoolean(Constants.DISCOVER_KEY)) {
+				for(var srv : mdns.get().list("_tnfs._tcp.local.")) {
+					try {
+						for(var addr : srv.getHostAddresses()) {
+
+							var clnt = new TNFSClient.Builder().
+									withHostname(addr).
+									withPort(srv.getPort()).
+									build();
+							
+							for(var path : parseArray(srv.getPropertyString("path"))) {
+								try {
+									var name = path + " on " + addr;
+									log.info("Mounting {} to {} @ {}", name, addr, path);
+									var tnfsmnt = clnt.mount(path).build();
+									var vol = new TNFSMountVolume(tnfsmnt, srv.getName());
+									bldr.addVolumes(new DefaultVolumeRef(name, vol));
+									log.info("Mounted {} to {} @ {}", name, addr, path);
+									mountCount.addAndGet(1);	
+								}
+								catch(IOException | TNFSException ioe) {
+									log.warn("Failed to connect to mDNS advertised mount {} on {}", path, addr);
+								}
+							}
+								
+						}
+					}
+					catch(IOException ioe) {
+						log.warn("Failed to connect to mDNS advertised server {}", srv);
+					}
+				}
+			}
+
+			if (mountCount.get() == 0)
+				throw new IllegalStateException("No valid mounts defined in configuration.");
+
+			var storage = bldr.build();
+
+			storageFactory.setElfinderStorage(storage);
+		}
+		catch(RuntimeException re) {
+			mdns.ifPresent(dns -> { 
+				dns.unregisterAllServices();
+				try {
+					dns.close();
+				} catch (IOException e) {
+				}
+			});
+			throw re;
+		}
 	}
 
 	@Override
@@ -377,55 +403,54 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 					build());
 		}
 
-		try (var httpd = bldr.build()) {
+		httpd = bldr.build();
 
+		httpd.httpAddress().ifPresent(addr -> {
+			var iaddr = (InetSocketAddress)addr;
+			log.info("Listening on {} @ {} for HTTP", iaddr.getPort(), iaddr.getHostString());
+		});
+		httpd.httpsAddress().ifPresent(addr -> {
+			var iaddr = (InetSocketAddress)addr;
+			log.info("Listening on {} @ {} for HTTPS", iaddr.getPort(), iaddr.getHostString());
+		});
+
+		gateway.ifPresent(gw -> {
 			httpd.httpAddress().ifPresent(addr -> {
 				var iaddr = (InetSocketAddress)addr;
-				log.info("Listening on {} @ {} for HTTP", iaddr.getPort(), iaddr.getHostString());
+				log.info("Mapping port {} @ {} for HTTP on your router to this machine", iaddr.getPort(), iaddr.getHostString());
+				gw.map(iaddr.getPort(), Protocol.TCP);
+				log.warn("Mapping port {} @ {} for HTTP successful. Your server is now on the internet!", iaddr.getPort(), iaddr.getHostString());
 			});
 			httpd.httpsAddress().ifPresent(addr -> {
 				var iaddr = (InetSocketAddress)addr;
-				log.info("Listening on {} @ {} for HTTPS", iaddr.getPort(), iaddr.getHostString());
+				log.info("Mapping port {} @ {} for HTTP on your router to this machine", iaddr.getPort(), iaddr.getHostString());
+				gw.map(iaddr.getPort(), Protocol.TCP);
+				log.warn("Mapping port {} @ {} for HTTPS successful. Your server is now on the internet!", iaddr.getPort(), iaddr.getHostString());
 			});
+		});
 
-			gateway.ifPresent(gw -> {
-				httpd.httpAddress().ifPresent(addr -> {
-					var iaddr = (InetSocketAddress)addr;
-					log.info("Mapping port {} @ {} for HTTP on your router to this machine", iaddr.getPort(), iaddr.getHostString());
-					gw.map(iaddr.getPort(), Protocol.TCP);
-					log.warn("Mapping port {} @ {} for HTTP successful. Your server is now on the internet!", iaddr.getPort(), iaddr.getHostString());
-				});
-				httpd.httpsAddress().ifPresent(addr -> {
-					var iaddr = (InetSocketAddress)addr;
-					log.info("Mapping port {} @ {} for HTTP on your router to this machine", iaddr.getPort(), iaddr.getHostString());
-					gw.map(iaddr.getPort(), Protocol.TCP);
-					log.warn("Mapping port {} @ {} for HTTPS successful. Your server is now on the internet!", iaddr.getPort(), iaddr.getHostString());
-				});
+		mdns.ifPresent(d -> {
+			httpd.httpAddress().ifPresent(addr -> {
+				var iaddr = (InetSocketAddress)addr;
+				log.info("Registering mDNS for HTTP on {} @ {}", iaddr.getPort(), iaddr.getHostString());
+				try {
+					d.registerService( ServiceInfo.create("_http._tcp.local.", "TNFSJ Web", iaddr.getPort(), "path=index.html"));
+				} catch (IOException e) {
+					throw new UncheckedIOException(e);
+				}
 			});
-
-			mdns.ifPresent(d -> {
-				httpd.httpAddress().ifPresent(addr -> {
-					var iaddr = (InetSocketAddress)addr;
-					log.info("Registering mDNS for HTTP on {} @ {}", iaddr.getPort(), iaddr.getHostString());
-					try {
-						d.registerService( ServiceInfo.create("_http._tcp.local.", "TNFSJ Web", iaddr.getPort(), "path=index.html"));
-					} catch (IOException e) {
-						throw new UncheckedIOException(e);
-					}
-				});
-				httpd.httpsAddress().ifPresent(addr -> {
-					var iaddr = (InetSocketAddress)addr;
-					log.info("Registering mDNS for HTTPS on {} @ {}", iaddr.getPort(), iaddr.getHostString());
-					try {
-						d.registerService( ServiceInfo.create("_https._tcp.local.", "TNFSJ Web", iaddr.getPort(), "path=index.html"));
-					} catch (IOException e) {
-						throw new UncheckedIOException(e);
-					}
-				});
+			httpd.httpsAddress().ifPresent(addr -> {
+				var iaddr = (InetSocketAddress)addr;
+				log.info("Registering mDNS for HTTPS on {} @ {}", iaddr.getPort(), iaddr.getHostString());
+				try {
+					d.registerService( ServiceInfo.create("_https._tcp.local.", "TNFSJ Web", iaddr.getPort(), "path=index.html"));
+				} catch (IOException e) {
+					throw new UncheckedIOException(e);
+				}
 			});
-			
-			httpd.run();
-		}
+		});
+		
+		httpd.run();
 	}
 
 	private void apiPost(Transaction tx) throws Exception {

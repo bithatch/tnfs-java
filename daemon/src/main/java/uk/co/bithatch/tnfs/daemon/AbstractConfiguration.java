@@ -87,7 +87,10 @@ public abstract class AbstractConfiguration {
 
 		if(!scopes.isEmpty()) {
 			bldr.withScopes(scopes.toArray(new Scope[0]));
-			bldr.withWriteScope(scopes.get(0));
+			if(scopes.size() == 2)
+				bldr.withWriteScope(Scope.USER);
+			else
+				bldr.withWriteScope(scopes.get(0));
 		}
 		
 		monitor.ifPresent(bldr::withMonitor);

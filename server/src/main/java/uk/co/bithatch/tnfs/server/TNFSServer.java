@@ -30,6 +30,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.Channel;
+import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -171,6 +172,7 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 
 	private final static class TCPTNFSServer extends TNFSServer<ServerSocketChannel> {
 		private final static Logger LOG = LoggerFactory.getLogger(TCPTNFSServer.class);
+		private Selector selector;
 
 
 		private TCPTNFSServer(
@@ -219,11 +221,19 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 		}
 
 		@Override
+		protected void onClose() {
+			try {
+				selector.close();
+			} catch (IOException e) {
+			}
+		}
+
+		@Override
 		protected void doRun() throws Exception {
 
 			var serverChannel = channel();
 
-			var selector = Selector.open(); // selector is open here
+			selector = Selector.open(); // selector is open here
 			var ops = serverChannel.validOps();
 
 			serverChannel.register(selector, ops, null);
@@ -439,9 +449,14 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 	}
 
 	@Override
-	public void close() throws IOException {
+	public final void close() throws IOException {
+		LOG.info("Closing {}", protocol());
 		closed = true;
 		socketChannel.close();
+		onClose();
+	}
+	
+	protected void onClose() {
 	}
 
 	public TNFSFileSystemService fileSystemService() {
@@ -468,6 +483,9 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 		LOG.info("Listening on {} {}:{}", address().getHostString(), port(), protocol());
 		try {
 			doRun();
+		} catch(ClosedSelectorException cce) {
+			if(!closed)
+				throw cce;
 		} catch(RuntimeException re) {
 			throw re;
 		} catch (IOException ioe) {

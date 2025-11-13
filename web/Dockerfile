@@ -28,15 +28,23 @@ RUN mkdir -p $HOME
 WORKDIR $HOME
 ADD . $HOME
 #RUN --mount=type=cache,target=/root/.m2 mvn -f $HOME/pom.xml clean package -Dbuild.native.daemon=true
-RUN mvn -f $HOME/pom.xml clean package -Dbuild.native.web=true
+RUN mvn -f $HOME/pom.xml clean package -Dbuild.native.web=true -DskipTests
 
 #
 # Package stage
 #
+
+ENV TNFS_MOUNT_HOSTNAME localhost
+ENV TNFS_MOUNT_PORT 16384
+ENV TNFS_MOUNT_PATH /
+ENV TNFS_MOUNT_PROTOCOL UDP
+ENV TNFS_MOUNT_NAME Local TNFS
+ENV LOG_LEVEL INFO
+
 FROM debian:stable-slim 
 COPY --from=build /usr/app/web/target/tnfsjd-web /app/tnfsjd-web
 COPY --from=build /usr/app/web/src/main/docker/configuration /etc/tnfsjd-web
 EXPOSE 14080
 EXPOSE 14443
 VOLUME /configuration
-ENTRYPOINT /app/tnfsjd-web -X -L INFO -C /etc/tnfsjd-web -O /configuration
+ENTRYPOINT /app/tnfsjd-web -X -L ${LOG_LEVEL:-INFO} -C /etc -O /configuration

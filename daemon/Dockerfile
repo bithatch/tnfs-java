@@ -28,12 +28,13 @@ RUN mkdir -p $HOME
 WORKDIR $HOME
 ADD . $HOME
 #RUN --mount=type=cache,target=/root/.m2 mvn -f $HOME/pom.xml clean package -Dbuild.native.daemon=true
-RUN mvn -f $HOME/pom.xml clean package -Dbuild.native.daemon=true
+RUN mvn -f $HOME/pom.xml clean package -Dbuild.native.daemon=true -DskipTests
 
 #
 # Package stage
 #
 FROM debian:stable-slim 
+ENV TNFS_LOG_LEVEL INFO
 COPY --from=build /usr/app/daemon/target/tnfsjd /app/tnfsjd
 COPY --from=build /usr/app/daemon/target/tnfs-user /app/tnfs-user
 COPY --from=build /usr/app/daemon/src/main/docker/configuration /etc/tnfsjd
@@ -42,4 +43,4 @@ EXPOSE 16384
 EXPOSE 16384/udp
 VOLUME /public-files
 VOLUME /configuration
-ENTRYPOINT /app/tnfsjd -L INFO -C /etc/tnfsjd -O /configuration
+ENTRYPOINT /app/tnfsjd -L ${TNFS_LOG_LEVEL:-INFO} -C /etc -O /configuration
