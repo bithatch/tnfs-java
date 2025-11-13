@@ -1,5 +1,6 @@
 /etc/tnfsjd/tnfsjd.ini
 /etc/tnfsjd/mounts.ini
 /etc/tnfsjd/authentication.ini
+/etc/tnfsjd/server-key.b64
 /etc/tnfsjd/users.ini
 /etc/tnfsjd-web/tnfsjd-web.ini

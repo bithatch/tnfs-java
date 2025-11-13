@@ -9,3 +9,4 @@
 /web/etc/tnfsd/passwd.properties
 /web/etc/
 /daemon/etc/
+/sdk/src/main/packages/configuration/tnfsjd/server-key.b64

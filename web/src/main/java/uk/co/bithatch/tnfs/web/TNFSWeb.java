@@ -150,7 +150,7 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 			/* Mounts from config files */
 			
 			configuration.mounts().forEach(mnt -> {
-				var hostname = mnt.get(Constants.HOSTNAME_KEY);
+				var hostname = Net.parseAddress(mnt.get(Constants.HOSTNAME_KEY)).getHostAddress();
 				var port = mnt.getInt(Constants.PORT_KEY);
 				var path = mnt.get(Constants.PATH_KEY);
 				var name = mnt.getOr(Constants.NAME_KEY).orElseGet(() -> {
