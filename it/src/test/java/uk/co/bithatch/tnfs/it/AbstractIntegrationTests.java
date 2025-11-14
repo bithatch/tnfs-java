@@ -34,6 +34,7 @@ import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.FileAlreadyExistsException;
 import java.util.ArrayList;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +58,7 @@ public abstract class AbstractIntegrationTests {
 	}
 	
 	static {
-//		System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "TRACE");
+		System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "TRACE");
 		
 		Thread.setDefaultUncaughtExceptionHandler((t,e) -> {
 			LOG.error("Uncaught error in thread.", e);
@@ -268,17 +269,21 @@ public abstract class AbstractIntegrationTests {
 		for(var t : l) {
 			t.join(1000 * 60 * 5);
 		}
+		
+		Assertions.assertEquals(0, e.size());
 	}
 
 	protected void testPutAndGetFile(String filename, long size) throws Exception {
 		LOG.info("Test put then get of {} bytes", size);
 		runMountTest((mnt, clnt, svr) -> {
-			var buf = ByteBuffer.allocateDirect(256);
-			try(var rc = new RandomReadableChannel(256, size, false)) {
+			var buf = ByteBuffer.allocateDirect(clnt.size());
+			var wrtn = 0l;
+			try(var rc = new RandomReadableChannel(clnt.size(), size, false)) {
 				try(var fc = mnt.open(filename, OpenFlag.CREATE, OpenFlag.WRITE)) {
 					while(rc.read(buf) != -1) {
 						buf.flip();
-						fc.write(buf);
+						while(buf.hasRemaining())
+							wrtn += fc.write(buf);
 						buf.clear();
 					}
 				}	
@@ -291,6 +296,8 @@ public abstract class AbstractIntegrationTests {
 					assertArrayEquals(rc.digest(), dc.digest());
 				}	
 			}
+			
+			Assertions.assertEquals(size, wrtn);
 		});
 	}
 
@@ -305,31 +312,40 @@ public abstract class AbstractIntegrationTests {
 		return new TNFSJServerBuilder().
 				withHost(InetAddress.getLoopbackAddress());
 	}
+	
+	protected final void runTest(TestTask task) throws Exception {
+		var started = System.currentTimeMillis();
 
-	private TNFSClient createClient(ITNFSServer svr) throws IOException {
-		return createClientBuilder(svr).
-				build();
+		try {
+			doRunTest(task);
+			
+		}
+		finally {
+			var ended = System.currentTimeMillis();
+			var took =  ended - started;
+			LOG.info("Test took: {}ms",  took);
+		}
 	}
 
-	private void runMountTest(TestMountTask task) throws Exception {
+	protected void doRunTest(TestTask task) throws Exception, IOException {
+		try(var svr = createServer(createServerBuilder())) {
+			try(var clnt = createClientBuilder(svr).
+					build()) {
+				task.run(clnt, svr);
+			}
+		}
+	}
+
+	protected void runMountTest(TestMountTask task) throws Exception {
 		runTest((clnt, svr) -> {
 			try(var mnt = clnt.mount("/").build()) {
 				task.run(mnt, clnt, svr);
 			}
 		});
 	}
-	
-	private void runTest(TestTask task) throws Exception {
 
-		try(var svr = createServer()) {
-			try(var clnt = createClient(svr)) {
-				task.run(clnt, svr);
-			}
-		}
-	}
-
-	private ITNFSServer createServer() {
-		ITNFSServer svr = createServerBuilder().
+	protected ITNFSServer createServer(TNFSJServerBuilder bldr) {
+		ITNFSServer svr = bldr.
 				build();
 		Thread t = new Thread(svr, "TNFSServer");
 		t.start();

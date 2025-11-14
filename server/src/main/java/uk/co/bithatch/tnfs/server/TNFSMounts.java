@@ -124,7 +124,7 @@ public class TNFSMounts implements TNFSFileSystemService {
 	}
 
 	@Override
-	public TNFSUserMount createMount(String path, Optional<? extends Principal> user) {
+	public TNFSUserMount createMount(String path, Optional<Principal> user) {
 		var ref = mountDetails(path);
 		if (LOG.isDebugEnabled()) {
 			user.ifPresentOrElse(un -> LOG.debug("Request to mount {} as {}", path, un.getName()),

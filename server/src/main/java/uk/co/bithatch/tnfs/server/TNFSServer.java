@@ -29,6 +29,7 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.AsynchronousCloseException;
+import java.nio.channels.CancelledKeyException;
 import java.nio.channels.Channel;
 import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.DatagramChannel;
@@ -48,6 +49,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -76,6 +78,7 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 		private List<TNFSMessageProcessor> preProcessors = new ArrayList<>();
 		private Duration retryTime = Duration.ofSeconds(5);
 		private Optional<Supplier<byte[]>> serverKey = Optional.empty();
+		private Optional<Consumer<TNFSSession>> sessionDecorator = Optional.empty();
 
 		public TNFSServer<?> build() throws IOException {
 			if(protocol == Protocol.TCP) {
@@ -90,7 +93,8 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 					preProcessors, 
 					postProcessors,
 					serverKey, 
-					bufferPool
+					bufferPool, 
+					sessionDecorator
 				);
 			}
 			else {
@@ -104,7 +108,8 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 					preProcessors, 
 					postProcessors,
 					serverKey, 
-					bufferPool
+					bufferPool, 
+					sessionDecorator
 				);
 			}
 		}
@@ -168,6 +173,11 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 			this.serverKey = Optional.of(serverKey);
 			return this;
 		}
+
+		public Builder withSessionDecorator(Consumer<TNFSSession> sessionDecorator) {
+			this.sessionDecorator = Optional.of(sessionDecorator);
+			return this;
+		}
 	}
 
 	private final static class TCPTNFSServer extends TNFSServer<ServerSocketChannel> {
@@ -186,8 +196,9 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 				List<TNFSMessageProcessor> preProcessors,
 				List<TNFSMessageProcessor> postProcessors,
 				Optional<Supplier<byte[]>> serverKey,
-				Optional<ByteBufferPool> bufferPool)  throws  IOException {
-			super(port, size.orElse(TNFS.MAX_TCP_MESSAGE_SIZE), hostname, fileSystemFactory, retryTime, maxSessions, preProcessors, postProcessors, ServerSocketChannel.open(), serverKey, bufferPool);
+				Optional<ByteBufferPool> bufferPool,
+				Optional<Consumer<TNFSSession>> sessionDecorator)  throws  IOException {
+			super(port, size.orElse(TNFS.MAX_TCP_MESSAGE_SIZE), hostname, fileSystemFactory, retryTime, maxSessions, preProcessors, postProcessors, ServerSocketChannel.open(), serverKey, bufferPool, sessionDecorator);
 			LOG.info("Binding TCP server to {} using a maximum message size of {} bytes", address(), size());
 			channel().bind(address());
 			channel().configureBlocking(false);
@@ -248,6 +259,7 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 				var keyIt = keys.iterator();
 				while (keyIt.hasNext()) {
 					var key = keyIt.next();
+					keyIt.remove();
 
 					if (key.isAcceptable()) {
 
@@ -265,7 +277,7 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 			                key.interestOps(SelectionKey.OP_WRITE);
 						}
 						catch (/* EOF */Exception eof) {
-							if(eof instanceof EOFException) {
+							if(eof instanceof EOFException |  eof instanceof ClosedSelectorException |  eof instanceof CancelledKeyException) {
 								LOG.info("Session {} closed cleanly.", sckt.getRemoteAddress());
 							}
 							else {
@@ -285,7 +297,7 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 					} else if (key.isWritable()) {
 		                key.interestOps(SelectionKey.OP_READ);
 					}
-					keyIt.remove();
+//					keyIt.remove();
 				}
 			}
 		}
@@ -318,8 +330,9 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 				List<TNFSMessageProcessor> preProcessors,
 				List<TNFSMessageProcessor> postProcessors,
 				Optional<Supplier<byte[]>> serverKey,
-				Optional<ByteBufferPool> bufferPool)  throws  IOException {
-			super(port, size.orElse(TNFS.MAX_UDP_MESSAGE_SIZE),  hostname, fileSystemFactory, retryTime, maxSessions, preProcessors, postProcessors, DatagramChannel.open(), serverKey, bufferPool);
+				Optional<ByteBufferPool> bufferPool,
+				Optional<Consumer<TNFSSession>> sessionDecorator)  throws  IOException {
+			super(port, size.orElse(TNFS.MAX_UDP_MESSAGE_SIZE),  hostname, fileSystemFactory, retryTime, maxSessions, preProcessors, postProcessors, DatagramChannel.open(), serverKey, bufferPool, sessionDecorator);
 			LOG.info("Binding UDP server to {} using a maximum message size of {} bytes", address(), size());
 			channel().socket().bind(address());
 			/* TODO put responses on a queue (each thread with own buffer) */
@@ -398,6 +411,7 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 	private final Map<Integer, TNFSSession> sessions = Collections.synchronizedMap(new HashMap<>());
 	private final Map<Integer, TNFSMessageHandler> handlers = Collections.synchronizedMap(new HashMap<>());
 	private short sessionId;
+	private final Optional<Consumer<TNFSSession>> sessionDecorator;
 
 //	protected final Map<SocketAddress, TNFSPeer> peers = new HashMap<>();
 
@@ -417,11 +431,13 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 			List<TNFSMessageProcessor> postProcessors,
 			CHAN channel,
 			Optional<Supplier<byte[]>> serverKey,
-			Optional<ByteBufferPool> bufferPool)  throws  IOException {
+			Optional<ByteBufferPool> bufferPool,
+			Optional<Consumer<TNFSSession>> sessionDecorator)  throws  IOException {
 
 		this.bufferPool = bufferPool.orElseGet(() -> 
 			new ByteBufferPool(TNFS.DEFAULT_SERVER_BUFFERS, ByteBufferPool.DIRECT)
 		);
+		this.sessionDecorator = sessionDecorator;
 		this.serverKey = serverKey;
 		this.preProcessors = Collections.unmodifiableList(new ArrayList<>(preProcessors));
 		this.postProcessors = Collections.unmodifiableList(new ArrayList<>(postProcessors));
@@ -569,6 +585,7 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 				var session = new TNFSSession(userMount, mountSessionId, TNFSServer.this, version);
 				sessions.put(mountSessionId, session);
 				newSession.set(mountSessionId);
+				sessionDecorator.ifPresent(sd -> sd.accept(session));
 				LOG.info("New mount with id of {} [{}] to {} by {} in connection {}", mountSessionId, String.format("%04x", mountSessionId), userMount.fileSystem().mountPath(), userMount.user().getName(), address());
 				return session;
 			}

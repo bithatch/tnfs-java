@@ -364,8 +364,11 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 						gw.map(port, UPnP.Protocol.UDP);
 					}
 				});
-				registerMDNS(tnfsMounts, Protocol.TCP);
-				registerMDNS(tnfsMounts, Protocol.UDP);
+				
+				if(jmdns != null) {
+					registerMDNS(tnfsMounts, Protocol.TCP);
+					registerMDNS(tnfsMounts, Protocol.UDP);
+				}
 				
 				var t1 = new Thread(udpSrvr::run, "UDPTNFS");
 				t1.start();
@@ -381,7 +384,9 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 			if(protocols.get(0) == Protocol.TCP) {
 
 				gateway.ifPresent(gw -> gw.map(port, UPnP.Protocol.TCP));
-				registerMDNS(tnfsMounts, Protocol.TCP);
+				if(jmdns != null) {
+					registerMDNS(tnfsMounts, Protocol.TCP);
+				}
 				
 				/* TCP */
 				try(var tcpSrvr = new TNFSServer.Builder().
@@ -399,7 +404,9 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 			else if(protocols.get(0) == Protocol.UDP) {
 
 				gateway.ifPresent(gw -> gw.map(port, UPnP.Protocol.UDP));
-				registerMDNS(tnfsMounts, Protocol.UDP);
+				if(jmdns != null) {
+					registerMDNS(tnfsMounts, Protocol.UDP);
+				}
 				
 				/* UDP */
 				try(var udpSrvr = new TNFSServer.Builder().

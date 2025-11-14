@@ -28,7 +28,7 @@ import uk.co.bithatch.tnfs.server.TNFSMounts.TNFSMountRef;
 
 public interface TNFSFileSystemService {
 	
-	TNFSUserMount createMount(String path, Optional<? extends Principal> user);
+	TNFSUserMount createMount(String path, Optional<Principal> user);
 	
 	TNFSMountRef mountDetails(String path);
 	

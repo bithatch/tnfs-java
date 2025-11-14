@@ -21,7 +21,6 @@
 package uk.co.bithatch.tnfs.it;
 
 import java.io.Closeable;
-import java.util.Optional;
 
 public interface ITNFSServer extends Closeable, Runnable {
 

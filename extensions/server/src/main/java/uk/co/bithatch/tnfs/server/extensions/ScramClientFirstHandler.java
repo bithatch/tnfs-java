@@ -22,6 +22,7 @@ package uk.co.bithatch.tnfs.server.extensions;
 
 import static uk.co.bithatch.tnfs.server.Tasks.ioCall;
 
+import java.security.Principal;
 import java.util.Optional;
 
 import com.ongres.scram.common.ClientFirstMessage;
@@ -81,7 +82,7 @@ public class ScramClientFirstHandler implements TNFSMessageHandler {
 			/* Create the mount to get the new session, the session
 			 * will not actually be usable until authentication complete
 			 */
-			var userMount = fact.createMount(mountmsg.normalizedPath(), principal);
+			var userMount = fact.createMount(mountmsg.normalizedPath(), principal.map(s -> (Principal)s));
 			var session = context.newSession(userMount, mountmsg.version());
 			
 			/* Store some stuff in the session for use by the remainder of the

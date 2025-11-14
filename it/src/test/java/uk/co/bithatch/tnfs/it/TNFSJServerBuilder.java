@@ -78,6 +78,18 @@ public class TNFSJServerBuilder extends AbstractTestTNFSServerBuilder {
 		return this;
 	}
 	
+	public TNFSJServerBuilder withSize(int size) {
+		builder.withSize(size);
+		return this;
+	}
+	
+	public TNFSJServerBuilder withClientSize(int csize) {
+		builder.withSessionDecorator(s -> {
+			s.size(csize);
+		});
+		return this;
+	}
+	
 	public ITNFSServer build() {
 		
 		builder.withFileSystemFactory(new DefaultInMemoryFileSystemService());
