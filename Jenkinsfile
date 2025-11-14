@@ -166,6 +166,44 @@ pipeline {
                         
 					}
 				}
+                
+				/*
+				 * MacOS
+				 */
+				stage ('MacOS Arm TNFS') {
+					agent {
+						label 'macos && aarch64'
+					}
+					steps {
+                    
+                        script {
+                            env.FULL_VERSION = getFullVersion()
+                            echo "Full Version : ${env.FULLVERSION}"
+                        }
+                        
+						configFileProvider([
+					 			configFile(
+                                    fileId: "${env.BUILD_PROPERTIES_ID}",  
+					 				replaceTokens: true,
+                                    targetLocation: "${env.BUILD_PROPERTIES_FILENAME}",
+					 				variable: 'BUILD_PROPERTIES'
+					 			)
+					 		]) {
+					 		withMaven(
+                                globalMavenSettingsConfig: "${env.MAVEN_PROPERTIES_ID}"
+					 		) {	
+								withCredentials([usernamePassword(credentialsId: 'bithatch-ftp-upload', passwordVariable: 'FTP_UPLOAD_PASSWORD', usernameVariable: 'FTP_UPLOAD_USERNAME')]) {			 		  	
+	                                sh '''
+	                                mvn "-Dbuild.projectProperties=$BUILD_PROPERTIES" -DskipTests \
+	                                    -U -P native-image,upload-distribution clean deploy \
+				                        -Dbuild.uploadPassword="$FTP_UPLOAD_PASSWORD" -Dbuild.uploadUsername=$FTP_UPLOAD_USERNAME
+	                                '''
+	                            }
+					 		}
+        				}
+                        
+					}
+				}
 				
 				/*
 				 * Windows
