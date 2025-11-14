@@ -230,75 +230,78 @@ public abstract class AbstractIntegrationTests {
 
 	@Test
 	public void testPutAndGetFile() throws Exception {
-		testPutAndGetFile("file1", 16);
-		testPutAndGetFile("file1", 255);
-		testPutAndGetFile("file1", 256);
-		testPutAndGetFile("file1", TNFS.DEFAULT_UDP_MESSAGE_SIZE);
-		testPutAndGetFile("file1", 1024);
-		testPutAndGetFile("file1", 1024 * 10);
-		testPutAndGetFile("file1", 1024 * 1024);
-		testPutAndGetFile("file1", 1024 * 1024 * 6);
+		runMountTest((mnt, clnt, svr) -> {
+			testPutAndGetFile(mnt, clnt, svr, "file1", 16);
+			testPutAndGetFile(mnt, clnt, svr, "file1", 255);
+			testPutAndGetFile(mnt, clnt, svr, "file1", 256);
+			testPutAndGetFile(mnt, clnt, svr, "file1", TNFS.DEFAULT_UDP_MESSAGE_SIZE);
+			testPutAndGetFile(mnt, clnt, svr, "file1", 1024);
+			testPutAndGetFile(mnt, clnt, svr, "file1", 1024 * 10);
+			testPutAndGetFile(mnt, clnt, svr, "file1", 1024 * 1024);
+			testPutAndGetFile(mnt, clnt, svr, "file1", 1024 * 1024 * 6);
+	});
 	}
 
 	@Test
 	public void testPutAndGetFileThreads() throws Exception {
 		var l = new ArrayList<Thread>();
-		var e = new ArrayList<Exception>();
-		for(int i = 0 ; i < 10 ; i++) {
-			var t = new Thread(() -> {
-				try {
-					testPutAndGetFile("file1", 16);
-					testPutAndGetFile("file1", 255);
-					testPutAndGetFile("file1", 256);
-					testPutAndGetFile("file1", TNFS.DEFAULT_UDP_MESSAGE_SIZE);
-					testPutAndGetFile("file1", 1024);
-					testPutAndGetFile("file1", 1024 * 10);
-					testPutAndGetFile("file1", 1024 * 1024);
-					testPutAndGetFile("file1", 1024 * 1024 * 2);
-				}
-				catch(Exception ex) {
-					ex.printStackTrace();
-					e.add(ex);
-				}
-				
-			}, "testPutAndGetFileThreads-" + i);
-			l.add(t);
-			t.start();
-		}
-		
-		for(var t : l) {
-			t.join(1000 * 60 * 5);
-		}
-		
+		var e = new ArrayList<Throwable>();
+		runMountTest((mnt, clnt, svr) -> {
+			for(int i = 0 ; i < 10 ; i++) {
+				var fi = i;
+				var t = new Thread(() -> {
+					try {
+						testPutAndGetFile(mnt, clnt, svr, "file1_" + fi, 16);
+						testPutAndGetFile(mnt, clnt, svr, "file1_" + fi, 255);
+						testPutAndGetFile(mnt, clnt, svr, "file1_" + fi, 256);
+						testPutAndGetFile(mnt, clnt, svr, "file1_" + fi, TNFS.DEFAULT_UDP_MESSAGE_SIZE);
+						testPutAndGetFile(mnt, clnt, svr, "file1_" + fi, 1024);
+						testPutAndGetFile(mnt, clnt, svr, "file1_" + fi, 1024 * 10);
+						testPutAndGetFile(mnt, clnt, svr, "file1_" + fi, 1024 * 1024);
+						testPutAndGetFile(mnt, clnt, svr, "file1_" + fi, 1024 * 1024 * 2);
+					}
+					catch(Throwable ex) {
+						ex.printStackTrace();
+						e.add(ex);
+					}
+					
+				}, "testPutAndGetFileThreads-" + i);
+				l.add(t);
+				t.start();
+			}
+			
+			for(var t : l) {
+				t.join(1000 * 60 * 5);
+			}
+			
+		});
 		Assertions.assertEquals(0, e.size());
 	}
 
-	protected void testPutAndGetFile(String filename, long size) throws Exception {
+	protected void testPutAndGetFile(TNFSMount mnt, TNFSClient clnt, ITNFSServer svr, String filename, long size) throws Exception {
 		LOG.info("Test put then get of {} bytes", size);
-		runMountTest((mnt, clnt, svr) -> {
-			var buf = ByteBuffer.allocateDirect(clnt.size());
-			var wrtn = 0l;
-			try(var rc = new RandomReadableChannel(clnt.size(), size, false)) {
-				try(var fc = mnt.open(filename, OpenFlag.CREATE, OpenFlag.WRITE)) {
-					while(rc.read(buf) != -1) {
-						buf.flip();
-						while(buf.hasRemaining())
-							wrtn += fc.write(buf);
-						buf.clear();
-					}
-				}	
-				
-				try(var dc = new DigestReadableChannel(mnt.open("file1", OpenFlag.READ))) {
-					while(dc.read(buf) != -1) {
-						buf.clear();
-					}
-					
-					assertArrayEquals(rc.digest(), dc.digest());
-				}	
-			}
+		var buf = ByteBuffer.allocateDirect(clnt.size());
+		var wrtn = 0l;
+		try(var rc = new RandomReadableChannel(clnt.size(), size, false)) {
+			try(var fc = mnt.open(filename, OpenFlag.CREATE, OpenFlag.WRITE)) {
+				while(rc.read(buf) != -1) {
+					buf.flip();
+					while(buf.hasRemaining())
+						wrtn += fc.write(buf);
+					buf.clear();
+				}
+			}	
 			
-			Assertions.assertEquals(size, wrtn);
-		});
+			try(var dc = new DigestReadableChannel(mnt.open(filename, OpenFlag.READ))) {
+				while(dc.read(buf) != -1) {
+					buf.clear();
+				}
+				
+				assertArrayEquals(rc.digest(), dc.digest());
+			}	
+		}
+		
+		Assertions.assertEquals(size, wrtn);
 	}
 
 	protected Builder createClientBuilder(ITNFSServer svr) {
@@ -310,6 +313,7 @@ public abstract class AbstractIntegrationTests {
 
 	protected TNFSJServerBuilder createServerBuilder() {
 		return new TNFSJServerBuilder().
+				withFileMounts().
 				withHost(InetAddress.getLoopbackAddress());
 	}
 	

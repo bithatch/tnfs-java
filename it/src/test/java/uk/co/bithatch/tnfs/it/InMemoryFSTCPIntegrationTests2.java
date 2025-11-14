@@ -20,30 +20,21 @@
  */
 package uk.co.bithatch.tnfs.it;
 
+import java.net.InetAddress;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BigPacketUDPIntegrationTests extends UDPIntegrationTests {
-	final static Logger LOG = LoggerFactory.getLogger(BigPacketUDPIntegrationTests.class);
+import uk.co.bithatch.tnfs.lib.Protocol;
 
-	
-	protected void doRunTest(TestTask task) throws Exception {
-		for (var sz : new int[] { 532, 768, 1024, 1300, 1400, 1500, 32768/* , 50000 */}) {
-			LOG.info("-----------------------------------------------------------------------");
-			LOG.info("Testing with packets of {} bytes", sz);
-			LOG.info("-----------------------------------------------------------------------");
-			try(var svr = createServer(
-					createServerBuilder().
-					withClientSize(sz).
-					withSize(sz)
-			)) {
-				try(var clnt = createClientBuilder(svr).
-						withSize(sz).
-						build()) {
-					task.run(clnt, svr);
-				}
-			}
-		}
+public class InMemoryFSTCPIntegrationTests2 extends TCPIntegrationTests {
+	final static Logger LOG = LoggerFactory.getLogger(InMemoryFSTCPIntegrationTests2.class);
+
+	@Override
+	protected TNFSJServerBuilder createServerBuilder() {
+		return new TNFSJServerBuilder().
+				withProtocol(Protocol.TCP).
+				withHost(InetAddress.getLoopbackAddress());
 	}
-
+	
 }

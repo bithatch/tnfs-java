@@ -23,9 +23,13 @@ package uk.co.bithatch.tnfs.it;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
+import uk.co.bithatch.tnfs.lib.Io;
 import uk.co.bithatch.tnfs.lib.Protocol;
 import uk.co.bithatch.tnfs.server.DefaultInMemoryFileSystemService;
+import uk.co.bithatch.tnfs.server.TNFSMounts;
 import uk.co.bithatch.tnfs.server.TNFSServer;
 
 /**
@@ -33,18 +37,22 @@ import uk.co.bithatch.tnfs.server.TNFSServer;
  */
 public class TNFSJServerBuilder extends AbstractTestTNFSServerBuilder {
 	private final TNFSServer.Builder builder = new TNFSServer.Builder();
+	private Path tempMountDir;
 	
 	{
 		builder.withRandomPort();
+		builder.withFileSystemFactory(new DefaultInMemoryFileSystemService());
 	}
 
 	private class TNFSJServer implements ITNFSServer {
 		
 		private final TNFSServer<?> tnfsjServer;
+		private final Path tempMountDir;
 		
 
-		TNFSJServer(TNFSServer<?> tnfsjServer) {
+		TNFSJServer(Path tempMountDir, TNFSServer<?> tnfsjServer) {
 			this.tnfsjServer = tnfsjServer;
+			this.tempMountDir = tempMountDir;
 		}
 
 		@Override
@@ -53,6 +61,10 @@ public class TNFSJServerBuilder extends AbstractTestTNFSServerBuilder {
 				tnfsjServer.close();
 			} catch (IOException e) {
 				throw new UncheckedIOException(e);
+			} finally {
+				if(tempMountDir != null) {
+					Io.deleteDir(tempMountDir);
+				}
 			}
 		}
 
@@ -83,6 +95,18 @@ public class TNFSJServerBuilder extends AbstractTestTNFSServerBuilder {
 		return this;
 	}
 	
+	public TNFSJServerBuilder withFileMounts() {
+		var mounts = new TNFSMounts();
+		try {
+			tempMountDir = Files.createTempDirectory("tnfs");
+			mounts.mount("/", tempMountDir);
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+		builder.withFileSystemFactory(mounts);
+		return this;
+	}
+	
 	public TNFSJServerBuilder withClientSize(int csize) {
 		builder.withSessionDecorator(s -> {
 			s.size(csize);
@@ -91,11 +115,8 @@ public class TNFSJServerBuilder extends AbstractTestTNFSServerBuilder {
 	}
 	
 	public ITNFSServer build() {
-		
-		builder.withFileSystemFactory(new DefaultInMemoryFileSystemService());
-		
 		try {
-			return new TNFSJServer(builder.build());
+			return new TNFSJServer(tempMountDir, builder.build());
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}

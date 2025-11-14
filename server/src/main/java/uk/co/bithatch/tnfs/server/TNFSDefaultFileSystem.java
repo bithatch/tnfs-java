@@ -27,6 +27,7 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.ReadOnlyFileSystemException;
 import java.nio.file.attribute.BasicFileAttributeView;
@@ -177,7 +178,8 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 		
 		var rpath = resolve(path);
 		checkFileSymbolicLink(rpath, path);
-		var chnl = Files.newByteChannel(rpath, OpenFlag.encodeOptions(flags));
+		var oflgs = OpenFlag.encodeOptions(flags);
+		var chnl = Files.newByteChannel(rpath, oflgs);
 		
 		if(flgs.contains(OpenFlag.CREATE)) {
 			/* TODO umask? */
@@ -205,9 +207,9 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 		var dpath = resolve(path);
 		checkFileSymbolicLink(dpath, path);
 		if(dpath.equals(root))
-			Files.delete(dpath);
-		else
 			throw new AccessDeniedException(path);
+		else
+			Files.delete(dpath);
 	}
 	
 	@Override

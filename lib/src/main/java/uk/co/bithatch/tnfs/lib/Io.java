@@ -21,16 +21,33 @@
 package uk.co.bithatch.tnfs.lib;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.MessageFormat;
+import java.util.Comparator;
 
 /**
  * General I/O utilities.
  */
 public final class Io {
 
+	/**
+	 * Recursively delete a local directory (not following symbolic links).
+	 * 
+	 * @param path path to delete
+	 */
+	public static void deleteDir(Path path) {
+	    try (var paths = Files.walk(path)) {
+	        paths.sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
+	    }
+	    catch(IOException ioe) {
+	    	throw  new UncheckedIOException(ioe);
+	    }
+	}
 
 	/**
 	 * Prompt for a response from standard input, optionally masking (when supported). 

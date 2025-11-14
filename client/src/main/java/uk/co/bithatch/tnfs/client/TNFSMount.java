@@ -150,7 +150,7 @@ public interface TNFSMount extends TNFSFileAccess {
 	 * @throws IOException on I/O error
 	 */
 	default void newFile(String path) throws IOException {
-		open(path, OpenFlag.CREATE, OpenFlag.EXCLUSIVE).close();;
+		open(path, OpenFlag.WRITE, OpenFlag.CREATE, OpenFlag.EXCLUSIVE).close();;
 	}
 	
 	/**
