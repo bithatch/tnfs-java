@@ -181,13 +181,13 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 
 	@Override
 	public Integer call() throws Exception {
-		cwd = getSeparator();
+		cwd = String.valueOf(getSeparator());
 		start();
 		return 0;
 	}
 
 	@Override
-	public String getSeparator() {
+	public char getSeparator() {
 		return getSeparator(false);
 	}
 
@@ -246,7 +246,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 		var oldMount = mount;
 		mount = doMount(uri, client);
 		this.uri = uri; 
-		cwd = getSeparator();
+		cwd = String.valueOf(getSeparator());
 		if(oldMount != null) {
 			oldMount.close();
 		}
@@ -258,7 +258,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 		var oldClient = client;
 		client = doConnect(uri);
 		this.uri = uri;
-		cwd = getSeparator();
+		cwd = String.valueOf(getSeparator());
 		if(oldClient != null) {
 			mount = null;
 			oldClient.close();
@@ -283,7 +283,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 	public String nativeToLocalPath(String cwd) {
 		/* TODO what if path has escaped forward slash? */
 		if(isWindowsParsing()) {
-			return cwd.replace("/", getSeparator(false));
+			return cwd.replace("/", String.valueOf(getSeparator(false)));
 		}
 		return cwd;
 	}
@@ -373,7 +373,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 			keyMap.bind(new Reference("tailtip-toggle"), KeyMap.alt("s"));
 			
 			/* Welcome text */
-			cwd = getSeparator();
+			cwd = String.valueOf(getSeparator());
 			var trm = terminal.writer();
 			trm.println(String.format("Connected to %s @ %s over %s", mount.client().address(), mount.mountPath().equals("") ? "default mount" : mount.mountPath(), mount.client().protocol()));
 			trm.flush();
@@ -576,7 +576,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 
             String current;
             String curBuf;
-            String sep = getSeparator(reader.isSet(LineReader.Option.USE_FORWARD_SLASH));
+            char sep = getSeparator(reader.isSet(LineReader.Option.USE_FORWARD_SLASH));
             int lastSep = buffer.lastIndexOf(sep);
             try {
                 if (lastSep >= 0) {
@@ -596,7 +596,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 	                	var value = curBuf + p.name();
 	                    if (DirEntryFlag.isDirectory(p.flags())) {
 	                    	var candidate = value;
-	                    	if(reader.isSet(LineReader.Option.AUTO_PARAM_SLASH) && !candidate.endsWith(sep)) {
+	                    	if(reader.isSet(LineReader.Option.AUTO_PARAM_SLASH) && !candidate.endsWith(String.valueOf(sep))) {
 	                    		candidate += sep;
 	                    	}
 	                    	
@@ -605,7 +605,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 	                                getDisplay(terminal, p, resolver, 0, sep, true),
 	                                null,
 	                                null,
-	                                reader.isSet(LineReader.Option.AUTO_REMOVE_SLASH) ? sep : null,
+	                                reader.isSet(LineReader.Option.AUTO_REMOVE_SLASH) ? String.valueOf(sep) : null,
 	                                null,
 	                                false));
 	                    } else {
@@ -632,7 +632,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
         }
     }
 
-    public static String getDisplay(Terminal terminal, Entry p, StyleResolver resolver, int width, String separator, boolean nameTailIndicator) {
+    public static String getDisplay(Terminal terminal, Entry p, StyleResolver resolver, int width, char separator, boolean nameTailIndicator) {
     	
         var sb = new AttributedStringBuilder();
         var name = p.name();

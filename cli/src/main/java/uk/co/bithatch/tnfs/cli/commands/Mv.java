@@ -20,8 +20,9 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
-import static uk.co.bithatch.tnfs.lib.Util.relativizePath;
+import static uk.co.bithatch.tnfs.lib.Util.absolutePath;
 
+import java.util.List;
 import java.util.concurrent.Callable;
 
 import picocli.CommandLine.Command;
@@ -34,8 +35,8 @@ import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
 @Command(name = "mv", aliases = { "rename", "ren", "move" }, mixinStandardHelpOptions = true, description = "Rename or move file.")
 public class Mv extends TNFSTPCommand implements Callable<Integer> {
 
-	@Parameters(index = "0", arity = "1", description = "Path of file to move or rename from.")
-	private String file;
+	@Parameters(index = "0", arity = "1..", description = "Path of files to move or rename from.")
+	private List<String> files;
 
 	@Parameters(index = "1", arity = "1", description = "Path to rename or move file to.")
 	private String targetFile;
@@ -48,9 +49,14 @@ public class Mv extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var sftp = container.getMount();
-		file = relativizePath(container.getCwd(), file, container.getSeparator());
-		targetFile = relativizePath(container.getCwd(), targetFile, container.getSeparator());
-		sftp.rename(container.localToNativePath(file), container.localToNativePath(targetFile));
+		
+		targetFile = absolutePath(container.getCwd(), expandRemote(targetFile), container.getSeparator());
+		
+		expandRemoteAndDo(file -> {
+			file = absolutePath(container.getCwd(), file, container.getSeparator());
+			sftp.rename(container.localToNativePath(file), container.localToNativePath(targetFile));	
+		}, true, files);
+		
 		return 0;
 	}
 }

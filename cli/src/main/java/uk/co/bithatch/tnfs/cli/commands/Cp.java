@@ -20,7 +20,7 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
-import static uk.co.bithatch.tnfs.lib.Util.relativizePath;
+import static uk.co.bithatch.tnfs.lib.Util.absolutePath;
 
 import java.util.concurrent.Callable;
 
@@ -49,9 +49,18 @@ public class Cp extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var ext = container.getMount().extension(Copy.class);
-		file = relativizePath(container.getCwd(), file, container.getSeparator());
-		targetFile = relativizePath(container.getCwd(), targetFile, container.getSeparator());
-		ext.copy(container.localToNativePath(file), container.localToNativePath(targetFile));
+
+		expandRemoteAndDo(file -> {
+			expandRemoteAndDo(targetFile -> {
+				ext.copy(
+					container.localToNativePath(absolutePath(container.getCwd(), file, container.getSeparator())), 
+					container.localToNativePath(absolutePath(container.getCwd(), targetFile, container.getSeparator())
+				));		
+			}, false, targetFile);
+			
+		}, false, file);
+		
+		
 		return 0;
 	}
 }

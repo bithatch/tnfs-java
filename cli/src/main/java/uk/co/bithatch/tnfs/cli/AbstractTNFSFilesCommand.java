@@ -67,8 +67,8 @@ public abstract class AbstractTNFSFilesCommand extends AbstractTNFSCommand {
 		}
 	}
 
-	 protected String getSeparator(boolean useForwardSlash) {
-        return useForwardSlash ? "/" : ( isWindowsParsing() ? "\\" : "/" );
+	 protected char getSeparator(boolean useForwardSlash) {
+        return useForwardSlash ? '/' : ( isWindowsParsing() ? '\\' : '/' );
     }
 	
 	protected boolean isWindowsParsing() {

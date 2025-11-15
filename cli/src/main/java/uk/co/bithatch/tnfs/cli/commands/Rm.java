@@ -20,11 +20,13 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
-import static uk.co.bithatch.tnfs.lib.Util.relativizePath;
+import static uk.co.bithatch.tnfs.lib.Util.absolutePath;
 
+import java.util.List;
 import java.util.concurrent.Callable;
 
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
 
@@ -34,9 +36,12 @@ import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
 @Command(name = "rm", aliases = { "unlink", "del", "delete", "remove" }, mixinStandardHelpOptions = true, description = "Remove file.")
 public class Rm extends TNFSTPCommand implements Callable<Integer> {
 
-	@Parameters(index = "0", arity = "1", description = "File to remove.")
-	private String file;
+	@Parameters(index = "0", arity = "1..", description = "Files to remove.")
+	private List<String> files;
 	
+	@Option(names = { "-r", "--recursive" }, description = "Recursively delete files and directories.")
+	private boolean recursive;
+
 	public Rm() {
 		super(FilenameCompletionMode.REMOTE);
 	}
@@ -45,8 +50,16 @@ public class Rm extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var sftp = container.getMount();
-		file = relativizePath(container.getCwd(), file, container.getSeparator());
-		sftp.unlink(container.localToNativePath(file));
+		expandRemoteAndDo(file -> {
+			file = absolutePath(container.getCwd(), file, container.getSeparator());
+			var npath = container.localToNativePath(file);
+			if(recursive) {
+				sftp.deleteRecursively(npath);
+			}
+			else {
+				sftp.unlink(npath);
+			}
+		}, true, files);
 		return 0;
 	}
 }

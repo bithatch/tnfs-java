@@ -22,7 +22,6 @@ package uk.co.bithatch.tnfs.cli;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.concurrent.Delayed;
 
 import org.jline.terminal.Terminal;
 
@@ -104,7 +103,7 @@ public class InteractiveConsole implements Runnable, TNFSContainer {
 	}
 
 	@Override
-	public String getSeparator() {
+	public char getSeparator() {
 		return this.cntr.getSeparator();
 	}
 

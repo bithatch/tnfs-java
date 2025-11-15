@@ -20,8 +20,9 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
-import static uk.co.bithatch.tnfs.lib.Util.relativizePath;
+import static uk.co.bithatch.tnfs.lib.Util.absolutePath;
 
+import java.util.List;
 import java.util.concurrent.Callable;
 
 import picocli.CommandLine.Command;
@@ -34,8 +35,8 @@ import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
 @Command(name = "rmdir", aliases = { "rd"}, mixinStandardHelpOptions = true, description = "Remove directory.")
 public class Rmdir extends TNFSTPCommand implements Callable<Integer> {
 
-	@Parameters(index = "0", arity = "1", description = "Directory to remove.")
-	private String directory;
+	@Parameters(index = "0", arity = "1..", description = "Directories to remove.")
+	private List<String> directories;
 	
 	public Rmdir() {
 		super(FilenameCompletionMode.DIRECTORIES_REMOTE);
@@ -45,8 +46,10 @@ public class Rmdir extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var sftp = container.getMount();
-		directory = relativizePath(container.getCwd(), directory, container.getSeparator());
-		sftp.rmdir(container.localToNativePath(directory));
+		expandRemoteAndDo(directory -> {
+			directory = absolutePath(container.getCwd(), directory, container.getSeparator());
+			sftp.rmdir(container.localToNativePath(directory));
+		}, true, directories);
 		return 0;
 	}
 }

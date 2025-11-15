@@ -22,8 +22,11 @@ package uk.co.bithatch.tnfs.lib;
 
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 public class Util {
 	
@@ -256,13 +259,25 @@ public class Util {
 	 * @return file basename
 	 */
 	public static String basename(String path) {
-		if (path.equals("/")) {
+		return basename(path, '/');
+	}
+
+	/**
+	 * Get the file portion of a path, i.e the part after the last separator. If the
+	 * provided path ends with a separator, this is stripped first.
+	 * 
+	 * @param path path
+	 * @param sep separator
+	 * @return file basename
+	 */
+	public static String basename(String path, char sep) {
+		if (path.equals(String.valueOf(sep))) {
 			return path;
 		}
-		while (path.endsWith("/")) {
+		while (path.endsWith(String.valueOf(sep))) {
 			path = path.substring(0, path.length() - 1);
 		}
-		int idx = path.lastIndexOf("/");
+		int idx = path.lastIndexOf(sep);
 		return idx == -1 ? path : path.substring(idx + 1);
 	}
 	/**
@@ -273,13 +288,25 @@ public class Util {
 	 * @return file dirname
 	 */
 	public static String dirname(String path) {
-		if (path.equals("/")) {
+		return dirname(path, '/');
+	}
+	
+	/**
+	 * Get the file parent of a path, i.e the part before the last separator. If the
+	 * provided path ends with a separator, this is stripped first.
+	 * 
+	 * @param path path
+	 * @param sep separator
+	 * @return file dirname
+	 */
+	public static String dirname(String path, char sep) {
+		if (path.equals(String.valueOf(sep))) {
 			return path;
 		}
-		while (path.endsWith("/")) {
+		while (path.endsWith(String.valueOf(sep))) {
 			path = path.substring(0, path.length() - 1);
 		}
-		int idx = path.lastIndexOf("/");
+		int idx = path.lastIndexOf(sep);
 		return idx == -1 ? path : path.substring(0, idx);
 	}
 
@@ -290,7 +317,7 @@ public class Util {
 	 * @param filename path to resolve
 	 * @return resolved path
 	 */
-	public static String resolvePaths(String path, String filename, String sep) {
+	public static String resolvePaths(String path, String filename, char sep) {
 		if(filename.startsWith("/"))
 			return filename;
 		else
@@ -304,10 +331,10 @@ public class Util {
 	 * @param filename path to append
 	 * @return concatenated path
 	 */
-	public static String concatenatePaths(String path, String filename, String sep) {
+	public static String concatenatePaths(String path, String filename, char sep) {
 		if (filename.startsWith("." + sep))
 			filename = filename.substring(2);
-		while (path.endsWith(sep)) {
+		while (path.endsWith(String.valueOf(sep))) {
 			path = path.substring(0, path.length() - 1);
 		}
 		return path + sep + filename;
@@ -330,12 +357,12 @@ public class Util {
 		return str;
 	}
 
-	public static String relativizePath(String cwd, String newCwd, String sep) {
-		if(!newCwd.equals(sep) && newCwd.endsWith(sep)) {
+	public static String absolutePath(String cwd, String newCwd, char sep) {
+		if(!newCwd.equals(String.valueOf(sep)) && newCwd.endsWith(String.valueOf(sep))) {
 			newCwd = newCwd.substring(0, newCwd.length() - 1);
 		}
-		if (!newCwd.startsWith(sep)) {
-			newCwd = normalPath(concatenatePaths(cwd, newCwd, sep), sep.charAt(0));
+		if (!newCwd.startsWith(String.valueOf(sep))) {
+			newCwd = normalPath(concatenatePaths(cwd, newCwd, sep), sep);
 		}
 		return newCwd;
 	}
@@ -345,5 +372,28 @@ public class Util {
 		System.arraycopy(a1, 0, b, 0, a1.length);
 		System.arraycopy(a2, 0, b, a1.length, a2.length);
 		return b;
+	}
+
+
+	public  static String[] splitPath(char sep, String path) {
+		return ( path.startsWith(String.valueOf(sep)) ? path.substring(1) : path ).split(Pattern.quote(String.valueOf(sep)));
+	}
+
+	public  static String[] processHome(char sep, String[] pathParts) {
+		return processHome(sep, pathParts,System.getProperty("user.home", String.valueOf(sep)));
+	}
+
+	public  static String[] processHome(char sep, String[] pathParts, String homeDir) {
+		var l = new ArrayList<>(Arrays.asList(pathParts));
+		for(var p : pathParts) {
+			if(p.equals("~")) {
+				l.clear();
+				l.addAll(Arrays.asList(splitPath(sep, homeDir)));
+			}
+			else {
+				l.add(p);
+			}
+		}
+		return l.toArray(new String[0]);
 	}
 }

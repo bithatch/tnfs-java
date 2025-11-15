@@ -20,7 +20,7 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
-import static uk.co.bithatch.tnfs.lib.Util.relativizePath;
+import static uk.co.bithatch.tnfs.lib.Util.absolutePath;
 
 import java.nio.file.NotDirectoryException;
 import java.util.concurrent.Callable;
@@ -48,13 +48,18 @@ public class Cd extends TNFSTPCommand implements Callable<Integer> {
 		var mount = container.getMount();
 
 		if (directory != null && directory.length() > 0) {
-			directory = relativizePath(container.getCwd(), directory, container.getSeparator());
-			var file = mount.stat(container.localToNativePath(directory));
-			if (file.isDirectory()) {
-				container.setCwd(directory);
-			} else {
-				throw new NotDirectoryException(directory);
-			}
+
+			expandRemoteAndDo(path -> {
+				path = absolutePath(container.getCwd(), path, container.getSeparator());
+				if (mount.stat(container.localToNativePath(path)).isDirectory()) {
+					container.setCwd(path);
+				} else {
+					throw new NotDirectoryException(path);
+				}
+				
+			}, false, directory);
+			
+			
 		} else {
 			container.setCwd(mount.mountPath());
 		}

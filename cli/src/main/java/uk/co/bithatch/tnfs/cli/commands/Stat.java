@@ -20,8 +20,9 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
-import static uk.co.bithatch.tnfs.lib.Util.relativizePath;
+import static uk.co.bithatch.tnfs.lib.Util.absolutePath;
 
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -35,8 +36,8 @@ import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
 @Command(name = "stat", aliases = { "st"}, mixinStandardHelpOptions = true, description = "Stat file.")
 public class Stat extends TNFSTPCommand implements Callable<Integer> {
 
-    @Parameters(index = "0", arity = "1", description = "File to set.")
-	private String file;
+    @Parameters(index = "0", arity = "1..", description = "File to stat.")
+	private List<String> files;
     
 	public Stat() {
 		super(FilenameCompletionMode.REMOTE);
@@ -46,13 +47,17 @@ public class Stat extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var mount = container.getMount();
-		
-		file = relativizePath(container.getCwd(), file, container.getSeparator());
-		
-		var stat = mount.stat(container.localToNativePath(file));
-		var wtr = getContainer().getTerminal().writer();
-		
-		wtr.println(String.format("%s %7d %7d %10d %10d %10d \"%s\" \"%s\"", stat.isDirectory() ? "d" : "-", stat.uid(), stat.gid(), stat.atime().to(TimeUnit.SECONDS), stat.ctime().to(TimeUnit.SECONDS), stat.mtime().to(TimeUnit.SECONDS), stat.uidString(), stat.gidString()));
+
+		expandRemoteAndDo(file -> {
+			
+			file = absolutePath(container.getCwd(), file, container.getSeparator());
+			
+			var stat = mount.stat(container.localToNativePath(file));
+			var wtr = getContainer().getTerminal().writer();
+			
+			wtr.println(String.format("%s %7d %7d %10d %10d %10d \"%s\" \"%s\"", stat.isDirectory() ? "d" : "-", stat.uid(), stat.gid(), stat.atime().to(TimeUnit.SECONDS), stat.ctime().to(TimeUnit.SECONDS), stat.mtime().to(TimeUnit.SECONDS), stat.uidString(), stat.gidString()));
+			
+		}, true, files);
 		return 0;
 	}
 }

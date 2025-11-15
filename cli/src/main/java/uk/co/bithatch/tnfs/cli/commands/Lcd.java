@@ -22,7 +22,6 @@ package uk.co.bithatch.tnfs.cli.commands;
 
 import java.nio.file.Files;
 import java.nio.file.NotDirectoryException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.concurrent.Callable;
@@ -38,7 +37,7 @@ import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
 public class Lcd extends TNFSTPCommand implements Callable<Integer> {
 
 	@Parameters(index = "0", arity = "0..1", description = "Directory to change to.")
-	private Optional<Path> directory;
+	private Optional<String> directory;
 	
 	public Lcd() {
 		super(FilenameCompletionMode.DIRECTORIES_LOCAL);
@@ -48,19 +47,7 @@ public class Lcd extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var userhome = Paths.get(System.getProperty("user.home"));
-		var resolved = directory.map(d -> {
-			if(d.getName(0).getFileName().toString().equals("~")) {
-				if(d.getNameCount() == 1) {
-					return userhome;
-				}
-				else {
-					return userhome.resolve(d.subpath(1, d.getNameCount()));	
-				}
-			}
-			else {
-				return d;
-			}
-		}).orElse(userhome);
+		var resolved = directory.map(this::expandLocal).orElse(userhome);
 		
 		if (!resolved.isAbsolute())	
 			resolved = container.getLcwd().resolve(resolved);

@@ -99,7 +99,7 @@ public interface TNFSContainer {
 	 * 
 	 * @return separator
 	 */
-	String getSeparator();
+	char getSeparator();
 
 	/**
 	 * Connect to the URI.

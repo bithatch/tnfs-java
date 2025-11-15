@@ -20,14 +20,16 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
+import static uk.co.bithatch.tnfs.lib.Util.absolutePath;
 import static uk.co.bithatch.tnfs.lib.Util.basename;
+import static uk.co.bithatch.tnfs.lib.Util.dirname;
 
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Optional;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 import org.jline.builtins.Styles;
@@ -79,8 +81,8 @@ public class Ls extends TNFSTPCommand implements Callable<Integer> {
 	@Option(names = {"-x", "--exact-sizes"}, description = "Use exact bytes for sizes instead of rough sizes.")
 	private boolean exactSizes;
 
-	@Parameters(arity = "0..1", description = "Path of remote directory, or wildcard to match returned entries with.")
-	private Optional<String> path;
+	@Parameters(arity = "0..", description = "Pathes of remote directories, or wildcard to match returned entries with.")
+	private List<String> paths = new ArrayList<>();
 
 	public Ls() {
 		super(FilenameCompletionMode.DIRECTORIES_REMOTE);
@@ -93,90 +95,95 @@ public class Ls extends TNFSTPCommand implements Callable<Integer> {
 
 		var dirOptions = new ArrayList<DirOptionFlag>();
 		var dirSort = new ArrayList<DirSortFlag>();
-		var apath = container.localToNativePath(path.orElseGet(container::getCwd));
-		var base = basename(apath);
-		var wildcard = "";
-        var resolver = Styles.lsStyle();
 		
-		if(base.contains("*") || base.contains("?")) {
-			wildcard = base;
-			apath = Util.dirname(apath);
+		for(var path : paths.isEmpty() ? Arrays.asList(container.getCwd()) : paths) {
+			var base = basename(path, container.getSeparator());
+			var wildcard = "";
+	        var resolver = Styles.lsStyle();
+			
+			if(base.contains("*") || base.contains("?")) {
+				wildcard = base;
+				path = absolutePath(container.getCwd(),  expandRemote(dirname(path, container.getSeparator())), container.getSeparator());
+			}
+			else {
+				path = absolutePath(container.getCwd(),  expandRemote(path), container.getSeparator());
+			}
+			
+			if(!basic) {
+				
+				if(all) {
+					dirOptions.add(DirOptionFlag.NO_SKIPHIDDEN);
+					dirOptions.add(DirOptionFlag.NO_SKIPSPECIAL);
+				}
+				
+				if(dirPattern) {
+					dirOptions.add(DirOptionFlag.DIR_PATTERN);
+				}
+				
+				if(reverse) {
+					dirSort.add(DirSortFlag.DESCENDING);
+				}
+				
+				if(caseSensitive) {
+					dirSort.add(DirSortFlag.CASE);
+				}
+				
+				switch(sort) {
+				case MODIFIED:
+					dirSort.add(DirSortFlag.MODIFIED);
+					break;
+				case SIZE:
+					dirSort.add(DirSortFlag.SIZE);
+					break;
+				case NONE:
+					dirSort.add(DirSortFlag.NONE);
+					break;
+				default:
+					break;
+				}
+				
+				var width = container.getTerminal().getWidth();
+				if(width == 0)
+					width = 132;
+				
+				var longNameWidth = width - 30;
+				
+				try(var dir = container.getMount().directory(
+						maxResults,
+						container.localToNativePath(path),
+						wildcard,
+						dirOptions.toArray(new DirOptionFlag[0]),
+						dirSort.toArray(new DirSortFlag[0])
+					)) {
+					var stream = dir.stream();
+					stream.forEach(file -> {
+						var flags = Arrays.asList(file.flags());
+						
+						if(longFormat) {
+							wtr.println(String.format("%1s %s %8s %15s",
+									new Object[] { 
+											flags.contains(DirEntryFlag.DIR) ? "D" : ( flags.contains(DirEntryFlag.SPECIAL) ? "S" : "-"),
+													TNFSTP.getDisplay(getContainer().getTerminal(), file, resolver, longNameWidth, getContainer().getSeparator(), false), 
+											exactSizes ? String.valueOf(file.size()) : Util.formatSize(file.size()),
+											DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).format(file.mtime().toInstant().atZone(ZoneId.systemDefault()))
+									}));
+						}
+						else {
+							wtr.println(TNFSTP.getDisplay(getContainer().getTerminal(), file, resolver, 0, getContainer().getSeparator(), true));
+						}
+					});
+				}
+			}
+			else {
+				if(longFormat || all || reverse || caseSensitive || sort != Sort.NAME || maxResults > 0) {
+					throw new IllegalArgumentException("Options not supported with basic listing.");
+				}
+				try(var stream = container.getMount().list(container.localToNativePath(path))) {
+					stream.forEach(wtr::println);
+				}
+			}
+			wtr.flush();
 		}
-		
-		if(!basic) {
-			
-			if(all) {
-				dirOptions.add(DirOptionFlag.NO_SKIPHIDDEN);
-				dirOptions.add(DirOptionFlag.NO_SKIPSPECIAL);
-			}
-			
-			if(dirPattern) {
-				dirOptions.add(DirOptionFlag.DIR_PATTERN);
-			}
-			
-			if(reverse) {
-				dirSort.add(DirSortFlag.DESCENDING);
-			}
-			
-			if(caseSensitive) {
-				dirSort.add(DirSortFlag.CASE);
-			}
-			
-			switch(sort) {
-			case MODIFIED:
-				dirSort.add(DirSortFlag.MODIFIED);
-				break;
-			case SIZE:
-				dirSort.add(DirSortFlag.SIZE);
-				break;
-			case NONE:
-				dirSort.add(DirSortFlag.NONE);
-				break;
-			default:
-				break;
-			}
-			
-			var width = container.getTerminal().getWidth();
-			if(width == 0)
-				width = 132;
-			
-			var longNameWidth = width - 30;
-			
-			try(var dir = container.getMount().directory(
-					maxResults,
-					apath,
-					wildcard,
-					dirOptions.toArray(new DirOptionFlag[0]),
-					dirSort.toArray(new DirSortFlag[0])
-				)) {
-				var stream = dir.stream();
-				stream.forEach(file -> {
-					var flags = Arrays.asList(file.flags());
-					
-					if(longFormat) {
-						wtr.println(String.format("%1s %s %8s %15s",
-								new Object[] { 
-										flags.contains(DirEntryFlag.DIR) ? "D" : ( flags.contains(DirEntryFlag.SPECIAL) ? "S" : "-"),
-												TNFSTP.getDisplay(getContainer().getTerminal(), file, resolver, longNameWidth, getContainer().getSeparator(), false), 
-										exactSizes ? String.valueOf(file.size()) : Util.formatSize(file.size()),
-										DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).format(file.mtime().toInstant().atZone(ZoneId.systemDefault()))
-								}));
-					}
-					else {
-						wtr.println(TNFSTP.getDisplay(getContainer().getTerminal(), file, resolver, 0, getContainer().getSeparator(), true));
-					}
-				});
-			}
-		}
-		else {
-			if(longFormat || all || reverse || caseSensitive || sort != Sort.NAME || maxResults > 0) {
-				throw new IllegalArgumentException("Options not supported with basic listing.");
-			}
-			try(var stream = container.getMount().list(apath)) {
-				stream.forEach(wtr::println);
-			}
-		}
-		wtr.flush();
 		return 0;
 	}
 

@@ -20,20 +20,19 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
-import static uk.co.bithatch.tnfs.lib.Util.basename;
-import static uk.co.bithatch.tnfs.lib.Util.relativizePath;
+import static uk.co.bithatch.tnfs.lib.Util.absolutePath;
+import static uk.co.bithatch.tnfs.lib.Util.concatenatePaths;
 
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
-import me.tongfei.progressbar.ProgressBar;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+import uk.co.bithatch.tnfs.cli.FileTransfer;
 import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
-import uk.co.bithatch.tnfs.lib.OpenFlag;
 
 /**
  * Put file command.
@@ -41,12 +40,19 @@ import uk.co.bithatch.tnfs.lib.OpenFlag;
 @Command(name = "put", aliases = { "upload"}, mixinStandardHelpOptions = true, description = "Upload local file.")
 public class Put extends TNFSTPCommand implements Callable<Integer> {
 
-	private static final int LOCAL_READ_BUFFER_SIZE = 65536;
+	@Option(names = { "-r", "--recursive" }, description = "Recursively copy directories.")
+	private boolean recursive;
 
-	@Parameters(index = "0", arity = "1", description = "File to store.")
-	private String file;
+	@Option(names = { "-f", "--force" }, description = "Force overwriting existing local files.")
+	private boolean force;
 
-	@Parameters(index = "1", arity = "0..1", description = "Destination.")
+	@Option(names = { "-g", "--no-progress-bar" }, description = "No progress bar.")
+	private boolean noProgress = false;
+
+	@Parameters(index = "0", arity = "1..", description = "Files to store.")
+	private List<String> files;
+
+	@Option(names = {"-d", "--destination" }, description = "Path to upload file to.")
 	private Optional<String> destination;
 
 	public Put() {
@@ -55,37 +61,32 @@ public class Put extends TNFSTPCommand implements Callable<Integer> {
 
 	@Override
 	protected Integer onCall() throws Exception {
+		
 		var container = getContainer();
-		var mnt = container.getMount();
-		var path =  container.getLcwd().resolve(file);
+		var mount = container.getMount();
+		
+		var remoteDest = destination.map(d ->
+			container.localToNativePath(absolutePath(container.getCwd(), d, container.getSeparator()))
+		).orElseGet(container::getCwd);
+		
+		var ftransfer = new FileTransfer(
+				mount.client().bufferPool(), 
+				force, 
+				!noProgress, 
+				recursive, 
+				container.getSeparator());
+		
+		expandLocalAndDo(file -> {
 
-		try(var f = Files.newByteChannel(path, StandardOpenOption.READ)) {
-			var base = basename(file);
-    		var target = relativizePath(container.getCwd(), base, container.getSeparator());
+			var remoteFile = Files.isDirectory(file) 
+					? concatenatePaths(remoteDest, file.getFileName().toString(), '/') 
+					: remoteDest;
 
-//			var transfers = getContainer().getTransferHost();
-
-    		try (ProgressBar pb = new ProgressBar(base, Files.size(path))) {
-//			transfers.startedTransfer(path.toString(), target, Files.size(path));
-    		
-				try(var o = mnt.open(container.localToNativePath(target), OpenFlag.WRITE, OpenFlag.TRUNCATE, OpenFlag.CREATE)) {
-					var buf = ByteBuffer.allocate(LOCAL_READ_BUFFER_SIZE);
-					while( ( f.read(buf) ) != -1) {
-						buf.flip();
-						while(buf.hasRemaining()) {
-							var wrt = o.write(buf);
-							pb.stepBy(wrt);
-						}
-						buf.clear();
-	
-//						transfers.transferProgress(path.toString(), target, rd);
-					}
-				}
-//				finally {
-//					transfers.finishedTransfer(path.toString(), target);
-//				}
-    		}
-		}
+			ftransfer.localToRemote(mount, file, remoteFile);
+			
+			System.out.println("Uploaded " + file + " to " + remoteFile);
+			
+		}, true, files);
 
 		return 0;
 	}

@@ -20,8 +20,9 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
-import static uk.co.bithatch.tnfs.lib.Util.relativizePath;
+import static uk.co.bithatch.tnfs.lib.Util.absolutePath;
 
+import java.util.List;
 import java.util.concurrent.Callable;
 
 import picocli.CommandLine.Command;
@@ -40,8 +41,8 @@ public class ChkSum extends TNFSTPCommand implements Callable<Integer> {
 	@Option(names = "-t", description = "Checksum type. Defaults to CRC32")
 	private Checksum type = Checksum.CRC32;
 
-	@Parameters(index = "0", arity = "1", description = "File to sum.")
-	private String file;
+	@Parameters(index = "0", arity = "1...", description = "File to sum.")
+	private List<String> files;
 	
 	public ChkSum() {
 		super(FilenameCompletionMode.REMOTE);
@@ -51,8 +52,12 @@ public class ChkSum extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var sum = container.getMount().extension(Sum.class);
-		file = relativizePath(container.getCwd(), file, container.getSeparator());
-		System.out.format("%s %s%n", sum.sum(type, container.localToNativePath(file)), file);
+		
+		expandRemoteAndDo(file -> {
+			file = absolutePath(container.getCwd(), file, container.getSeparator());
+			System.out.format("%s %s%n", sum.sum(type, container.localToNativePath(file)), file);
+			
+		}, true, files);
 		return 0;
 	}
 }

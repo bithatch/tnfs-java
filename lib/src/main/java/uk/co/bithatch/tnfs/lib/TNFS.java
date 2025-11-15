@@ -32,7 +32,7 @@ public final class TNFS {
 	public static final Version READ_DIRX_REQUIRES_VERSION = Version.fromString("1.2");
 	
 	public static final int DEFAULT_MAX_SESSIONS = 256;
-	public static final String UNIX_SEPARATOR = "/";
+	public static final char UNIX_SEPARATOR = '/';
 	public static final int DEFAULT_REPLY_TIMEOUT_SECONDS = 5;
 	public static final int DEFAULT_TIMEOUT_SECONDS = 5;
 	public static final int DEFAULT_CLIENT_BUFFERS = 10;

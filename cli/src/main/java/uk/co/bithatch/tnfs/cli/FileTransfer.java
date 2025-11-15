@@ -49,10 +49,10 @@ public final class FileTransfer {
 	private final boolean force;
 	private final boolean progress;
 	private final boolean recursive;
-	private final String sep;
+	private final char sep;
 	private final ByteBufferPool bufferPool;
 
-	public FileTransfer(ByteBufferPool bufferPool, boolean force, boolean progress, boolean recursive, String sep) {
+	public FileTransfer(ByteBufferPool bufferPool, boolean force, boolean progress, boolean recursive, char sep) {
 		super();
 		this.bufferPool = bufferPool;
 		this.force = force;
@@ -82,7 +82,7 @@ public final class FileTransfer {
 				@Override
 				public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
 					mount.mkdir(currentPath);
-					copyLocalToRemoteFile(mount, file, Util.concatenatePaths(currentPath, file.getFileName().toString(), currentPath), Files.size(file));
+					copyLocalToRemoteFile(mount, file, Util.concatenatePaths(currentPath, file.getFileName().toString(), sep), Files.size(file));
 					return super.visitFile(file, attrs);
 				}
 

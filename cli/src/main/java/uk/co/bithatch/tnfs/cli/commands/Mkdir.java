@@ -20,8 +20,10 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
-import static uk.co.bithatch.tnfs.lib.Util.relativizePath;
+import static uk.co.bithatch.tnfs.lib.Util.absolutePath;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 import picocli.CommandLine.Command;
@@ -34,8 +36,8 @@ import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
 @Command(name = "mkdir", aliases = { "md"}, mixinStandardHelpOptions = true, description = "Create directory.")
 public class Mkdir extends TNFSTPCommand implements Callable<Integer> {
 
-	@Parameters(index = "0", arity = "1", description = "Directory to create.")
-	private String directory;
+	@Parameters(index = "0", arity = "1..", description = "Directory to create.")
+	private List<String> directories = new ArrayList<>();
 
 	public Mkdir() {
 		super(FilenameCompletionMode.DIRECTORIES_REMOTE);
@@ -45,8 +47,10 @@ public class Mkdir extends TNFSTPCommand implements Callable<Integer> {
 	protected Integer onCall() throws Exception {
 		var container = getContainer();
 		var sftp = container.getMount();
-		directory = relativizePath(container.getCwd(), directory, container.getSeparator());
-		sftp.mkdir(container.localToNativePath(directory));
+		expandRemoteAndDo(directory -> {
+			directory = absolutePath(container.getCwd(), expandRemote(directory), container.getSeparator());
+			sftp.mkdir(container.localToNativePath(directory));
+		}, true, directories);
 		return 0;
 	}
 }

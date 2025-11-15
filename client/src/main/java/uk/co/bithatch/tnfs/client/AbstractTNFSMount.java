@@ -66,8 +66,6 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 	
 	private final static Logger LOG = LoggerFactory.getLogger(AbstractTNFSMount.class);
 
-	private record NamedEntry(String name, StatResult stat) {}
-
 	public static final class ReadDirIterator implements Iterator<String> {
 		
 		public static final Stream<String> stream(TNFSClient client, int sessionId, HandleResult dir, Optional<String> path) {
