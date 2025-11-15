@@ -6,6 +6,8 @@ I started this to help me understand the TNFS protocol, as I intend to implement
 
 [More about TNFS Java](https://bithatch.co.uk/?page_id=443)
 
+*Remember, TNFS is not designed for the modern Internet. Do not use on public networks for anything remotely private. If you use authentication, never reuse passwords you must keep secret!*
+
 # For Users
 
 *TNFS Java* provides a full suite of ready-made tools for TNFS.

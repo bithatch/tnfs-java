@@ -8,7 +8,6 @@ A set of ready-to-go tools for working with TNFS.
  
 ## TODO
 
- * Bulk/Recursive copies in tnfscp and tnfstp.
  * Complete FUSE implementation.
  
 ## Applications
@@ -20,6 +19,7 @@ A set of ready-to-go tools for working with TNFS.
  * Command, filename and option completion for remote and local paths in shell.
  * Coloured directory listing.
  * File transfer progress bars.
+ * Local and remote wildcard expansion
  
 You can start the application with ... (see below for more options)
 
@@ -33,8 +33,10 @@ Once you see the `tnfs>` prompt, the shell supports the following sub-commmands 
 
  * `ls` - List directories.
  * `rm` - Remove files.
- * `get` - Download files.
- * `put` - Upload files.
+ * `get` - Download single file.
+ * `put` - Upload single file.
+ * `mget` - Download multiple files.
+ * `mput` - Upload multiple files.
  * `chmod` - Change permissions.
  * `mkdir` - Create directories.
  * `rmdir` - Remove directories.

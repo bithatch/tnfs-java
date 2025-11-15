@@ -14,9 +14,9 @@ The SDK all executables and libraries into a distributable archive, known as the
 
 ## Obtaining The SDK
 
-The latest SDK is available in the [RELEASES](Release) section. Complete builds are only available for a select number of architectures and operating systems.
+The latest development SDK is available from my [Downloads](https://bithatch.co.uk/?page_id=344) page. Or official released builds in the [RELEASES](https://github.com/bithatch/tnfs-java/releases) section here when they are made avvailable. 
 
-If yours is not on the list, cross-platform builds of the SDK are available too. You'll just need a Java runtime.
+Complete native builds are only available for a select number of architectures and operating systems. If yours is not on the list, cross-platform builds of the SDK are available too. You'll just need a Java runtime.
 
 ## Installation
 
