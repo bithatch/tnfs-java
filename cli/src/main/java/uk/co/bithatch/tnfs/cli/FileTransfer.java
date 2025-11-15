@@ -161,29 +161,31 @@ public final class FileTransfer {
 	}
 
 	private void remoteToLocal(TNFSMount mount, String remote, Path localFile, ProgressBar pb) throws IOException {
-		try (var o = Files.newByteChannel(localFile, getLocalWriteOpenFlags())) {
-			try (var f = mount.open(remote)) {
-				copyStreams(mount, pb, o, f);
+		try (var output = Files.newByteChannel(localFile, getLocalWriteOpenFlags())) {
+			try (var input = mount.open(remote)) {
+				copyStreams(mount, pb, input, output);
 			}
 		}
 	}
 
 	private void localToRemote(TNFSMount mount, Path localFile, String remote, ProgressBar pb) throws IOException {
-		try (var o = Files.newByteChannel(localFile, StandardOpenOption.READ)) {
-			try (var f = mount.open(remote, getRemoteWriteOpenFlags())) {
-				copyStreams(mount, pb, o, f);
+		try (var input = Files.newByteChannel(localFile, StandardOpenOption.READ)) {
+			try (var output = mount.open(remote, getRemoteWriteOpenFlags())) {
+				copyStreams(mount, pb, input, output);
 			}
 		}
 	}
 
-	private void copyStreams(TNFSMount mount, ProgressBar pb, SeekableByteChannel o, SeekableByteChannel f)
+	private void copyStreams(TNFSMount mount, ProgressBar pb, SeekableByteChannel input, SeekableByteChannel output)
 			throws IOException {
 		try(var lease = bufferPool.acquire(mount.client().size())) {
 			var buf = lease.buffer();
 			var rd = 0;
-			while ((rd = f.read(buf)) != -1) {
+			while ((rd = input.read(buf)) != -1) {
 				buf.flip();
-				o.write(buf);
+				while(buf.hasRemaining()) {
+					output.write(buf);
+				}
 				buf.clear();
 				if (pb != null)
 					pb.stepBy(rd);

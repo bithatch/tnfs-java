@@ -38,6 +38,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import picocli.CommandLine.IVersionProvider;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Spec;
@@ -49,6 +52,10 @@ import uk.co.bithatch.tnfs.lib.Version;
  * Abstract TNFSTP command.
  */
 public abstract class TNFSTPCommand implements IVersionProvider, Callable<Integer> {
+	
+	protected final static class Lazy {
+		public final static Logger LOG = LoggerFactory.getLogger(TNFSTPCommand.class); 
+	}
 	
 	public interface FileOp extends VisitOp<String> {
 	}
@@ -139,7 +146,7 @@ public abstract class TNFSTPCommand implements IVersionProvider, Callable<Intege
 						}
 					}
 					catch(IOException ioe) {
-						throw new UncheckedIOException(ioe);
+						Lazy.LOG.debug("Failed gathering completion candidates.", ioe);
 					}
 					
 					if(matches == 0 || (matched && !multiple)) {
@@ -226,7 +233,7 @@ public abstract class TNFSTPCommand implements IVersionProvider, Callable<Intege
 						}
 					}
 					catch(IOException ioe) {
-						throw new UncheckedIOException(ioe);
+						Lazy.LOG.debug("Failed gathering completion candidates.", ioe);
 					}
 					
 					if(matches == 0 || (matched && !multiple)) {

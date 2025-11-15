@@ -20,10 +20,16 @@
  */
 package uk.co.bithatch.tnfs.lib;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -318,7 +324,7 @@ public class Util {
 	 * @return resolved path
 	 */
 	public static String resolvePaths(String path, String filename, char sep) {
-		if(filename.startsWith("/"))
+		if(filename.startsWith(String.valueOf(sep)))
 			return filename;
 		else
 			return concatenatePaths(path, filename, sep);
@@ -395,5 +401,28 @@ public class Util {
 			}
 		}
 		return l.toArray(new String[0]);
+	}
+
+	public static boolean isWindows() {
+		return  System.getProperty("os.name").toLowerCase().contains("windows");
+	}
+	
+	public static Path findCommand(String... cmd) throws IOException {
+		for(var c : cmd) {
+			for(var path : systemPaths()) {
+				if (isWindows() && !c.toLowerCase().endsWith(".exe")) {
+					c += ".exe";
+				}
+				var fullPath = Paths.get(path).resolve(c);
+				if(Files.exists(fullPath)) {
+					return fullPath;
+				}
+			}
+		}
+		throw new IOException("Could not find command " + String.join(", ", cmd) + " on the PATH");
+	}
+
+	public static List<String> systemPaths() {
+		return Arrays.asList(System.getenv("PATH").split(File.pathSeparator));
 	}
 }

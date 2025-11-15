@@ -67,6 +67,8 @@ import uk.co.bithatch.tnfs.cli.commands.Help;
 import uk.co.bithatch.tnfs.cli.commands.Lcd;
 import uk.co.bithatch.tnfs.cli.commands.Lpwd;
 import uk.co.bithatch.tnfs.cli.commands.Ls;
+import uk.co.bithatch.tnfs.cli.commands.MGet;
+import uk.co.bithatch.tnfs.cli.commands.MPut;
 import uk.co.bithatch.tnfs.cli.commands.Mkdir;
 import uk.co.bithatch.tnfs.cli.commands.Mount;
 import uk.co.bithatch.tnfs.cli.commands.Mounts;
@@ -89,7 +91,7 @@ import uk.co.bithatch.tnfs.lib.Util;
  */
 @Command(name = "tnfstp", mixinStandardHelpOptions = true, description = "Trivial Network File System Transfer Program.", subcommands = {
 		Ls.class, Cd.class, Pwd.class, Lcd.class, Lpwd.class, Mkdir.class, Rmdir.class, Mv.class, Rm.class,
-		Get.class, Put.class, Bye.class, Df.class, Cp.class, ChkSum.class, Mounts.class, Mount.class, 
+		Get.class, MGet.class, Put.class, MPut.class, Bye.class, Df.class, Cp.class, ChkSum.class, Mounts.class, Mount.class, 
 		MsgSize.class, Stat.class, Help.class })
 public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<Integer>, TNFSContainer {
 
@@ -345,6 +347,9 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 
 			/* Parser and system registry */
 			var parser = new DefaultParser();  /* TODO windows / unix path parsing mode */
+			if(isWindowsParsing()) {
+				parser.setEscapeChars(new char[] {'^'});
+			}
 			var systemRegistry = new SystemRegistryImpl(parser, terminal, this::getLcwd, null);
 			systemRegistry.setCommandRegistries(picocliCommands);
 			
@@ -508,8 +513,19 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 
 	private void spawn(String[] args, Object cmd) throws IOException, InterruptedException {
 		if(args[0].startsWith("!")) {
-			args[0] = args[0].substring(1);
 			try {
+				args[0] = args[0].substring(1);
+				if(Util.isWindows()) {
+					args = new String[] {
+						"cmd.exe",
+						"/c",
+						String.join(" ", Arrays.asList(args).stream().
+								map(s -> "\"" + s + "\"").
+								toList().
+								toArray(new String[0]))
+					};
+				}
+//				args[0] = Util.findCommand(args[0]).toAbsolutePath().toString();
 				var pb = new ProcessBuilder(Arrays.asList(args));
 				pb.directory(getLcwd().toFile());
 				pb.redirectErrorStream(true);
@@ -545,7 +561,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 					}
 				}
 			}
-			catch(IOException ioe) { 
+			catch(Exception ioe) { 
 				error(String.format("Command %s failed. %s%n", args[0], ioe.getMessage()));
 			}
 		}

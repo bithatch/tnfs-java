@@ -20,6 +20,12 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
+import static java.nio.file.Files.isDirectory;
+import static uk.co.bithatch.tnfs.lib.Util.absolutePath;
+import static uk.co.bithatch.tnfs.lib.Util.basename;
+
+import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
@@ -28,13 +34,15 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import uk.co.bithatch.tnfs.cli.FileTransfer;
 import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
-import uk.co.bithatch.tnfs.lib.Util;
 
 /**
- * Put file command.
+ * Get command.
  */
-@Command(name = "put", aliases = { "upload"}, mixinStandardHelpOptions = true, description = "Upload local file.")
-public class Put extends TNFSTPCommand implements Callable<Integer> {
+@Command(name = "mget", aliases = { "mdownload" }, mixinStandardHelpOptions = true, description = "Download multiple remote files.")
+public class MGet extends TNFSTPCommand implements Callable<Integer> {
+
+	@Option(names = { "-r", "--recursive" }, description = "Recursively copy directories.")
+	private boolean recursive;
 
 	@Option(names = { "-f", "--force" }, description = "Force overwriting existing local files.")
 	private boolean force;
@@ -42,40 +50,42 @@ public class Put extends TNFSTPCommand implements Callable<Integer> {
 	@Option(names = { "-g", "--no-progress-bar" }, description = "No progress bar.")
 	private boolean noProgress = false;
 
-	@Parameters(index = "0", arity = "1", description = "File to upload.")
-	private String path;
+	@Parameters(index = "0", arity = "1..", description = "Remote files or directories to retrieve.")
+	private List<String> files;
 
-	@Parameters(index = "1", arity = "0..1", description = "Optional destination filename.")
-	private Optional<String> destination;
+	@Option(names = {"-d", "--destination" }, description = "Path to download file to.")
+	private Optional<Path> destination;
 
-	public Put() {
-		super(FilenameCompletionMode.LOCAL_THEN_REMOTE);
+	public MGet() {
+		super(FilenameCompletionMode.REMOTE);
 	}
 
 	@Override
 	protected Integer onCall() throws Exception {
-		
 		var container = getContainer();
 		var mount = container.getMount();
-		
+		var localDest = destination.map(d -> container.getLcwd().resolve(d)).orElseGet(container::getLcwd);
 		var ftransfer = new FileTransfer(
 				mount.client().bufferPool(), 
 				force, 
 				!noProgress, 
-				false, 
+				recursive, 
 				container.getSeparator());
 		
-		var local = expandLocal(path);
-		var resolved = local.isAbsolute() 
-				? local 
-				: container.getLcwd().resolve(local);
-		
-		var remoteFile = destination.map(this::expandRemote).orElseGet(() -> Util.concatenatePaths(container.getCwd(), resolved.getFileName().toString(), container.getSeparator()));
+		expandRemoteAndDo(file -> {
+			file = absolutePath(container.getCwd(), file, container.getSeparator());
 
-		ftransfer.localToRemote(mount, resolved, container.localToNativePath(remoteFile));
+			var localFile = isDirectory(localDest) 
+					? localDest.resolve(basename(file)) 
+					: localDest;
+
+			ftransfer.remoteToLocal(mount, container.localToNativePath(file), localFile);
+			
+			System.out.println("Downloaded " + file + " to " + localFile);
+			
+		}, true, files);
 		
-		System.out.println("Uploaded " + resolved + " to " + remoteFile);
-		
+
 		return 0;
 	}
 }

@@ -28,6 +28,7 @@ import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 
 import picocli.CommandLine.Option;
+import uk.co.bithatch.tnfs.lib.Util;
 
 public abstract class AbstractTNFSFilesCommand extends AbstractTNFSCommand {
 	
@@ -77,6 +78,6 @@ public abstract class AbstractTNFSFilesCommand extends AbstractTNFSCommand {
 		else if(paths == PathsMode.WINDOWS)
 			return true;
 		else
-			return System.getProperty("os.name").toLowerCase().contains("windows");
+			return Util.isWindows();
 	}
 }

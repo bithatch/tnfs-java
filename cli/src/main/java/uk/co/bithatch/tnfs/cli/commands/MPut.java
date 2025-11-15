@@ -20,6 +20,10 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
+import static uk.co.bithatch.tnfs.lib.Util.absolutePath;
+import static uk.co.bithatch.tnfs.lib.Util.concatenatePaths;
+
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
@@ -28,13 +32,15 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import uk.co.bithatch.tnfs.cli.FileTransfer;
 import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
-import uk.co.bithatch.tnfs.lib.Util;
 
 /**
  * Put file command.
  */
-@Command(name = "put", aliases = { "upload"}, mixinStandardHelpOptions = true, description = "Upload local file.")
-public class Put extends TNFSTPCommand implements Callable<Integer> {
+@Command(name = "mput", aliases = { "mupload"}, mixinStandardHelpOptions = true, description = "Upload multiple files.")
+public class MPut extends TNFSTPCommand implements Callable<Integer> {
+
+	@Option(names = { "-r", "--recursive" }, description = "Recursively copy directories.")
+	private boolean recursive;
 
 	@Option(names = { "-f", "--force" }, description = "Force overwriting existing local files.")
 	private boolean force;
@@ -42,13 +48,13 @@ public class Put extends TNFSTPCommand implements Callable<Integer> {
 	@Option(names = { "-g", "--no-progress-bar" }, description = "No progress bar.")
 	private boolean noProgress = false;
 
-	@Parameters(index = "0", arity = "1", description = "File to upload.")
-	private String path;
+	@Parameters(index = "0", arity = "1..", description = "Files to store.")
+	private List<String> files;
 
-	@Parameters(index = "1", arity = "0..1", description = "Optional destination filename.")
+	@Option(names = {"-d", "--destination" }, description = "Path to upload file to (a directory).")
 	private Optional<String> destination;
 
-	public Put() {
+	public MPut() {
 		super(FilenameCompletionMode.LOCAL_THEN_REMOTE);
 	}
 
@@ -58,24 +64,27 @@ public class Put extends TNFSTPCommand implements Callable<Integer> {
 		var container = getContainer();
 		var mount = container.getMount();
 		
+		var remoteDest = container.localToNativePath(destination.map(d ->
+			absolutePath(container.getCwd(), d, container.getSeparator())
+		).orElseGet(container::getCwd));
+		
 		var ftransfer = new FileTransfer(
 				mount.client().bufferPool(), 
 				force, 
 				!noProgress, 
-				false, 
+				recursive, 
 				container.getSeparator());
 		
-		var local = expandLocal(path);
-		var resolved = local.isAbsolute() 
-				? local 
-				: container.getLcwd().resolve(local);
-		
-		var remoteFile = destination.map(this::expandRemote).orElseGet(() -> Util.concatenatePaths(container.getCwd(), resolved.getFileName().toString(), container.getSeparator()));
+		expandLocalAndDo(file -> {
 
-		ftransfer.localToRemote(mount, resolved, container.localToNativePath(remoteFile));
-		
-		System.out.println("Uploaded " + resolved + " to " + remoteFile);
-		
+			var remoteFile = concatenatePaths(remoteDest, file.getFileName().toString(), '/') ;
+
+			ftransfer.localToRemote(mount, file, remoteFile);
+			
+			System.out.println("Uploaded " + file + " to " + remoteFile);
+			
+		}, true, files);
+
 		return 0;
 	}
 }
