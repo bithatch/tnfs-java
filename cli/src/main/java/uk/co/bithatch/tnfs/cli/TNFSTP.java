@@ -46,6 +46,7 @@ import org.jline.reader.UserInterruptException;
 import org.jline.reader.impl.DefaultParser;
 import org.jline.terminal.Terminal;
 import org.jline.utils.AttributedStringBuilder;
+import org.jline.utils.AttributedStyle;
 import org.jline.utils.StyleResolver;
 import org.jline.widget.TailTipWidgets;
 
@@ -381,7 +382,23 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 			/* Welcome text */
 			cwd = String.valueOf(getSeparator());
 			var trm = terminal.writer();
-			trm.println(String.format("Connected to %s @ %s over %s", mount.client().address(), mount.mountPath().equals("") ? "default mount" : mount.mountPath(), mount.client().protocol()));
+	        var sb = new AttributedStringBuilder();
+	        sb.append("Connected to ");
+	        sb.style(AttributedStyle.BOLD);
+	        sb.append(String.format("%s @ %s", mount.client().address(), mount.mountPath().equals("") ? "default mount" : mount.mountPath()));
+	        sb.style(AttributedStyle.BOLD_OFF);
+	        sb.append(" over ");
+	        sb.style(AttributedStyle.BOLD);
+	        sb.append(String.format("%s", mount.client().protocol()));
+	        sb.style(AttributedStyle.BOLD_OFF);
+	        sb.println(terminal);
+			trm.flush();
+
+	        sb = new AttributedStringBuilder();
+	        sb.style(new AttributedStyle().faint());
+	        sb.append("Alt+S to toggle help");
+	        sb.style(new AttributedStyle().faintOff());
+	        sb.println(terminal);
 			trm.flush();
 			
 			/* Input loop */
