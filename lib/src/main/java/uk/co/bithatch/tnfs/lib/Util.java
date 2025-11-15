@@ -390,7 +390,7 @@ public class Util {
 	}
 
 	public  static String[] processHome(char sep, String[] pathParts, String homeDir) {
-		var l = new ArrayList<>(Arrays.asList(pathParts));
+		var l = new ArrayList<>();
 		for(var p : pathParts) {
 			if(p.equals("~")) {
 				l.clear();

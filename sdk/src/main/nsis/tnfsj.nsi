@@ -122,6 +122,7 @@ Section "TNFSJ Client Tools" TNFSJ_ClientTools
 SectionEnd
 
 Section "TNFSJ Server (Service)" TNFSJ_Server
+  ExecShellWait "" "$INSTDIR\tnfsjd-service.exe" "stop" SW_HIDE
 
   SetOutPath "$INSTDIR\sbin"
   File /r ..\..\..\target\sdk\tnfs-java-sdk-windows-amd64\sbin\tnfsjd.exe
@@ -142,6 +143,7 @@ Section "TNFSJ Server (Service)" TNFSJ_Server
 SectionEnd
 
 Section "TNFSJ Web Basd File Browser (Service)" TNFSJ_Web
+  ExecShellWait "" "$INSTDIR\tnfsjd-web-service.exe" "stop" SW_HIDE
 
   SetOutPath "$INSTDIR\sbin"
   File /r ..\..\..\target\sdk\tnfs-java-sdk-windows-amd64\sbin\tnfsjd-web.exe

@@ -76,7 +76,7 @@ public class MGet extends TNFSTPCommand implements Callable<Integer> {
 			file = absolutePath(container.getCwd(), file, container.getSeparator());
 
 			var localFile = isDirectory(localDest) 
-					? localDest.resolve(basename(file)) 
+					? localDest.resolve(basename(file, container.getSeparator())) 
 					: localDest;
 
 			ftransfer.remoteToLocal(mount, container.localToNativePath(file), localFile);

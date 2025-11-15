@@ -225,9 +225,9 @@ public abstract class TNFSTPCommand implements IVersionProvider, Callable<Intege
 								if(i == pathCount -1) {
 									doOp(op, fullPath);
 									matched = true;
-									if(!multiple) {
-										break;
-									}
+								}
+								if(!multiple) {
+									break;
 								}
 							}
 						}

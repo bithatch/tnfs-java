@@ -68,10 +68,10 @@ public class Get extends TNFSTPCommand implements Callable<Integer> {
 				false, 
 				container.getSeparator());
 
-		file = absolutePath(container.getCwd(), file, container.getSeparator());
+		file = expandRemote(absolutePath(container.getCwd(), file, container.getSeparator()));
 
 		var localFile = isDirectory(localDest) 
-				? localDest.resolve(basename(file)) 
+				? localDest.resolve(basename(file, container.getSeparator())) 
 				: localDest;
 
 		ftransfer.remoteToLocal(mount, container.localToNativePath(file), localFile);
