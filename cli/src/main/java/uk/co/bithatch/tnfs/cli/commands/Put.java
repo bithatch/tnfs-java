@@ -63,7 +63,8 @@ public class Put extends TNFSTPCommand implements Callable<Integer> {
 				force, 
 				!noProgress, 
 				false, 
-				container.getSeparator());
+				container.getSeparator(),
+				container.getTerminal());
 		
 		var local = expandLocal(path);
 		var resolved = local.isAbsolute() 

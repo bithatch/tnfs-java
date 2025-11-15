@@ -20,7 +20,10 @@
  */
 package uk.co.bithatch.tnfs.cli;
 
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -29,11 +32,16 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.time.temporal.ChronoUnit;
 
+import org.jline.terminal.Terminal;
+import org.jline.utils.InfoCmp;
 import org.jline.utils.OSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import me.tongfei.progressbar.ConsoleProgressBarConsumer;
+import me.tongfei.progressbar.InteractiveConsoleProgressBarConsumer;
 import me.tongfei.progressbar.ProgressBar;
 import me.tongfei.progressbar.ProgressBarBuilder;
 import me.tongfei.progressbar.ProgressBarStyle;
@@ -51,9 +59,11 @@ public final class FileTransfer {
 	private final boolean recursive;
 	private final char sep;
 	private final ByteBufferPool bufferPool;
+	private final Terminal terminal;
 
-	public FileTransfer(ByteBufferPool bufferPool, boolean force, boolean progress, boolean recursive, char sep) {
+	public FileTransfer(ByteBufferPool bufferPool, boolean force, boolean progress, boolean recursive, char sep, Terminal terminal) {
 		super();
+		this.terminal = terminal;
 		this.bufferPool = bufferPool;
 		this.force = force;
 		this.progress = progress;
@@ -194,15 +204,32 @@ public final class FileTransfer {
 	}
 
 	private ProgressBar createProgressBar(long size, String txt) {
-		var bldr = new ProgressBarBuilder().setTaskName(txt).setInitialMax(size);
+		var bldr = new ProgressBarBuilder().
+				setTaskName(txt).
+				setInitialMax(size).
+				setConsumer(createConsoleConsumer(-1)).
+				setSpeedUnit(ChronoUnit.SECONDS);
+		
+		if(size < 1024) {
+			bldr.setUnit("B", 1);
+		}
+		else if(size < 1048576) {
+			bldr.setUnit("KiB", 1024);
+		}
+		else  {
+			bldr.setUnit("MiB", 1048576);
+		}
+		
 		if(OSUtils.IS_WINDOWS) {
 			var term = System.getenv("TERM");
-			if(term == null)
+			if(term == null) {
 				bldr.setStyle(ProgressBarStyle.ASCII);
-			else if(term.contains("color") || term.contains("colour"))
-				bldr.setStyle(ProgressBarStyle.UNICODE_BLOCK);
-			else {
+			}
+			else if(term.contains("color") || term.contains("colour")) {
 				bldr.setStyle(ProgressBarStyle.COLORFUL_UNICODE_BLOCK);
+			}
+			else {
+				bldr.setStyle(ProgressBarStyle.UNICODE_BLOCK);
 			}
 		}
 		return bldr.build();
@@ -222,5 +249,45 @@ public final class FileTransfer {
 					OpenFlag.CREATE };
 		else
 			return new OpenFlag[] { OpenFlag.WRITE, OpenFlag.CREATE };
+	}
+	
+	private ConsoleProgressBarConsumer createConsoleConsumer(int predefinedWidth) {
+        PrintStream real = new PrintStream(new FileOutputStream(FileDescriptor.err));
+        return createConsoleConsumer(real, predefinedWidth);  // System.err might be overridden by System.setErr
+    }
+
+	private ConsoleProgressBarConsumer createConsoleConsumer(PrintStream out, int predefinedWidth) {
+		return hasCursorMovementSupport() ? new InteractiveConsoleProgressBarConsumer(out, predefinedWidth) {
+			@Override
+			public int getMaxRenderedLength() {
+				if(terminal != null) {
+					var w = terminal.getWidth();
+					if(w > 0)
+						return w;
+				}
+				return super.getMaxRenderedLength();
+			}
+		} : new ConsoleProgressBarConsumer(out, predefinedWidth) {
+			@Override
+			public int getMaxRenderedLength() {
+				if(terminal != null) {
+					var w = terminal.getWidth();
+					if(w > 0)
+						return w;
+				}
+				return super.getMaxRenderedLength();
+			}
+		};
+	}
+
+	private boolean hasCursorMovementSupport() {
+		if(terminal == null)
+			return false;
+		else {
+            return (
+                    terminal.getStringCapability(InfoCmp.Capability.cursor_up) != null &&
+                    terminal.getStringCapability(InfoCmp.Capability.cursor_down) != null
+            );
+		}
 	}
 }

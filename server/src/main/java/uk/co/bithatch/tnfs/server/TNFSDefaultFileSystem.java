@@ -32,6 +32,7 @@ import java.nio.file.ReadOnlyFileSystemException;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.DosFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributeView;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -82,7 +83,32 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 		var resolved = resolve(path); 
 		checkFileSymbolicLink(resolved, path);
 		checkDescendant(resolved, path);
-		Files.setPosixFilePermissions(resolved, Set.of(ModeFlag.permissions(modes)));
+
+		var perms = Set.of(ModeFlag.permissions(modes));
+		try {
+			Files.setPosixFilePermissions(resolved, perms);
+		}
+		catch(UnsupportedOperationException uoe) {
+			var readableOthers =  
+					perms.contains(PosixFilePermission.GROUP_READ) ||
+					perms.contains(PosixFilePermission.OTHERS_READ);
+			var readable = perms.contains(PosixFilePermission.OWNER_READ) || readableOthers;
+
+			
+			var writableOthers =  
+					perms.contains(PosixFilePermission.GROUP_WRITE) ||
+					perms.contains(PosixFilePermission.OTHERS_WRITE);
+			var writable = perms.contains(PosixFilePermission.OWNER_WRITE) || writableOthers;
+			
+			var executableOthers =  
+					perms.contains(PosixFilePermission.GROUP_EXECUTE) ||
+					perms.contains(PosixFilePermission.OTHERS_EXECUTE);
+			var executable = perms.contains(PosixFilePermission.OWNER_EXECUTE) || executableOthers;
+			
+			resolved.toFile().setReadable(readable, readableOthers);
+			resolved.toFile().setExecutable(executable, executableOthers);
+			resolved.toFile().setWritable(writable, writableOthers);
+		}
 	}
 
 	@Override
@@ -238,7 +264,7 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 				var basicAttrs = basicAttrView.readAttributes();
 				return new StatResult(
 						ResultCode.SUCCESS, 
-						ModeFlag.forAttributes(basicAttrs),
+						ModeFlag.forAttributes(basicAttrs, p),
 						0,
 						0,
 						basicAttrs.size(), 
@@ -252,7 +278,7 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 				var dosAttrs = dosAttrView.readAttributes();
 				return new StatResult(
 						ResultCode.SUCCESS, 
-						ModeFlag.forAttributes(dosAttrs),
+						ModeFlag.forAttributes(dosAttrs, p),
 						0,
 						0,
 						dosAttrs.size(), 

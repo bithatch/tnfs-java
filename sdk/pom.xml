@@ -213,35 +213,35 @@
                 <plugins>
                 
 	                <plugin>
-					<artifactId>maven-resources-plugin</artifactId>
-					<executions>
-						<execution>
-							<id>generate-package-resources</id>
-							<phase>package</phase>
-							<goals>
-								<goal>copy-resources</goal>
-							</goals>
-							<configuration>
-								<delimiters>
-									<delimiter>[[*]]</delimiter>
-								</delimiters>
-								<outputDirectory>${project.basedir}/target/staging</outputDirectory>
-								<resources>
-									<resource>
-										<directory>src/main/packages</directory>
-										<filtering>true</filtering>
-										<includes>
-											<include>configuration/**/*</include>
-											<include>deb/**/*</include>
-											<include>logrotate.d/**/*</include>
-											<include>systemd/**/*</include>
-										</includes>
-									</resource>
-								</resources>
-							</configuration>
-						</execution>
-					</executions>
-				</plugin>
+						<artifactId>maven-resources-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>generate-package-resources</id>
+								<phase>package</phase>
+								<goals>
+									<goal>copy-resources</goal>
+								</goals>
+								<configuration>
+									<delimiters>
+										<delimiter>[[*]]</delimiter>
+									</delimiters>
+									<outputDirectory>${project.basedir}/target/staging</outputDirectory>
+									<resources>
+										<resource>
+											<directory>src/main/packages</directory>
+											<filtering>true</filtering>
+											<includes>
+												<include>configuration/**/*</include>
+												<include>deb/**/*</include>
+												<include>logrotate.d/**/*</include>
+												<include>systemd/**/*</include>
+											</includes>
+										</resource>
+									</resources>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
                 
                     <plugin>
 					    <groupId>org.vafer</groupId>

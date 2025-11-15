@@ -24,6 +24,7 @@ import static java.nio.file.attribute.PosixFilePermission.OWNER_READ;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.DosFileAttributes;
@@ -132,22 +133,63 @@ public enum ModeFlag implements BitSet {
 		}
 	}
 
+
 	public static ModeFlag[] forAttributes(DosFileAttributes attrs) {
+		return forAttributes(attrs, null);
+	}
+
+	public static ModeFlag[] forAttributes(DosFileAttributes attrs, Path file) {
 		var l = new ArrayList<ModeFlag>();
 		forBasicType(attrs, l);
-		if(attrs.isReadOnly()) {
-			l.addAll(Arrays.asList(ALL_EXECUTABLE));
-		}
-		else {
-			l.addAll(Arrays.asList(ALL_FLAGS));
+		if(!forLegacyFile(file, l)) {
+			if(attrs.isReadOnly()) {
+				l.addAll(Arrays.asList(ALL_EXECUTABLE));
+			}
+			else {
+				l.addAll(Arrays.asList(ALL_FLAGS));
+			}
 		}
 		return l.toArray(new ModeFlag[0]);
 	}
 	
 	public static ModeFlag[] forAttributes(BasicFileAttributes attrs) {
+		return forAttributes(attrs, null);
+	}
+	
+	public static ModeFlag[] forAttributes(BasicFileAttributes attrs, Path file) {
 		var l = new ArrayList<ModeFlag>();
+		forLegacyFile(file, l);
 		forBasicType(attrs, l);
 		return l.toArray(new ModeFlag[0]);
+	}
+
+	protected static boolean forLegacyFile(Path file, ArrayList<ModeFlag> l) {
+		if(file != null) {
+			try {
+				var legacyFile = file.toFile();
+				if(legacyFile.canRead()) {
+					l.add(ModeFlag.IRUSR);
+					l.add(ModeFlag.IRGRP);
+					l.add(ModeFlag.IROTH);
+				}
+				if(legacyFile.canWrite()) {
+					l.add(ModeFlag.IWUSR);
+					l.add(ModeFlag.IWGRP);
+					l.add(ModeFlag.IWOTH);
+				}
+				if(legacyFile.canExecute()) {
+					l.add(ModeFlag.IXUSR);
+					l.add(ModeFlag.IXGRP);
+					l.add(ModeFlag.IXOTH);
+				}
+				return true;
+			}
+			catch(Exception e) {
+				
+			}
+			
+		}
+		return false;
 	}
 
 	private static void forBasicType(BasicFileAttributes attrs, ArrayList<ModeFlag> l) {

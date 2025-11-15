@@ -86,8 +86,6 @@ public class TNFSFUSE extends AbstractTNFSFilesCommand implements Callable<Integ
 			Files.createDirectories(mountPoint);
 		}
 		
-		System.getProperties().forEach((k,v) -> System.out.println(k + "=" + v));
-		
 		var uri = TNFSURI.parse(remotePath);
 		var mount = doMount(uri, doConnect(uri));
 		var builder = Fuse.builder();

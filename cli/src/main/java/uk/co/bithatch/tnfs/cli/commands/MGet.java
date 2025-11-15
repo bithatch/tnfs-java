@@ -70,7 +70,8 @@ public class MGet extends TNFSTPCommand implements Callable<Integer> {
 				force, 
 				!noProgress, 
 				recursive, 
-				container.getSeparator());
+				container.getSeparator(),
+				container.getTerminal());
 		
 		expandRemoteAndDo(file -> {
 			file = absolutePath(container.getCwd(), file, container.getSeparator());

@@ -21,6 +21,7 @@
 package uk.co.bithatch.tnfs.cli;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -525,7 +526,6 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 								toArray(new String[0]))
 					};
 				}
-//				args[0] = Util.findCommand(args[0]).toAbsolutePath().toString();
 				var pb = new ProcessBuilder(Arrays.asList(args));
 				pb.directory(getLcwd().toFile());
 				pb.redirectErrorStream(true);
@@ -542,6 +542,8 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 									out.write(b, 0, r);
 									out.flush();
 								}
+							}
+							catch(InterruptedIOException ie) {
 							}
 							catch(Exception ioe) {
 							}

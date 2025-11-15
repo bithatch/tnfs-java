@@ -73,7 +73,8 @@ public class MPut extends TNFSTPCommand implements Callable<Integer> {
 				force, 
 				!noProgress, 
 				recursive, 
-				container.getSeparator());
+				container.getSeparator(),
+				container.getTerminal());
 		
 		expandLocalAndDo(file -> {
 

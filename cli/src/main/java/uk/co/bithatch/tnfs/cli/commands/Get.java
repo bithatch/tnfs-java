@@ -66,7 +66,8 @@ public class Get extends TNFSTPCommand implements Callable<Integer> {
 				force, 
 				!noProgress, 
 				false, 
-				container.getSeparator());
+				container.getSeparator(),
+				container.getTerminal());
 
 		file = expandRemote(absolutePath(container.getCwd(), file, container.getSeparator()));
 
