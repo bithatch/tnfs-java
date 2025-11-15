@@ -22,6 +22,7 @@ package uk.co.bithatch.tnfs.cli;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeoutException;
@@ -85,10 +86,21 @@ public class TNFSFUSE extends AbstractTNFSFilesCommand implements Callable<Integ
 			Files.createDirectories(mountPoint);
 		}
 		
+		System.getProperties().forEach((k,v) -> System.out.println(k + "=" + v));
+		
 		var uri = TNFSURI.parse(remotePath);
 		var mount = doMount(uri, doConnect(uri));
 		var builder = Fuse.builder();
-		libpath.ifPresent(p -> builder.setLibraryPath(p.toString()));
+		libpath.ifPresentOrElse(p -> builder.setLibraryPath(p.toString()), () -> {
+			if(System.getProperty("os.name", "").toLowerCase().contains("linux")) {
+				if(System.getProperty("os.arch", "amd64").equals("amd64")) {
+					var path = Paths.get("/lib/x86_64-linux-gnu/libfuse3.so.3");
+					if(Files.exists(path)) {
+						builder.setLibraryPath(path.toString());
+					}
+				}	
+			}
+		});
 		var fuseOps = new TNFSFUSEFileSystem(mount, builder.errno());
 		try (var fuse = builder.build(fuseOps)) {
 			Runtime.getRuntime().addShutdownHook(new Thread(() -> {

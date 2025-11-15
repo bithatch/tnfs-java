@@ -207,4 +207,6 @@ public interface TNFSMount extends TNFSFileAccess {
 	 * @return version
 	 */
 	Version serverVersion();
+
+	int sessionId();
 }

@@ -224,8 +224,6 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 		return username;
 	}
 
-	public abstract int sessionId();
-
 	@Override
 	public long free() throws IOException {
 		if(LOG.isDebugEnabled()) {

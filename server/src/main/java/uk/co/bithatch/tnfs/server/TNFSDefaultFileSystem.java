@@ -27,7 +27,6 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.ReadOnlyFileSystemException;
 import java.nio.file.attribute.BasicFileAttributeView;
@@ -82,6 +81,7 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 		checkReadOnly();
 		var resolved = resolve(path); 
 		checkFileSymbolicLink(resolved, path);
+		checkDescendant(resolved, path);
 		Files.setPosixFilePermissions(resolved, Set.of(ModeFlag.permissions(modes)));
 	}
 
@@ -99,6 +99,7 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 		if(isSymbolicLink(resolved)) {
 			throw new NotDirectoryException(path);
 		}
+		checkDescendant(resolved, path);
 		
 		Stream<Entry> str;
 		if(wildcard.isBlank()) {
@@ -153,6 +154,7 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 		if(isSymbolicLink(rpath)) {
 			throw new NotDirectoryException(path);
 		}
+		checkDescendant(rpath, path);
 		return Files.list(rpath).map(p -> p.getFileName().toString()).sorted();
 	}
 
@@ -161,6 +163,7 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 		checkReadOnly();
 		var rpath = resolve(path);
 		checkFileSymbolicLink(rpath, path);
+		checkDescendant(rpath, path);
 		Files.createDirectory(rpath);
 	}
 
@@ -178,6 +181,7 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 		
 		var rpath = resolve(path);
 		checkFileSymbolicLink(rpath, path);
+		checkDescendant(rpath, path);
 		var oflgs = OpenFlag.encodeOptions(flags);
 		var chnl = Files.newByteChannel(rpath, oflgs);
 		
@@ -194,9 +198,11 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 		
 		var rpath1 = resolve(path);
 		checkFileSymbolicLink(rpath1, path);
+		checkDescendant(rpath1, path);
 		
 		var rpath2 = resolve(targetPath);
 		checkFileSymbolicLink(rpath2, targetPath);
+		checkDescendant(rpath2, targetPath);
 		
 		Files.move(rpath1, rpath2);
 	}
@@ -206,7 +212,8 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 		checkReadOnly();
 		var dpath = resolve(path);
 		checkFileSymbolicLink(dpath, path);
-		if(dpath.equals(root))
+		checkDescendant(dpath, path);
+		if(dpath.toAbsolutePath().toString().equals(root.toAbsolutePath().toString()))
 			throw new AccessDeniedException(path);
 		else
 			Files.delete(dpath);
@@ -221,6 +228,7 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 	public StatResult stat(String path) throws IOException {
 		var p = resolve(path);
 		checkFileSymbolicLink(p, path);
+		checkDescendant(p, path);
 		var basicAttrView = Files.getFileAttributeView(p, BasicFileAttributeView.class);
 		var posixAttrView = Files.getFileAttributeView(p, PosixFileAttributeView.class);
 		var dosAttrView = Files.getFileAttributeView(p, DosFileAttributeView.class);
@@ -278,6 +286,7 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 		checkReadOnly();
 		var rpath = resolve(path);
 		checkFileSymbolicLink(rpath, path);
+		checkDescendant(rpath, path);
 		Files.delete(rpath);
 	}
 	
@@ -324,6 +333,14 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 	private void checkFileSymbolicLink(Path path, String strpath) throws IOException {
 		if(isSymbolicLink(path.getParent())) {
 			throw new NoSuchFileException(strpath);
+		}
+	}
+
+	private void checkDescendant(Path path, String strpath) throws IOException {
+		var thisPath = path.toAbsolutePath();
+		var rootPath = root.toAbsolutePath();
+		if(!thisPath.startsWith(rootPath)) {
+			throw new AccessDeniedException(strpath);
 		}
 	}
 

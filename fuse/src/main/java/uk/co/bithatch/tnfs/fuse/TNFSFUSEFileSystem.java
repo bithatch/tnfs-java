@@ -66,6 +66,9 @@ public class TNFSFUSEFileSystem implements FuseOperations {
 	private final TNFSMount mount;
 	private final Map<Long, TNFSDirectory> openDirs = new ConcurrentHashMap<>();
 	private final Map<Long, SeekableByteChannel> openFiles = new ConcurrentHashMap<>();
+	
+	private final static int RENAME_EXCHANGE = 0;
+	private final static int RENAME_NOREPLACE = 1;
 
 	public TNFSFUSEFileSystem(TNFSMount mount, Errno errno) {
 		this.errno = errno;
@@ -249,6 +252,9 @@ public class TNFSFUSEFileSystem implements FuseOperations {
 			LOG.debug("rename {} {}", oldpath, newpath);
 		}
 		return ioCall(() -> {
+			if((flags & RENAME_NOREPLACE) == 0 && mount.exists(newpath)) {
+				mount.unlink(newpath);
+			}
 			mount.rename(oldpath, newpath);
 			return 0;
 		});

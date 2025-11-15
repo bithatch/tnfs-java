@@ -37,10 +37,12 @@ import picocli.CommandLine.Option;
 import uk.co.bithatch.tnfs.client.TNFSClient;
 import uk.co.bithatch.tnfs.client.TNFSMount;
 import uk.co.bithatch.tnfs.client.extensions.SecureMount;
+import uk.co.bithatch.tnfs.lib.Message;
 import uk.co.bithatch.tnfs.lib.Protocol;
 import uk.co.bithatch.tnfs.lib.ResultCode;
 import uk.co.bithatch.tnfs.lib.TNFS;
 import uk.co.bithatch.tnfs.lib.TNFSException;
+import uk.co.bithatch.tnfs.lib.extensions.Extensions;
 
 /**
  * Abstract command.
@@ -74,6 +76,12 @@ public abstract class AbstractTNFSCommand {
 	@Option(names = { "-S",
 			"--secure" }, description = "Use the Secure Mount .")
 	private boolean secure;
+
+	@Option(names = { "--paths" }, description = "Whether or not to use WINDOWS styles paths and escaping, or UNIX style. When AUTO, defaults to automatic based on operating system.")
+	public PathsMode paths = PathsMode.AUTO;
+
+	@Option(names = { "-M", "--packet-size" }, description = "Maximum size of each message packet. Requires server support for PKTSZ extension.")
+	private Optional<Integer> size;
 	
 	protected Logger log;
 
@@ -189,8 +197,8 @@ public abstract class AbstractTNFSCommand {
 							mntBldr.withPassword(promptForPassword());
 						}
 					}
-					
-					return mntBldr.build();
+
+					return setupMount(client, mntBldr.build());
 				}
 				else {
 				
@@ -208,8 +216,8 @@ public abstract class AbstractTNFSCommand {
 							mntBldr.withPassword(promptForPassword());
 						}
 					}
-					
-					return mntBldr.build();
+
+					return setupMount(client, mntBldr.build());
 				}
 			}
 			catch(TNFSException tnfse) {
@@ -220,6 +228,19 @@ public abstract class AbstractTNFSCommand {
 			}		
 		}
 		throw new IllegalStateException("Too many authentication attempts.");
+	}
+
+	protected TNFSMount setupMount(TNFSClient client, TNFSMount mnt) throws IOException {
+		if(size.isPresent()) {
+			try {
+				var res = client.sendMessage(Extensions.PKTSZ, Message.of(mnt.sessionId(), Extensions.PKTSZ, new Extensions.PktSize(size.get())));
+				client.size(res.size());
+			}
+			catch(Exception e) {
+				error("Failed to set packet size.", e);
+			}
+		}
+		return mnt;
 	}
 	
 	protected char[] promptForPassword() {
