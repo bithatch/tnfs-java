@@ -196,10 +196,14 @@ public final class FileTransfer {
 	private ProgressBar createProgressBar(long size, String txt) {
 		var bldr = new ProgressBarBuilder().setTaskName(txt).setInitialMax(size);
 		if(OSUtils.IS_WINDOWS) {
-			if(System.getenv("TERM") == null)
+			var term = System.getenv("TERM");
+			if(term == null)
 				bldr.setStyle(ProgressBarStyle.ASCII);
-			else
+			else if(term.contains("color") || term.contains("colour"))
 				bldr.setStyle(ProgressBarStyle.UNICODE_BLOCK);
+			else {
+				bldr.setStyle(ProgressBarStyle.COLORFUL_UNICODE_BLOCK);
+			}
 		}
 		return bldr.build();
 	}

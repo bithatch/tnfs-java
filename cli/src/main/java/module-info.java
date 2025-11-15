@@ -29,7 +29,6 @@ open module uk.co.bithatch.tnfs.cli {
 	requires transitive org.jline.console;
 	requires transitive org.jline.reader;
 	requires transitive org.jline.terminal;
-	requires transitive com.sshtools.nih;
 
 	requires transitive info.picocli;
 	requires transitive info.picocli.shell.jline3;

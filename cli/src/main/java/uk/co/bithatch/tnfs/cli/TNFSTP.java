@@ -473,21 +473,21 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 						var mode = sub.completionMode();
 						switch(mode) {
 						case LOCAL:
-						case LOCAL_THEN_REMOTE: /* TODO remote when below is supported */
+						case LOCAL_THEN_REMOTE: /* TODO remove when below is supported */
 							local.complete(reader, line, candidates);
 							break;
 						case DIRECTORIES_LOCAL:
-						case DIRECTORIES_LOCAL_THEN_REMOTE: /* TODO remote when below is supported */
+						case DIRECTORIES_LOCAL_THEN_REMOTE: /* TODO remove when below is supported */
 							localDirs.complete(reader, line, candidates);
 							break;
 						case REMOTE:
-						case REMOTE_THEN_LOCAL:  /* TODO remote when below is supported */
+						case REMOTE_THEN_LOCAL:  /* TODO remove when below is supported */
 							if(remote != null) {
 								remote.complete(reader, line, candidates);
 							}
 							break;
 						case DIRECTORIES_REMOTE:
-						case DIRECTORIES_REMOTE_THEN_LOCAL:  /* TODO remote when below is supported */
+						case DIRECTORIES_REMOTE_THEN_LOCAL:  /* TODO remove when below is supported */
 							if(remote != null) {
 								remoteDirs.complete(reader, line, candidates);
 							}
@@ -604,7 +604,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
                 }
                 var resolver = Styles.lsStyle();
                 
-                try(var dir = mount.directory(current)) {
+                try(var dir = mount.directory(localToNativePath(current))) {
                 	var str = dir.stream();
                 	str.filter(this::accept).
                 	forEach(p -> {
