@@ -14,10 +14,9 @@ The web based file browser will let you create folders, upload files, and perfor
 
 There are various clients installed to the `bin` directory. For example, try out the `tnfstp` tool. This is an interactive client, similar to `ftp`.
 
-*Note, the PATH variable is not current set by the installer. You may want to add `bin` to your system PATH so you can just use the command name instead of it's full path.*
 
 ```
-"C:\Program Files\TNFSJ\bin\tnfstp.exe" localhost
+tnfstp localhost
 ```
 
 Run `help` to get a list of commands. Use *TAB* for filename and command completion.

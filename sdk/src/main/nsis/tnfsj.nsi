@@ -114,6 +114,11 @@ Section "TNFSJ Client Tools" TNFSJ_ClientTools
   File /r ..\..\..\target\sdk\tnfs-java-sdk-windows-amd64\doc\tnfscp*.*
   File /r ..\..\..\target\sdk\tnfs-java-sdk-windows-amd64\doc\tnfs-fuse*.*
   File /r ..\..\..\target\sdk\tnfs-java-sdk-windows-amd64\doc\tnfstp*.*
+  
+  EnVar::SetHKLM
+  Pop $0
+  EnVar::AddValue "PATH" "$INSTDIR\bin"
+  Pop $0
    
   CreateShortCut "$SMPROGRAMS\$StartMenuFolder\TNFSTP.lnk" "$INSTDIR\tnfstp.exe" \
     "" \
@@ -122,8 +127,7 @@ Section "TNFSJ Client Tools" TNFSJ_ClientTools
 SectionEnd
 
 Section "TNFSJ Server (Service)" TNFSJ_Server
-  ExecShellWait "" "$INSTDIR\tnfsjd-service.exe" "stop" SW_HIDE
-  Sleep 3000
+  ExecShellWait "" "$INSTDIR\tnfsjd-service.exe" "stopwait" SW_HIDE
 
   SetOutPath "$INSTDIR\sbin"
   File /r ..\..\..\target\sdk\tnfs-java-sdk-windows-amd64\sbin\tnfsjd.exe
@@ -144,8 +148,7 @@ Section "TNFSJ Server (Service)" TNFSJ_Server
 SectionEnd
 
 Section "TNFSJ Web Basd File Browser (Service)" TNFSJ_Web
-  ExecShellWait "" "$INSTDIR\tnfsjd-web-service.exe" "stop" SW_HIDE
-  Sleep 3000
+  ExecShellWait "" "$INSTDIR\tnfsjd-web-service.exe" "stopwait" SW_HIDE
 
   SetOutPath "$INSTDIR\sbin"
   File /r ..\..\..\target\sdk\tnfs-java-sdk-windows-amd64\sbin\tnfsjd-web.exe
@@ -203,11 +206,9 @@ FunctionEnd
 
 Section "Uninstall"
 
-  ExecShellWait "" "$INSTDIR\tnfsjd-service.exe" "stop" SW_HIDE
-  Sleep 3000
+  ExecShellWait "" "$INSTDIR\tnfsjd-service.exe" "stopwait" SW_HIDE
   ExecShellWait "" "$INSTDIR\tnfsjd-service.exe" "uninstall" SW_HIDE  
-  ExecShellWait "" "$INSTDIR\tnfsjd-web-service.exe" "stop" SW_HIDE
-  Sleep 3000
+  ExecShellWait "" "$INSTDIR\tnfsjd-web-service.exe" "stopwait" SW_HIDE
   ExecShellWait "" "$INSTDIR\tnfsjd-web-service.exe" "uninstall" SW_HIDE
   
   ;ADD YOUR OWN FILES HERE...
@@ -259,7 +260,12 @@ Section "Uninstall"
   RMDir "$SMPROGRAMS\$StartMenuFolder"
 
   DeleteRegKey /ifempty HKLM  "tnfsj"
-  DeleteRegKey /ifempty HKLM "Software\TNFSJ"
+  DeleteRegKey /ifempty HKLM "Software\TNFSJ" 
+  
+  EnVar::SetHKLM
+  Pop $0
+  EnVar::DeleteValue "PATH" "C:\$INSTDIR\bin"
+  Pop $0
 
 SectionEnd
 
