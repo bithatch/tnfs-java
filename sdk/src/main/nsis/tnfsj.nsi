@@ -59,8 +59,8 @@
 ;   !define MUI_FINISHPAGE_RUN_NOTCHECKED
 ;   !define MUI_FINISHPAGE_RUN_TEXT "Start TNFSJ"
 ;   !define MUI_FINISHPAGE_RUN_FUNCTION "LaunchLink"
-;   !define MUI_FINISHPAGE_SHOWREADME_NOTCHECKED
-;   !define MUI_FINISHPAGE_SHOWREADME $INSTDIR\README.md
+   !define MUI_FINISHPAGE_SHOWREADME_NOTCHECKED
+   !define MUI_FINISHPAGE_SHOWREADME $INSTDIR\README.md
   
   
   !insertmacro MUI_PAGE_FINISH
@@ -83,7 +83,7 @@ Section "TNFSJ Common Files" TNFSJ
   
   ;ADD YOUR OWN FILES HERE...
   File icon.ico
-  File ..\..\..\..\README.md
+  File README.md
   
   ;Store installation folder
   WriteRegStr HKLM "Software\TNFSJ" "" $INSTDIR
@@ -123,6 +123,7 @@ SectionEnd
 
 Section "TNFSJ Server (Service)" TNFSJ_Server
   ExecShellWait "" "$INSTDIR\tnfsjd-service.exe" "stop" SW_HIDE
+  Sleep 3000
 
   SetOutPath "$INSTDIR\sbin"
   File /r ..\..\..\target\sdk\tnfs-java-sdk-windows-amd64\sbin\tnfsjd.exe
@@ -144,6 +145,7 @@ SectionEnd
 
 Section "TNFSJ Web Basd File Browser (Service)" TNFSJ_Web
   ExecShellWait "" "$INSTDIR\tnfsjd-web-service.exe" "stop" SW_HIDE
+  Sleep 3000
 
   SetOutPath "$INSTDIR\sbin"
   File /r ..\..\..\target\sdk\tnfs-java-sdk-windows-amd64\sbin\tnfsjd-web.exe
@@ -202,11 +204,11 @@ FunctionEnd
 Section "Uninstall"
 
   ExecShellWait "" "$INSTDIR\tnfsjd-service.exe" "stop" SW_HIDE
+  Sleep 3000
   ExecShellWait "" "$INSTDIR\tnfsjd-service.exe" "uninstall" SW_HIDE  
   ExecShellWait "" "$INSTDIR\tnfsjd-web-service.exe" "stop" SW_HIDE
-  ExecShellWait "" "$INSTDIR\tnfsjd-web-service.exe" "uninstall" SW_HIDE
-  
   Sleep 3000
+  ExecShellWait "" "$INSTDIR\tnfsjd-web-service.exe" "uninstall" SW_HIDE
   
   ;ADD YOUR OWN FILES HERE...
 
@@ -219,10 +221,11 @@ Section "Uninstall"
   DELETE "$INSTDIR\bin\tnfstp.exe"
   DELETE "$INSTDIR\bin\tnfsfuse.exe"  
   DELETE "$INSTDIR\lib\*.jar"
-  DELETE "$INSTDIR\doc\*.html"    
-  DELETE "$INSTDIR\etc\*.sample"        
-  DELETE "$INSTDIR\etc\tnfsjd\*.sample"
-  DELETE "$INSTDIR\etc\tnfsjd-web\*.sample"
+  DELETE "$INSTDIR\doc\*.html"       
+  DELETE "$INSTDIR\etc\tnfsjd\authentication.ini"
+  DELETE "$INSTDIR\etc\tnfsjd\mounts.ini"
+  DELETE "$INSTDIR\etc\tnfsjd\tnfsjd.ini"
+  DELETE "$INSTDIR\etc\tnfsjd-web\tnfsjd-web.ini"
   DELETE "$INSTDIR\tnfsjd-service.exe"
   DELETE "$INSTDIR\tnfsjd-service.xml"
   DELETE "$INSTDIR\tnfsjd-web-service.exe"
@@ -235,7 +238,11 @@ Section "Uninstall"
   RMDir "$INSTDIR\bin"  
   RMDir "$INSTDIR\sbin"
   RMDir "$INSTDIR\doc"
-  RMDir "$INSTDIR\etc\tnfsjd-web"  
+  RMDir "$INSTDIR\etc\tnfsjd-web\tnfsjd-web.ini.d"
+  RMDir "$INSTDIR\etc\tnfsjd-web" 
+  RMDir "$INSTDIR\etc\tnfsjd\authentication.ini.d"
+  RMDir "$INSTDIR\etc\tnfsjd\mounts.ini.d"
+  RMDir "$INSTDIR\etc\tnfsjd\tnfsjd.ini.d"
   RMDir "$INSTDIR\etc\tnfsjd"
   RMDir "$INSTDIR\etc"
   RMDir "$INSTDIR\lib"

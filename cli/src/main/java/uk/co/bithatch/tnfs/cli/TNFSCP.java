@@ -20,9 +20,13 @@
  */
 package uk.co.bithatch.tnfs.cli;
 
+import static uk.co.bithatch.tnfs.lib.Util.resolvePaths;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -33,6 +37,7 @@ import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Spec;
+import uk.co.bithatch.tnfs.lib.Util;
 
 /**
  * SCP-like command for TNFS
@@ -64,12 +69,12 @@ public class TNFSCP extends AbstractTNFSFilesCommand implements Callable<Integer
 	@Option(names = {"-g", "--no-progress-bar"}, description = "No progress bar.")
 	private boolean noProgress = false;
 	
-	@Parameters(index = "0", arity = "1..", description = "The source file(s) or directory, either a local path or a TFNS Path URI.")
-	private List<String> sources;
+	@Parameters(arity = "2..*",  paramLabel = "<sources>... <target>", description = {
+	        "The source file(s) or directory, either a local path or a TFNS Path URI.",
+	        "The target file or directory, either a local path or a TFNS Path URI."
+	    })
+	private List<String> sourcesAndTarget;
 
-	@Parameters(index = "1", description = "The target file or directory, either a local path or a TFNS Path URI.")
-	private String target;
-	
 	@Spec 
 	private CommandSpec spec;
 
@@ -86,26 +91,28 @@ public class TNFSCP extends AbstractTNFSFilesCommand implements Callable<Integer
 
 	@Override
 	protected void onStart() throws IOException {
-		if(sources.size() == 1) {
-			oneSource(sources.get(0), false);
+		var end = sourcesAndTarget.size() - 1;
+		var target = sourcesAndTarget.get(end);
+		if(sourcesAndTarget.size() == 2) {
+			oneSource(sourcesAndTarget.get(0), target, false);
 		}
 		else {
-			for(var src : sources) {
-				oneSource(src, true);
+			for(var src : sourcesAndTarget.subList(0, end)) {
+				oneSource(src, target, true);
 			}
 		}
 	}
 
-	private void oneSource(String source, boolean multiple) throws IOException {
+	private void oneSource(String source, String target, boolean multiple) throws IOException {
 		if (isRemotePath(source)) {
 			if (isRemotePath(target)) {
 				remoteToRemote(source, multiple);
 			} else {
-				remoteToLocal(source, multiple);
+				remoteToLocal(source, target, multiple);
 			}
 		} else {
 			if (isRemotePath(target)) {
-				localToRemote(source, multiple);
+				localToRemote(source, target, multiple);
 			} else {
 				throw new IllegalArgumentException("Local to local copy not supported, use your OS tools!");
 			}
@@ -120,25 +127,42 @@ public class TNFSCP extends AbstractTNFSFilesCommand implements Callable<Integer
 		return file;
 	}
 
-	void localToRemote(String source, boolean multiple) throws IOException {
+	void localToRemote(String source, String target, boolean multiple) throws IOException {
 		var uri = TNFSURI.parsePath(target); 
 		var mount = doConnectAndMount(uri);
 		var local = Paths.get(source);
+		var destPath = uri.path().orElse("/");
+		
+		try {
+			if(mount.stat(destPath).isDirectory()) {
+				destPath = resolvePaths(destPath, local.getFileName().toString(), '/');
+			}
+		}
+		catch(NoSuchFileException nsfe) {
+		}
+				
 		
 		new FileTransfer(mount.client().bufferPool(), force, !noProgress, recursive, getSeparator(isWindowsParsing()), null).
-			localToRemote(mount, local, uri.path().orElse("/"));
+			localToRemote(mount, local, destPath);
 	}
 
-	void remoteToLocal(String source, boolean multiple) throws IOException {
+	void remoteToLocal(String source, String target, boolean multiple) throws IOException {
 		var uri = TNFSURI.parsePath(source); 
 		var mount = doConnectAndMount(uri);
 		var local = Paths.get(target);
+		var remotePath = uri.path().orElse("/");
+		if(remotePath.equals("/")) {
+			throw new IOException("Cannot download the mount root, use a wildcard instead.");
+		}
+		if(Files.isDirectory(local)) {
+			local = local.resolve(Util.basename(remotePath));
+		}
 		
 		new FileTransfer(mount.client().bufferPool(), force, !noProgress, recursive, getSeparator(isWindowsParsing()), null).
-			remoteToLocal(mount, uri.path().orElse("/"), local);
+			remoteToLocal(mount, remotePath, local);
 	}
 
 	void remoteToRemote(String source, boolean multiple) throws IOException {
-		throw new UnsupportedOperationException("TODO");
+		throw new UnsupportedOperationException("Remote to remote copy not yet supported.");
 	}
 }

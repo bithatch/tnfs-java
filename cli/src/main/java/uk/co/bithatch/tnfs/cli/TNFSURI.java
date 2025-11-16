@@ -234,7 +234,6 @@ public class TNFSURI {
 	}
 	
 	public static TNFSURI parsePath(String uri) {
-
 		if(!uri.toLowerCase().startsWith("tnfs:") && 
 		   !uri.toLowerCase().startsWith("tnfst:")) {
 		
