@@ -23,7 +23,11 @@ package uk.co.bithatch.tnfs.client.extensions;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ongres.scram.client.ScramClient;
+import com.ongres.scram.common.ScramFunctions;
 import com.ongres.scram.common.exception.ScramInvalidServerSignatureException;
 import com.ongres.scram.common.exception.ScramParseException;
 import com.ongres.scram.common.exception.ScramServerErrorException;
@@ -38,6 +42,8 @@ import uk.co.bithatch.tnfs.lib.extensions.Extensions;
 import uk.co.bithatch.tnfs.lib.extensions.Extensions.ServerFinal;
 
 public class SecureMount extends AbstractTNFSClientExtension {
+	
+	private final static Logger LOG = LoggerFactory.getLogger(SecureMount.class);
 	
 	public static class Builder extends AbstractBuilder<Builder> {
 
@@ -96,7 +102,7 @@ public class SecureMount extends AbstractTNFSClientExtension {
 			var capsRes = client.send(Extensions.SRVRCAPS, Message.of(Extensions.SRVRCAPS, new Extensions.ServerCaps()));
 			var caps = capsRes.result();
 			
-			System.out.println("HA : " + Arrays.asList(caps.hashAlgos()));
+			LOG.info("Supported Hash Algos: {}", Arrays.asList(caps.hashAlgos()));
 			
 			var scramClient = ScramClient.builder()
 				    .advertisedMechanisms(Arrays.asList(caps.hashAlgos()).stream().map(s -> s.replace("_", "-")).toList())
@@ -106,8 +112,8 @@ public class SecureMount extends AbstractTNFSClientExtension {
 				    .build();
 
 			var clientFirstMsg = scramClient.clientFirstMessage();
-			System.out.println("CFIR: " + clientFirstMsg.toString());
-
+			
+			LOG.info("Sending Client First: {}",  clientFirstMsg);
 
 			var srvRes = client.send(Extensions.CLNTFRST, Message.of(Extensions.CLNTFRST, new Extensions.ClientFirst(mountPath, clientFirstMsg.toString())));;
 			var res = srvRes.result();
@@ -115,14 +121,18 @@ public class SecureMount extends AbstractTNFSClientExtension {
 			try {
 				serverVersion = res.version();
 				sessionId  = srvRes.mesage().connectionId();
-				System.out.println("SFIR: " + res.serverFirstMessage());
+				
+				LOG.info("Received Server First: {}", res.serverFirstMessage());
 				scramClient.serverFirstMessage(res.serverFirstMessage());
 				var clientFinalMsg = scramClient.clientFinalMessage();
 
-				System.out.println("CFIN: " + clientFinalMsg.toString());
+//				LOG.info("Auth Message: {}", ScramFunctions.authMessage(clientFirstMsg, srvRes.result(), null));
+				
+				LOG.info("Sending Client Final: {}", clientFinalMsg);
 				ServerFinal finRes = client.sendMessage(Extensions.CLNTFINL, Message.of(sessionId, Extensions.CLNTFINL, new Extensions.ClientFinal(clientFinalMsg.toString())));
+				
 				var serverFinal = scramClient.serverFinalMessage(finRes.serverFinalMessage());
-				System.out.println("SFIN: " + serverFinal.toString());
+				LOG.info("Received Server Final: {}", serverFinal);
 			}
 			catch(ScramParseException | ScramServerErrorException | ScramInvalidServerSignatureException spe) {
 				throw new IOException("SCRAM error.", spe);

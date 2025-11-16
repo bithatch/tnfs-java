@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -35,6 +36,7 @@ import java.nio.file.FileAlreadyExistsException;
 import java.util.ArrayList;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,9 +45,19 @@ import uk.co.bithatch.tnfs.client.TNFSClient;
 import uk.co.bithatch.tnfs.client.TNFSClient.Builder;
 import uk.co.bithatch.tnfs.client.TNFSMount;
 import uk.co.bithatch.tnfs.lib.OpenFlag;
+import uk.co.bithatch.tnfs.lib.ResultCode;
 import uk.co.bithatch.tnfs.lib.TNFS;
+import uk.co.bithatch.tnfs.lib.TNFSException;
 
 public abstract class AbstractIntegrationTests {
+	protected static String username;
+	protected static char[] password;
+	
+	@BeforeAll
+	public static void setupUserAndPassword() {
+		username = null;
+		password = null;
+	}
 	
 	final static Logger LOG = LoggerFactory.getLogger(AbstractIntegrationTests.class);
 	
@@ -63,6 +75,37 @@ public abstract class AbstractIntegrationTests {
 		Thread.setDefaultUncaughtExceptionHandler((t,e) -> {
 			LOG.error("Uncaught error in thread.", e);
 		});
+	}
+	
+	@Test
+	public void testIncorrectUsername() throws Exception {
+		
+		assumeTrue(username != null);
+		
+		runTest((clnt, svr) -> {
+			var exception = Assertions.assertThrows(TNFSException.class, () -> {
+				clnt.mount("/").
+				withUsername(username + "XXXXXXXX").
+				withPassword(password).build();				
+			});
+			Assertions.assertEquals(ResultCode.PERM, exception.code());
+		});
+
+	}
+	
+	@Test
+	public void testIncorrectPassword() throws Exception {
+		assumeTrue(username != null);
+		
+		runTest((clnt, svr) -> {
+			var exception = Assertions.assertThrows(TNFSException.class, () -> {
+				clnt.mount("/").
+				withUsername(username).
+				withPassword((new String(password) + "XXXXXXXXX").toCharArray()).build();				
+			});
+			Assertions.assertEquals(ResultCode.PERM, exception.code());
+		});
+
 	}
 
 	@Test

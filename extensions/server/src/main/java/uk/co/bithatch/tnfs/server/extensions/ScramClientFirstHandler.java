@@ -25,6 +25,9 @@ import static uk.co.bithatch.tnfs.server.Tasks.ioCall;
 import java.security.Principal;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ongres.scram.common.ClientFirstMessage;
 import com.ongres.scram.common.ScramFunctions;
 import com.ongres.scram.common.ServerFirstMessage;
@@ -41,6 +44,7 @@ import uk.co.bithatch.tnfs.lib.extensions.Extensions.ServerFirst;
 import uk.co.bithatch.tnfs.server.TNFSMessageHandler;
 
 public class ScramClientFirstHandler implements TNFSMessageHandler {
+	private final static Logger LOG = LoggerFactory.getLogger(ScramClientFirstHandler.class);
 	
 	static final String SERVER_FIRST = "serverFirst";
 	static final String CLIENT_FIRST = "clientFirst";
@@ -101,6 +105,11 @@ public class ScramClientFirstHandler implements TNFSMessageHandler {
 				usr.getIterationCount()
 			);			
 			state.put(SERVER_FIRST, sfirst);
+			
+			LOG.info("User salt: {}", usr.getSalt());
+			LOG.info("Client nonce: {}", cfirst.getClientNonce());
+			LOG.info("Iteration Count: {}", usr.getIterationCount());
+			LOG.info("Sending Server First: {}", sfirst);
 			
 			return new  ServerFirst(
 					ResultCode.SUCCESS,

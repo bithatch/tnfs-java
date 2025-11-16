@@ -27,14 +27,23 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.Principal;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Optional;
+
+import com.ongres.scram.common.ScramFunctions;
+import com.ongres.scram.common.ScramMechanism;
+import com.ongres.scram.common.StringPreparation;
 
 import uk.co.bithatch.tnfs.lib.Io;
 import uk.co.bithatch.tnfs.lib.Protocol;
 import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
+import uk.co.bithatch.tnfs.lib.Util;
+import uk.co.bithatch.tnfs.lib.extensions.Crypto;
 import uk.co.bithatch.tnfs.server.DefaultInMemoryFileSystemService;
 import uk.co.bithatch.tnfs.server.TNFSMounts;
 import uk.co.bithatch.tnfs.server.TNFSMounts.TNFSAuthenticator;
+import uk.co.bithatch.tnfs.server.extensions.ScramPrincipal;
+import uk.co.bithatch.tnfs.server.extensions.ScramTNFSAuthenticator;
 import uk.co.bithatch.tnfs.server.TNFSServer;
 
 /**
@@ -115,6 +124,70 @@ public class TNFSJServerBuilder extends AbstractTestTNFSServerBuilder {
 								return username;
 							}
 						}) : Optional.empty();
+				}
+			});
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+		builder.withFileSystemFactory(mounts);
+		return this;
+	}
+	
+	public TNFSJServerBuilder withSCRAMFileMounts(String username, char[] password) {
+		var svrkey = Util.genRandom(Crypto.SERVER_KEY_SIZE);
+		builder.withServerKey(svrkey);
+
+		var its = Crypto.DEFAULT_ITERATIONS;
+		var mech  =  ScramMechanism.SCRAM_SHA_1;
+		var salt = ScramFunctions.salt(Crypto.SALT_SIZE, Crypto.random());
+		var saltedPw = ScramFunctions.saltedPassword(mech, StringPreparation.NO_PREPARATION, password, salt, its);
+		var storedKey = ScramFunctions.storedKey(mech, saltedPw);
+		
+		var scramUser = new ScramPrincipal() {
+			@Override
+			public String getName() {
+				return username;
+			}
+			
+			@Override
+			public String getStoredKey() {
+				return Base64.getEncoder().encodeToString(storedKey);
+			}
+			
+			@Override
+			public String getSalt() {
+				return Base64.getEncoder().encodeToString(salt);
+			}
+			
+			@Override
+			public ScramMechanism getMechanism() {
+				return mech;
+			}
+			
+			@Override
+			public int getIterationCount() {
+				return its;
+			}
+		};
+		
+		var mounts = new TNFSMounts();
+		try {
+			tempMountDir = Files.createTempDirectory("tnfs");
+			mounts.mount("/", tempMountDir, new ScramTNFSAuthenticator() {
+				
+				@Override
+				public byte[] serverKey() {
+					return serverKey();
+				}
+				
+				@Override
+				public Optional<ScramPrincipal> identify(TNFSFileAccess fs, String username) {
+					if(username.equals(scramUser.getName())) {
+						return Optional.of(scramUser);
+					}
+					else {
+						return Optional.empty();
+					}
 				}
 			});
 		} catch (IOException e) {

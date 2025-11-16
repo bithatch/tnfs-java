@@ -24,6 +24,9 @@ import static uk.co.bithatch.tnfs.server.Tasks.ioCall;
 
 import java.util.Base64;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ongres.scram.common.ClientFirstMessage;
 import com.ongres.scram.common.ScramFunctions;
 import com.ongres.scram.common.ServerFinalMessage;
@@ -41,6 +44,7 @@ import uk.co.bithatch.tnfs.lib.extensions.Extensions.ServerFinal;
 import uk.co.bithatch.tnfs.server.TNFSMessageHandler;
 
 public class ScramClientFinishHandler implements TNFSMessageHandler {
+	private final static Logger LOG = LoggerFactory.getLogger(ScramClientFinishHandler.class);
 
 	@Override
 	public Result handle(Message message, HandlerContext context) {
@@ -56,7 +60,8 @@ public class ScramClientFinishHandler implements TNFSMessageHandler {
 		    if (attributeValues.length != 3) {
 		      throw new ScramParseException("Invalid client-final-message");
 		    }
-		    System.out.println("CFIN: " + mountmsg.clientFinalMessage());
+		    
+		    LOG.info("Received Client Final: {}", mountmsg.clientFinalMessage());
 		    
 		    for(var attrVal : attributeValues) {
 		    	if(attrVal.startsWith("r=")) {
@@ -86,12 +91,13 @@ public class ScramClientFinishHandler implements TNFSMessageHandler {
 		    var clientFirstMessage = (ClientFirstMessage)state.get(ScramClientFirstHandler.CLIENT_FIRST);
 		    var serverFirstMessage = (ServerFirstMessage)state.get(ScramClientFirstHandler.SERVER_FIRST);
 		    var authMessage = ScramFunctions.authMessage(clientFirstMessage, serverFirstMessage, cbindData);
-		    
-		    System.out.println("auth message: " + authMessage);
+		    var storedKey = principal.getStoredKey();
+		    LOG.info("Verify Auth Message: {}", authMessage);
+		    LOG.info("Using Stored Key: {}", storedKey);
 		    
 		    /* TODO remove session on failure */
 		    
-		   if( ScramFunctions.verifyClientProof(principal.getMechanism(), proof, Base64.getDecoder().decode(principal.getStoredKey()), authMessage)) {
+		   if( ScramFunctions.verifyClientProof(principal.getMechanism(), proof, Base64.getDecoder().decode(storedKey), authMessage)) {
 			   	session.authenticate();
 			   
 				var sfinal = new ServerFinalMessage(
@@ -99,8 +105,8 @@ public class ScramClientFinishHandler implements TNFSMessageHandler {
 						ScramFunctions.serverSignature(principal.getMechanism(), context.server().serverKey(), authMessage)
 					)
 				);
-				
-				System.out.println("SFINAL: " + sfinal.toString());
+
+			    LOG.info("Sending Server Final: {}", sfinal);
 //				
 				return new  ServerFinal(
 						ResultCode.SUCCESS,
