@@ -25,11 +25,16 @@ import java.io.UncheckedIOException;
 import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.Principal;
+import java.util.Arrays;
+import java.util.Optional;
 
 import uk.co.bithatch.tnfs.lib.Io;
 import uk.co.bithatch.tnfs.lib.Protocol;
+import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
 import uk.co.bithatch.tnfs.server.DefaultInMemoryFileSystemService;
 import uk.co.bithatch.tnfs.server.TNFSMounts;
+import uk.co.bithatch.tnfs.server.TNFSMounts.TNFSAuthenticator;
 import uk.co.bithatch.tnfs.server.TNFSServer;
 
 /**
@@ -92,6 +97,30 @@ public class TNFSJServerBuilder extends AbstractTestTNFSServerBuilder {
 	
 	public TNFSJServerBuilder withSize(int size) {
 		builder.withSize(size);
+		return this;
+	}
+	
+	public TNFSJServerBuilder withAuthenticatedFileMounts(String username, char[] password) {
+		var mounts = new TNFSMounts();
+		try {
+			tempMountDir = Files.createTempDirectory("tnfs");
+			mounts.mount("/", tempMountDir, new TNFSAuthenticator() {
+				@Override
+				public Optional<Principal> authenticate(TNFSFileAccess fs, Optional<String> ausername, Optional<char[]> apassword) {
+					return ausername.isPresent() && ausername.get().equals(username) &&
+							apassword.isPresent() && Arrays.equals(apassword.get(), password) ?
+						Optional.of(new Principal() {
+							@Override
+							public String getName() {
+								return username;
+							}
+						}) : Optional.empty();
+				}
+			});
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+		builder.withFileSystemFactory(mounts);
 		return this;
 	}
 	

@@ -44,6 +44,9 @@ import java.util.ServiceLoader;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.security.auth.login.CredentialException;
+import javax.security.auth.login.LoginException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -193,7 +196,7 @@ public final class TNFSClient implements Closeable {
 				throw new FileSystemLoopException(path.orElse("Path Unknown"));
 			}
 			else if(res.result() == ResultCode.ACCESS) {
-				throw new AccessDeniedException(path.orElse("Path Unknown"));
+				throw new AccessDeniedException(path.orElse("Access denied"));
 			}
 			else if(res.result() == ResultCode.NOMEM) {
 				throw new OutOfMemoryError("Server reported out of memory.");
