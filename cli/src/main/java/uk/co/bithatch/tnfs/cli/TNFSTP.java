@@ -560,9 +560,7 @@ public final class TNFSTP extends AbstractTNFSFilesCommand implements Callable<I
 									out.flush();
 								}
 							}
-							catch(InterruptedIOException ie) {
-							}
-							catch(Exception ioe) {
+							catch(Throwable ie) {
 							}
 						}
 					};

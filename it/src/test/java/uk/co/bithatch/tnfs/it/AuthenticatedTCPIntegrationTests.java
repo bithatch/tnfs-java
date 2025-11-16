@@ -27,14 +27,14 @@ import org.junit.jupiter.api.BeforeAll;
 
 import uk.co.bithatch.tnfs.lib.Protocol;
 
-public class AuthenticatedUDPIntegrationTests extends UDPIntegrationTests {
+public class AuthenticatedTCPIntegrationTests extends TCPIntegrationTests {
 	
 	@BeforeAll
 	public static void setupUserAndPassword() {
 		username = UUID.randomUUID().toString();
 		password = UUID.randomUUID().toString().toCharArray();
 	}
-	
+
 	@Override
 	protected void runMountTest(TestMountTask task) throws Exception {
 		runTest((clnt, svr) -> {
@@ -53,7 +53,7 @@ public class AuthenticatedUDPIntegrationTests extends UDPIntegrationTests {
 	protected TNFSJServerBuilder createServerBuilder() {
 		return new TNFSJServerBuilder().
 				withAuthenticatedFileMounts(username, password).
-				withProtocol(Protocol.UDP).
+				withProtocol(Protocol.TCP).
 				withHost(InetAddress.getLoopbackAddress());
 	}
 
