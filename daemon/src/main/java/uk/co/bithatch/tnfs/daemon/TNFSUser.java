@@ -96,7 +96,7 @@ public class TNFSUser implements Callable<Integer>, ExceptionHandlerHost {
 				var prchndl = ProcessHandle.current();
 				var cmdor = prchndl.info().command();
 				if(cmdor.isPresent()) {
-					gconfig = Optional.of(Paths.get(cmdor.get()).getParent().resolve("etc"));
+					gconfig = Optional.of(Paths.get(cmdor.get()).getParent().getParent().resolve("etc"));
 				}
 			}
 			
