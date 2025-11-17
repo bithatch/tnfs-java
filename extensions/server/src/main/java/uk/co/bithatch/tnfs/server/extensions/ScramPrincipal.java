@@ -30,6 +30,8 @@ public interface ScramPrincipal extends Principal {
 	
 	String getStoredKey();
 	
+	String getServerKey();
+	
 	int getIterationCount();
 	
 	ScramMechanism getMechanism();

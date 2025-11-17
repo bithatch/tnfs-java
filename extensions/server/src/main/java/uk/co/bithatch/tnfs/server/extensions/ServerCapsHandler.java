@@ -37,8 +37,9 @@ import uk.co.bithatch.tnfs.server.TNFSMessageHandler;
 
 public class ServerCapsHandler implements TNFSMessageHandler {
 
-	private final static ScramMechanism[] MECHS = new ScramMechanism[] { ScramMechanism.SCRAM_SHA_1};
-//	private final static ScramMechanism[] MECHS = ScramMechanism.values();
+	public final static ScramMechanism[] MECHS = new ScramMechanism[] { ScramMechanism.SCRAM_SHA_1};
+//	public final static ScramMechanism[] MECHS = Arrays.asList(ScramMechanism.values()).stream().filter(f->!f.isPlus()).toList().toArray(new ScramMechanism[0]);
+//	public final static ScramMechanism[] MECHS = ScramMechanism.values();
 	
 	@Override
 	public Result handle(Message message, HandlerContext context) {

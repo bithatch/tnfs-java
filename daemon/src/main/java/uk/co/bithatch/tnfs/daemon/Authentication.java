@@ -83,6 +83,11 @@ public class Authentication extends AbstractConfiguration implements ScramTNFSAu
 		public ScramMechanism getMechanism() {
 			return ScramMechanism.valueOf(arr[0]);
 		}
+
+		@Override
+		public String getServerKey() {
+			return arr[4];
+		}
 	}
 
 	public Authentication(Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
@@ -118,7 +123,9 @@ public class Authentication extends AbstractConfiguration implements ScramTNFSAu
 				var usr = princ.get();
 				var pw = password.get();
 				var saltedPw = ScramFunctions.saltedPassword(usr.getMechanism(), StringPreparation.NO_PREPARATION, pw, Base64.getDecoder().decode(usr.getSalt()), usr.getIterationCount());
-				if(Arrays.equals(Base64.getDecoder().decode(usr.getStoredKey()), saltedPw)) {
+				var ckey = ScramFunctions.clientKey(usr.getMechanism(), saltedPw);
+				var skey = ScramFunctions.clientKey(usr.getMechanism(), ckey);
+				if(Arrays.equals(Base64.getDecoder().decode(usr.getStoredKey()), skey)) {
 					return princ.map(u -> (Principal)u);
 				}
 			}
@@ -196,14 +203,17 @@ public class Authentication extends AbstractConfiguration implements ScramTNFSAu
 			Integer iterations) {
 		var salt = ScramFunctions.salt(Crypto.SALT_SIZE, Crypto.random());
 		var saltedPw = ScramFunctions.saltedPassword(mech, StringPreparation.NO_PREPARATION, password, salt, iterations);
-		var storedKey = ScramFunctions.storedKey(mech, saltedPw);
+		var clientKey = ScramFunctions.clientKey(mech, saltedPw);
+		var serverKey = ScramFunctions.serverKey(mech, saltedPw);
+		var storedKey = ScramFunctions.storedKey(mech, clientKey);
 		
 		users.put(username, 
-			String.format("%s:%d:%s:%s", 
+			String.format("%s:%d:%s:%s:%s", 
 				mech.name(), 
 				iterations,
 				Base64.getEncoder().encodeToString(salt),
-				Base64.getEncoder().encodeToString(storedKey)
+				Base64.getEncoder().encodeToString(storedKey),
+				Base64.getEncoder().encodeToString(serverKey)
 			)
 		);
 		

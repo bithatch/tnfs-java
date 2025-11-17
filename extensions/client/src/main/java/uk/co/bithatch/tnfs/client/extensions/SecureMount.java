@@ -27,7 +27,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ongres.scram.client.ScramClient;
-import com.ongres.scram.common.ScramFunctions;
+import com.ongres.scram.common.ScramMechanism;
+import com.ongres.scram.common.StringPreparation;
 import com.ongres.scram.common.exception.ScramInvalidServerSignatureException;
 import com.ongres.scram.common.exception.ScramParseException;
 import com.ongres.scram.common.exception.ScramServerErrorException;
@@ -101,15 +102,23 @@ public class SecureMount extends AbstractTNFSClientExtension {
 			 */
 			var capsRes = client.send(Extensions.SRVRCAPS, Message.of(Extensions.SRVRCAPS, new Extensions.ServerCaps()));
 			var caps = capsRes.result();
+			var binding = Arrays.asList(caps.hashAlgos()).stream().map(ScramMechanism::valueOf).filter(f->f.isPlus()).findFirst().isPresent();
 			
-			LOG.info("Supported Hash Algos: {}", Arrays.asList(caps.hashAlgos()));
+			LOG.info("Supported Hash Algos: {} (supports binding {})", Arrays.asList(caps.hashAlgos()), binding);
 			
-			var scramClient = ScramClient.builder()
+			var scramBldr = ScramClient.builder()
 				    .advertisedMechanisms(Arrays.asList(caps.hashAlgos()).stream().map(s -> s.replace("_", "-")).toList())
 				    .username(username.orElseThrow(() -> new IllegalStateException("Username is required for secure mount.")))
-				    .password(password.orElseThrow(() -> new IllegalStateException("Password is required for secure mount.")))
-//				    .channelBinding("speck", caps.srvKey()) // client supports channel binding
-				    .build();
+				    .password(password.orElseThrow(() -> new IllegalStateException("Password is required for secure mount.")));
+			
+			if(binding) {
+				scramBldr.channelBinding("speck",  caps.srvKey()); // client supports channel binding
+			}
+			
+			var scramClient = scramBldr.stringPreparation(StringPreparation.NO_PREPARATION).
+					build();
+
+			LOG.info("Client decided on: {}",  scramClient.getScramMechanism());
 
 			var clientFirstMsg = scramClient.clientFirstMessage();
 			
@@ -130,9 +139,9 @@ public class SecureMount extends AbstractTNFSClientExtension {
 				
 				LOG.info("Sending Client Final: {}", clientFinalMsg);
 				ServerFinal finRes = client.sendMessage(Extensions.CLNTFINL, Message.of(sessionId, Extensions.CLNTFINL, new Extensions.ClientFinal(clientFinalMsg.toString())));
-				
+
+				LOG.info("Received Server Final: {}", finRes.serverFinalMessage());
 				var serverFinal = scramClient.serverFinalMessage(finRes.serverFinalMessage());
-				LOG.info("Received Server Final: {}", serverFinal);
 			}
 			catch(ScramParseException | ScramServerErrorException | ScramInvalidServerSignatureException spe) {
 				throw new IOException("SCRAM error.", spe);

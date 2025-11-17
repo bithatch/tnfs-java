@@ -190,8 +190,8 @@ public class Extensions {
 
 		@Override
 		public ByteBuffer encodeResult(ByteBuffer buf) {
+			version.encode(buf);
 			if(result.isOk()) {
-				version.encode(buf);
 				buf.putShort((short)retryTime.toMillis());			
 				Encodeable.cString(serverFirstMessage, buf);
 			}

@@ -42,9 +42,10 @@ import uk.co.bithatch.tnfs.lib.extensions.Crypto;
 import uk.co.bithatch.tnfs.server.DefaultInMemoryFileSystemService;
 import uk.co.bithatch.tnfs.server.TNFSMounts;
 import uk.co.bithatch.tnfs.server.TNFSMounts.TNFSAuthenticator;
+import uk.co.bithatch.tnfs.server.TNFSServer;
 import uk.co.bithatch.tnfs.server.extensions.ScramPrincipal;
 import uk.co.bithatch.tnfs.server.extensions.ScramTNFSAuthenticator;
-import uk.co.bithatch.tnfs.server.TNFSServer;
+import uk.co.bithatch.tnfs.server.extensions.ServerCapsHandler;
 
 /**
  * A TNFSJ implementation of a {@link AbstractTestTNFSServerBuilder}
@@ -138,10 +139,13 @@ public class TNFSJServerBuilder extends AbstractTestTNFSServerBuilder {
 		builder.withServerKey(svrkey);
 
 		var its = Crypto.DEFAULT_ITERATIONS;
-		var mech  =  ScramMechanism.SCRAM_SHA_1;
+//		var mech  =  ScramMechanism.SCRAM_SHA_256_PLUS;
+		var mech = ServerCapsHandler.MECHS[0];
 		var salt = ScramFunctions.salt(Crypto.SALT_SIZE, Crypto.random());
 		var saltedPw = ScramFunctions.saltedPassword(mech, StringPreparation.NO_PREPARATION, password, salt, its);
-		var storedKey = ScramFunctions.storedKey(mech, saltedPw);
+		var clientKey = ScramFunctions.clientKey(mech, saltedPw);
+		var serverKey = ScramFunctions.serverKey(mech, saltedPw);
+		var storedKey = ScramFunctions.storedKey(mech, clientKey);
 		
 		var scramUser = new ScramPrincipal() {
 			@Override
@@ -167,6 +171,11 @@ public class TNFSJServerBuilder extends AbstractTestTNFSServerBuilder {
 			@Override
 			public int getIterationCount() {
 				return its;
+			}
+
+			@Override
+			public String getServerKey() {
+				return Base64.getEncoder().encodeToString(serverKey);
 			}
 		};
 		

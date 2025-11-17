@@ -45,9 +45,7 @@ import uk.co.bithatch.tnfs.client.TNFSClient;
 import uk.co.bithatch.tnfs.client.TNFSClient.Builder;
 import uk.co.bithatch.tnfs.client.TNFSMount;
 import uk.co.bithatch.tnfs.lib.OpenFlag;
-import uk.co.bithatch.tnfs.lib.ResultCode;
 import uk.co.bithatch.tnfs.lib.TNFS;
-import uk.co.bithatch.tnfs.lib.TNFSException;
 
 public abstract class AbstractIntegrationTests {
 	protected static String username;
@@ -83,12 +81,11 @@ public abstract class AbstractIntegrationTests {
 		assumeTrue(username != null);
 		
 		runTest((clnt, svr) -> {
-			var exception = Assertions.assertThrows(TNFSException.class, () -> {
+			Assertions.assertThrows(AccessDeniedException.class, () -> {
 				clnt.mount("/").
 				withUsername(username + "XXXXXXXX").
 				withPassword(password).build();				
 			});
-			Assertions.assertEquals(ResultCode.PERM, exception.code());
 		});
 
 	}
@@ -98,12 +95,11 @@ public abstract class AbstractIntegrationTests {
 		assumeTrue(username != null);
 		
 		runTest((clnt, svr) -> {
-			var exception = Assertions.assertThrows(TNFSException.class, () -> {
+			Assertions.assertThrows(AccessDeniedException.class, () -> {
 				clnt.mount("/").
 				withUsername(username).
 				withPassword((new String(password) + "XXXXXXXXX").toCharArray()).build();				
 			});
-			Assertions.assertEquals(ResultCode.PERM, exception.code());
 		});
 
 	}

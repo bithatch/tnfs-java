@@ -22,12 +22,16 @@ package uk.co.bithatch.tnfs.server.extensions;
 
 import static uk.co.bithatch.tnfs.server.Tasks.ioCall;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ongres.scram.common.ClientFirstMessage;
+import com.ongres.scram.common.Gs2Header;
 import com.ongres.scram.common.ScramFunctions;
 import com.ongres.scram.common.ServerFinalMessage;
 import com.ongres.scram.common.ServerFirstMessage;
@@ -68,7 +72,15 @@ public class ScramClientFinishHandler implements TNFSMessageHandler {
 		    		nonce = attrVal.substring(2);
 		    	}
 		    	else if(attrVal.startsWith("c=")) {
-		    		cbindData = Base64.getDecoder().decode(attrVal.substring(2));
+		    		var cbindStr = new String(Base64.getDecoder().decode(attrVal.substring(2)), StandardCharsets.UTF_8);		    
+				    LOG.info("CBind Str: {}", cbindStr);
+				    var gs2hdr = Gs2Header.parseFrom(cbindStr);		    
+				    LOG.info("AuthzID: {}", gs2hdr.getAuthzid());
+				    LOG.info("Binding Name: {}", gs2hdr.getChannelBindingName());
+				    LOG.info("Binding Flag: {}", gs2hdr.getChannelBindingFlag());
+				    if(cbindData != null) {
+				    	LOG.info("CBind Data: {}", Base64.getEncoder().encodeToString(cbindData));
+				    }
 		    	}
 		    	else if(attrVal.startsWith("p=")) {
 		    		proof = Base64.getDecoder().decode(attrVal.substring(2));
@@ -76,7 +88,8 @@ public class ScramClientFinishHandler implements TNFSMessageHandler {
 		    	else
 		    		throw new IllegalArgumentException();
 		    }
-
+		    
+		    LOG.info("Proof: {}", Base64.getEncoder().encodeToString(proof));
 
 		    var session = context.session();
 			var state = session.state();
@@ -84,12 +97,15 @@ public class ScramClientFinishHandler implements TNFSMessageHandler {
 		    var clientNonce = (String)state.get(ScramClientFirstHandler.CLIENT_NONCE);
 		    var principal = (ScramPrincipal)state.get(ScramClientFirstHandler.PRINCIPAL);
 		    
-		    if(!nonce.startsWith(clientNonce)) {
-				throw new TNFSException(ResultCode.PERM, "Authentication failed for " + principal.getName());		    	
-		    }
+		    LOG.info("Nonce: {} (vs {})", nonce, clientNonce);
 
 		    var clientFirstMessage = (ClientFirstMessage)state.get(ScramClientFirstHandler.CLIENT_FIRST);
 		    var serverFirstMessage = (ServerFirstMessage)state.get(ScramClientFirstHandler.SERVER_FIRST);
+		    
+		    if(!nonce.equals(clientNonce + serverFirstMessage.getServerNonce())) {
+				throw new TNFSException(ResultCode.PERM, "Authentication failed for " + principal.getName());		    	
+		    }
+		    
 		    var authMessage = ScramFunctions.authMessage(clientFirstMessage, serverFirstMessage, cbindData);
 		    var storedKey = principal.getStoredKey();
 		    LOG.info("Verify Auth Message: {}", authMessage);
@@ -99,11 +115,14 @@ public class ScramClientFinishHandler implements TNFSMessageHandler {
 		    
 		   if( ScramFunctions.verifyClientProof(principal.getMechanism(), proof, Base64.getDecoder().decode(storedKey), authMessage)) {
 			   	session.authenticate();
-			   
+
+			    var srvkey = Base64.getDecoder().decode(principal.getServerKey());
+				LOG.info("Server key is : {}", Base64.getEncoder().encodeToString(srvkey));
+				var srvsig = ScramFunctions.serverSignature(principal.getMechanism(), srvkey, authMessage);
+				LOG.info("Server signature is : {}", Base64.getEncoder().encodeToString(srvsig));
+				
 				var sfinal = new ServerFinalMessage(
-					Base64.getEncoder().encode(
-						ScramFunctions.serverSignature(principal.getMechanism(), context.server().serverKey(), authMessage)
-					)
+					srvsig
 				);
 
 			    LOG.info("Sending Server Final: {}", sfinal);
@@ -113,8 +132,32 @@ public class ScramClientFinishHandler implements TNFSMessageHandler {
 						sfinal.toString()
 						);
 		   }
-		   else
-				throw new TNFSException(ResultCode.PERM, "Authentication failed for " + principal.getName());
+		   else {
+			   var sfinal = new ServerFinalMessage("invalid-proof");
+			   return new  ServerFinal(
+					ResultCode.ACCESS,
+					sfinal.toString()
+				);
+		   }
+		   
+
+//		    ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
+//		    map.put("invalid-encoding", "The message format or encoding is incorrect");
+//		    map.put("extensions-not-supported", "Requested extensions are not recognized by the server");
+//		    map.put("invalid-proof", "The client-provided proof is invalid");
+//		    map.put("channel-bindings-dont-match",
+//		        "Channel bindings sent by the client don't match those expected by the server.");
+//		    map.put("server-does-support-channel-binding",
+//		        "Server doesn't support channel binding at all.");
+//		    map.put("channel-binding-not-supported", "Channel binding is not supported for this user");
+//		    map.put("unsupported-channel-binding-type",
+//		        "The requested channel binding type is not supported.");
+//		    map.put("unknown-user", "The specified username is not recognized");
+//		    map.put("invalid-username-encoding",
+//		        "The username encoding is invalid (either invalid UTF-8 or SASLprep failure)");
+//		    map.put("no-resources", "The server lacks resources to process the request");
+//		    map.put("other-error", "A generic error occurred that doesn't fit into other categories");
+//		    return map;
 			
 		}
 		, code -> new ServerFinal(code));

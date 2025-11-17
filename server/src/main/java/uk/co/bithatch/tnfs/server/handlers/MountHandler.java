@@ -22,6 +22,7 @@ package uk.co.bithatch.tnfs.server.handlers;
 
 import static uk.co.bithatch.tnfs.server.Tasks.ioCall;
 
+import java.nio.file.AccessDeniedException;
 import java.util.Optional;
 
 import uk.co.bithatch.tnfs.lib.Command;
@@ -30,7 +31,6 @@ import uk.co.bithatch.tnfs.lib.Command.MountResult;
 import uk.co.bithatch.tnfs.lib.Command.Result;
 import uk.co.bithatch.tnfs.lib.Message;
 import uk.co.bithatch.tnfs.lib.ResultCode;
-import uk.co.bithatch.tnfs.lib.TNFSException;
 import uk.co.bithatch.tnfs.server.TNFSMessageHandler;
 
 public class MountHandler implements TNFSMessageHandler {
@@ -51,9 +51,9 @@ public class MountHandler implements TNFSMessageHandler {
 			).orElse(Optional.empty());
 			
 			if(ref.auth().isPresent() && !mountmsg.userId().isPresent())
-				throw new TNFSException(ResultCode.PERM, "Authentication required for " + mountmsg.normalizedPath());
+				throw new AccessDeniedException("Authentication required for " + mountmsg.normalizedPath());
 			else if(ref.auth().isPresent() && !principal.isPresent())
-				throw new TNFSException(ResultCode.PERM, "Authentication failed for " + mountmsg.normalizedPath());
+				throw new AccessDeniedException("Authentication failed for " + mountmsg.normalizedPath());
 			
 			/* Create mount */
 			var userMount = fact.createMount(mountmsg.path(), principal);

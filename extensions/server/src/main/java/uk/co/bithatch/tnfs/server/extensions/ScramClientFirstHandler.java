@@ -23,20 +23,23 @@ package uk.co.bithatch.tnfs.server.extensions;
 import static uk.co.bithatch.tnfs.server.Tasks.ioCall;
 
 import java.security.Principal;
+import java.util.Base64;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ongres.scram.common.ClientFirstMessage;
 import com.ongres.scram.common.ScramFunctions;
+import com.ongres.scram.common.ScramMechanism;
 import com.ongres.scram.common.ServerFirstMessage;
+import com.ongres.scram.common.StringPreparation;
 
 import uk.co.bithatch.tnfs.lib.Command;
 import uk.co.bithatch.tnfs.lib.Command.Result;
 import uk.co.bithatch.tnfs.lib.Message;
 import uk.co.bithatch.tnfs.lib.ResultCode;
-import uk.co.bithatch.tnfs.lib.TNFSException;
 import uk.co.bithatch.tnfs.lib.extensions.Crypto;
 import uk.co.bithatch.tnfs.lib.extensions.Extensions;
 import uk.co.bithatch.tnfs.lib.extensions.Extensions.ClientFirst;
@@ -62,6 +65,9 @@ public class ScramClientFirstHandler implements TNFSMessageHandler {
 
 			/* Parse clients SCRAM message */
 			var cfirst = ClientFirstMessage.parseFrom(mountmsg.clientFirstMessage());
+			LOG.info("Username: {}", cfirst.getUsername());
+			LOG.info("Channel binding: {}", cfirst.getGs2Header().getChannelBindingFlag());
+			LOG.info("Client nonce: {}", cfirst.getClientNonce());
 			
 			/* Locate user */
 			var principal = ref.auth().map(auth -> {
@@ -74,19 +80,64 @@ public class ScramClientFirstHandler implements TNFSMessageHandler {
 			}
 			).orElse(Optional.empty());
 			
-			/* TODO should we fake a user if it doesn't exist?
-			 */
-			
-			if(!principal.isPresent())
-				throw new TNFSException(ResultCode.PERM, "Authentication failed for " + mountmsg.normalizedPath());
-			
-			var usr = principal.get();
+			var usr = principal.orElseGet(() ->
+				/*  A fake user */
+				new ScramPrincipal() {
+					
+					byte[] salt;
+					byte[] storedKey;
+					byte[] serverKey;
+					ScramMechanism mech;
+					int its;
+					
+					{
+						mech = ServerCapsHandler.MECHS[0];
+						salt = ScramFunctions.salt(Crypto.SALT_SIZE, Crypto.random());
+						its = Crypto.DEFAULT_ITERATIONS; 
+						var saltedPw = ScramFunctions.saltedPassword(mech, StringPreparation.NO_PREPARATION, UUID.randomUUID().toString().toCharArray(), salt, its);
+						var clientKey = ScramFunctions.clientKey(mech, saltedPw);
+						serverKey = ScramFunctions.serverKey(mech, saltedPw);
+						storedKey = ScramFunctions.storedKey(mech, clientKey);
+					}
+					
+					@Override
+					public String getName() {
+						return cfirst.getUsername();
+					}
+					
+					@Override
+					public String getStoredKey() {
+						return Base64.getEncoder().encodeToString(storedKey);
+					}
+					
+					@Override
+					public String getServerKey() {
+						return Base64.getEncoder().encodeToString(serverKey);
+					}
+					
+					@Override
+					public String getSalt() {
+						return Base64.getEncoder().encodeToString(salt);
+					}
+					
+					@Override
+					public ScramMechanism getMechanism() {
+						return mech;
+					}
+					
+					@Override
+					public int getIterationCount() {
+						return its;
+					}
+				}
+			);
 			var serverNonce = ScramFunctions.nonce(Crypto.NONCE_SIZE, Crypto.random());
+			LOG.info("Server nonce: {}", serverNonce);
 			
 			/* Create the mount to get the new session, the session
 			 * will not actually be usable until authentication complete
 			 */
-			var userMount = fact.createMount(mountmsg.normalizedPath(), principal.map(s -> (Principal)s));
+			var userMount = fact.createMount(mountmsg.normalizedPath(), Optional.of((Principal)usr));
 			var session = context.newSession(userMount, mountmsg.version());
 			
 			/* Store some stuff in the session for use by the remainder of the
@@ -107,7 +158,6 @@ public class ScramClientFirstHandler implements TNFSMessageHandler {
 			state.put(SERVER_FIRST, sfirst);
 			
 			LOG.info("User salt: {}", usr.getSalt());
-			LOG.info("Client nonce: {}", cfirst.getClientNonce());
 			LOG.info("Iteration Count: {}", usr.getIterationCount());
 			LOG.info("Sending Server First: {}", sfirst);
 			
