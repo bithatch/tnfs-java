@@ -136,12 +136,19 @@ Section "TNFSJ Server (Service)" TNFSJ_Server
   SetOutPath "$INSTDIR\doc"
   File /r ..\..\..\target\sdk\tnfs-java-sdk-windows-amd64\doc\tnfs-user*.*
   
-  SetOutPath "$INSTDIR\etc"
-  File /r configuration\tnfsjd
-  
   SetOutPath "$INSTDIR"
   File tnfsjd-service.exe
   File tnfsjd-service.xml 
+  
+  SetOverwrite off
+  SetOutPath "$INSTDIR\etc"
+  File /r configuration\tnfsjd
+  SetOverwrite on
+  
+  EnVar::SetHKLM
+  Pop $0
+  EnVar::AddValue "PATH" "$INSTDIR\sbin"
+  Pop $0
   
   ExecShellWait "" "$INSTDIR\tnfsjd-service.exe" "install" SW_HIDE
   ExecShellWait "" "$INSTDIR\tnfsjd-service.exe" "start" SW_HIDE
@@ -157,8 +164,10 @@ Section "TNFSJ Web Basd File Browser (Service)" TNFSJ_Web
   File tnfsjd-web-service.exe
   File tnfsjd-web-service.xml
   
+  SetOverwrite off
   SetOutPath "$INSTDIR\etc"
   File /r configuration\tnfsjd-web
+  SetOverwrite on
   
   ExecShellWait "" "$INSTDIR\tnfsjd-web-service.exe" "install" SW_HIDE
   ExecShellWait "" "$INSTDIR\tnfsjd-web-service.exe" "start" SW_HIDE
@@ -265,6 +274,7 @@ Section "Uninstall"
   EnVar::SetHKLM
   Pop $0
   EnVar::DeleteValue "PATH" "C:\$INSTDIR\bin"
+  EnVar::DeleteValue "PATH" "C:\$INSTDIR\sbin"
   Pop $0
 
 SectionEnd

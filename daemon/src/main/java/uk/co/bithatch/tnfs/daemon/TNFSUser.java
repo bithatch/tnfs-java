@@ -23,6 +23,7 @@ package uk.co.bithatch.tnfs.daemon;
 import static uk.co.bithatch.tnfs.lib.Io.prompt;
 
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
@@ -89,7 +90,17 @@ public class TNFSUser implements Callable<Integer>, ExceptionHandlerHost {
 	    	/* Logging */
 			System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", level.orElse(AppLogLevel.WARN).name());
 			
-			authenticator = new Authentication(configuration, userConfiguration);
+			var gconfig = configuration;
+			
+			if(configuration.isEmpty() && userConfiguration.isEmpty() && System.getProperty("java.home") == null) {
+				var prchndl = ProcessHandle.current();
+				var cmdor = prchndl.info().command();
+				if(cmdor.isPresent()) {
+					gconfig = Optional.of(Paths.get(cmdor.get()).getParent().resolve("etc"));
+				}
+			}
+			
+			authenticator = new Authentication(gconfig, userConfiguration);
 		}
 		return authenticator;
 	}
