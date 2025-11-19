@@ -20,6 +20,7 @@
  */
 package uk.co.bithatch.tnfs.cli.commands;
 
+import static java.time.format.DateTimeFormatter.ofLocalizedDateTime;
 import static uk.co.bithatch.tnfs.lib.Util.absolutePath;
 import static uk.co.bithatch.tnfs.lib.Util.basename;
 import static uk.co.bithatch.tnfs.lib.Util.dirname;
@@ -160,12 +161,27 @@ public class Ls extends TNFSTPCommand implements Callable<Integer> {
 						var flags = Arrays.asList(file.flags());
 						
 						if(longFormat) {
+							
+							var sizeStr = exactSizes 
+								? String.valueOf(file.size()) 
+								: Util.formatSize(file.size());
+							var flagsStr = flags.contains(DirEntryFlag.DIR) ? "D" : ( flags.contains(DirEntryFlag.SPECIAL) ? "S" : "-");
+							var displayName = TNFSTP.getDisplay(
+								getContainer().getTerminal(), 
+								file, 
+								resolver, 
+								longNameWidth, 
+								getContainer().getSeparator(), 
+								false
+							);
+							var modTime = ofLocalizedDateTime(FormatStyle.SHORT).format(file.mtime().toInstant().atZone(ZoneId.systemDefault()));
+							
 							wtr.println(String.format("%1s %s %8s %15s",
 									new Object[] { 
-											flags.contains(DirEntryFlag.DIR) ? "D" : ( flags.contains(DirEntryFlag.SPECIAL) ? "S" : "-"),
-													TNFSTP.getDisplay(getContainer().getTerminal(), file, resolver, longNameWidth, getContainer().getSeparator(), false), 
-											exactSizes ? String.valueOf(file.size()) : Util.formatSize(file.size()),
-											DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).format(file.mtime().toInstant().atZone(ZoneId.systemDefault()))
+											flagsStr,
+											displayName, 
+											sizeStr,
+											modTime
 									}));
 						}
 						else {

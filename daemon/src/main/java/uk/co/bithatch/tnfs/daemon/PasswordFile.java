@@ -31,14 +31,12 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Stream;
 
-import com.sshtools.jini.config.Monitor;
-
 import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
 import uk.co.bithatch.tnfs.server.AuthenticationType;
 import uk.co.bithatch.tnfs.server.TNFSAuthenticator;
 import uk.co.bithatch.tnfs.server.TNFSAuthenticatorFactory;
 
-public class DefaultAuthentication extends AbstractConfiguration implements TNFSAuthenticator, TNFSAuthenticatorFactory {
+public class PasswordFile  implements TNFSAuthenticator, TNFSAuthenticatorFactory {
 
 	private final class ExtendedAuthUser implements UserPrincipal {
 		private final String username;
@@ -56,12 +54,15 @@ public class DefaultAuthentication extends AbstractConfiguration implements TNFS
 
 	}
 
-	public DefaultAuthentication(Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
-		this(Optional.empty(), configurationDir, userConfigurationDir);
-	}
+	private Path directory;
 	
-	public DefaultAuthentication(Optional<Monitor> monitor, Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
-		super(DefaultAuthentication.class, "authentication", monitor, configurationDir, userConfigurationDir);
+	public PasswordFile(Authentication authConfig) {
+		this(authConfig.iniSet.appPathForScope(authConfig.iniSet.writeScope()
+				.orElseThrow(() -> new IllegalStateException("No writable configuration directory found."))));
+	}
+
+	public PasswordFile(Path directory) {
+		this.directory = directory;
 	}
 
 	@Override
@@ -169,13 +170,7 @@ public class DefaultAuthentication extends AbstractConfiguration implements TNFS
 	}
 
 	private Path resolvePasswdFile() {
-		return resolveDir()
-				.resolve("passwd.properties");
-	}
-
-	private Path resolveDir() {
-		return iniSet.appPathForScope(iniSet.writeScope()
-				.orElseThrow(() -> new IllegalStateException("No writable configuration directory found.")));
+		return directory.resolve("passwd.properties");
 	}
 
 	@Override
@@ -186,5 +181,10 @@ public class DefaultAuthentication extends AbstractConfiguration implements TNFS
 	@Override
 	public int priority() {
 		return Integer.MIN_VALUE;
+	}
+
+	@Override
+	public String id() {
+		return "password-file";
 	}
 }

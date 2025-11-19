@@ -58,15 +58,18 @@ public class MountConfiguration extends AbstractConfiguration {
 	private final List<TNFSAuthenticatorFactory> authFactories;
 	private boolean demo;
 	private final List<Listener> listeners = new ArrayList<>();
+	private final Authentication authConfig;
 
 	public MountConfiguration(Monitor monitor, Configuration configuration, Optional<Path> configurationDir, Optional<Path> userConfigDir) {
 		super(MountConfiguration.class, "mounts", Optional.of(monitor), configurationDir, userConfigDir);
 		
 		mounts = new TNFSMounts();
 		
+		authConfig = new Authentication(Optional.of(monitor), configurationDir, userConfigDir);
+		var disabledAuthenticators = Arrays.asList(authConfig.document().getAllElse(Constants.DISABLE_AUTHENTICATOR_KEY));
 		authFactories = Stream.concat(
-				Stream.of(new DefaultAuthentication(Optional.of(monitor), configurationDir, userConfigDir)), 
-				ServiceLoader.load(TNFSAuthenticatorFactory.class).stream().map(Provider::get)
+				Stream.of(new PasswordFile(authConfig)), 
+				ServiceLoader.load(TNFSAuthenticatorFactory.class).stream().map(Provider::get).filter(p -> !disabledAuthenticators.contains(p.id()))
 		).sorted().toList();
 		
 		document().onValueUpdate(vu -> {

@@ -20,26 +20,18 @@
  */
 package uk.co.bithatch.tnfs.daemon;
 
-public class Constants {
+import java.nio.file.Path;
+import java.util.Optional;
 
-	public static final String SERVER_SECTION = "server";
-	public static final String MDNS_SECTION = "mdns";
-	public static final String AUTHENTICATION_SECTION = "authentication";
+import com.sshtools.jini.config.Monitor;
+
+public class Authentication extends AbstractConfiguration {
+
+	public Authentication(Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
+		this(Optional.empty(), configurationDir, userConfigurationDir);
+	}
 	
-	public static final String ANNOUNCE_KEY = "announce";
-	public static final String UPNP_KEY = "upnp";
-
-	public static final String ADDRESS_KEY = "address";
-	public static final String PORT_KEY = "port";
-	public static final String PROTOCOLS_KEY = "protocols";
-	public static final String NAME_KEY = "name";
-
-	public static final String MOUNT_KEY = "mount";
-
-	public static final String PATH_KEY = "path";
-	public static final String LOCAL_KEY = "local";
-	public static final String AUTHENTICATION_KEY = "authentication";
-	public static final String READ_ONLY_KEY = "read-only";
-	public static final String DISABLE_AUTHENTICATOR_KEY = "disable-authenticator";
-
+	public Authentication(Optional<Monitor> monitor, Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
+		super(Authentication.class, "authentication", monitor, configurationDir, userConfigurationDir);
+	}
 }

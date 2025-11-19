@@ -38,4 +38,9 @@ public class LinidTNFSAuthenticatorFactory implements TNFSAuthenticatorFactory {
 		return "Linux System Users";
 	}
 
+	@Override
+	public String id() {
+		return "system";
+	}
+
 }

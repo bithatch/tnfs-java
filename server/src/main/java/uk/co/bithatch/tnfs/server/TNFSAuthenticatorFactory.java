@@ -28,6 +28,8 @@ public interface TNFSAuthenticatorFactory extends Comparable<TNFSAuthenticatorFa
 		return getClass().getSimpleName();
 	}
 	
+	String id();
+	
 	default int priority() {
 		return 0;
 	}
