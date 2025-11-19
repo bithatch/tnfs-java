@@ -68,7 +68,7 @@ public class MountConfiguration extends AbstractConfiguration {
 		authConfig = new Authentication(Optional.of(monitor), configurationDir, userConfigDir);
 		var disabledAuthenticators = Arrays.asList(authConfig.document().getAllElse(Constants.DISABLE_AUTHENTICATOR_KEY));
 		authFactories = Stream.concat(
-				Stream.of(new PasswordFile(authConfig)), 
+				Stream.of(new PasswordFileAuthenticator(authConfig)), 
 				ServiceLoader.load(TNFSAuthenticatorFactory.class).stream().map(Provider::get).filter(p -> !disabledAuthenticators.contains(p.id()))
 		).sorted().toList();
 		

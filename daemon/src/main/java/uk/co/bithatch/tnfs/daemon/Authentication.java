@@ -34,4 +34,9 @@ public class Authentication extends AbstractConfiguration {
 	public Authentication(Optional<Monitor> monitor, Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
 		super(Authentication.class, "authentication", monitor, configurationDir, userConfigurationDir);
 	}
+
+	public Path passwdFile() {
+		return iniSet.appPathForScope(iniSet.writeScope()
+				.orElseThrow(() -> new IllegalStateException("No writable configuration directory found."))).resolve("password.properties");
+	}
 }

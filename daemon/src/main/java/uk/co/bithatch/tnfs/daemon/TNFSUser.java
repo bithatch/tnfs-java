@@ -98,7 +98,7 @@ public class TNFSUser implements Callable<Integer>, ExceptionHandlerHost {
 			}
 			
 			var authConfig = new Authentication(gconfig, userConfiguration); 
-			authenticator = new PasswordFile(authConfig);
+			authenticator = new PasswordFile(authConfig.passwdFile());
 		}
 		return authenticator;
 	}
@@ -205,7 +205,7 @@ public class TNFSUser implements Callable<Integer>, ExceptionHandlerHost {
 		@Override
 		public Integer call() throws Exception {
 			var auth = parent().authenticator();
-			auth.users().forEach(u -> System.out.println(u.getName()));
+			auth.users().forEach(u -> System.out.println(u));
 			return 0;
 		}
 		
