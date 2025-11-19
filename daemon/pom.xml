@@ -250,5 +250,51 @@
 			</build>
 		</profile>
 		
+        <!--Platform Specific Module Activation -->
+        <profile>
+            <id>windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <dependencies>
+                <!--<dependency>
+                    <groupId>uk.co.bithatch</groupId>
+                    <artifactId>tnfs-java-server-windows</artifactId>
+                    <version>${project.version}</version>
+                </dependency>-->
+            </dependencies>
+        </profile>
+        <profile>
+            <id>linux</id>
+            <activation>
+                <os>
+                    <family>linux</family>
+                </os>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>uk.co.bithatch</groupId>
+                    <artifactId>tnfs-java-server-linux</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>macos</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                </os>
+            </activation>
+            <dependencies>
+                <!--<dependency>
+                    <groupId>uk.co.bithatch</groupId>
+                    <artifactId>tnfs-java-server-macos</artifactId>
+                    <version>${project.version}</version>
+                </dependency>-->
+            </dependencies>
+        </profile>
 	</profiles>
 </project>

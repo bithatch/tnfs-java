@@ -18,18 +18,14 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+package uk.co.bithatch.tnfs.server;
 
-import uk.co.bithatch.tnfs.server.TNFSAuthenticatorFactory;
+import java.security.Principal;
+import java.util.Optional;
 
-open module uk.co.bithatch.tnfs.daemon {
-	requires info.picocli;
-	requires transitive uk.co.bithatch.tnfs.server;
-	requires transitive uk.co.bithatch.tnfs.server.extensions;
-	requires transitive uk.co.bithatch.tnfs.daemonlib;
-	requires org.slf4j.simple;
-	requires org.slf4j;
-	requires com.sshtools.porter;
-	requires com.sshtools.jini.config;
-	
-	uses TNFSAuthenticatorFactory;
+import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
+
+@FunctionalInterface
+public interface TNFSAuthenticator {
+	Optional<Principal> authenticate(TNFSFileAccess fs, Optional<String> username, Optional<char[]> password);
 }

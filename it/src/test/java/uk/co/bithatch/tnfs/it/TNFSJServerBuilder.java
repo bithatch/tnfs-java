@@ -33,8 +33,8 @@ import uk.co.bithatch.tnfs.lib.Io;
 import uk.co.bithatch.tnfs.lib.Protocol;
 import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
 import uk.co.bithatch.tnfs.server.DefaultInMemoryFileSystemService;
+import uk.co.bithatch.tnfs.server.TNFSAuthenticator;
 import uk.co.bithatch.tnfs.server.TNFSMounts;
-import uk.co.bithatch.tnfs.server.TNFSMounts.TNFSAuthenticator;
 import uk.co.bithatch.tnfs.server.TNFSServer;
 
 /**

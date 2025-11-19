@@ -61,7 +61,7 @@ public class TNFSUser implements Callable<Integer>, ExceptionHandlerHost {
     @Spec
     private CommandSpec spec;
 
-	private Authentication authenticator;
+	private DefaultAuthentication authenticator;
     
 
     @Override
@@ -81,7 +81,7 @@ public class TNFSUser implements Callable<Integer>, ExceptionHandlerHost {
 		return false;
 	}
 	
-	public Authentication authenticator() {
+	public DefaultAuthentication authenticator() {
 		if(authenticator == null) {
 			
 	    	/* Logging */
@@ -97,7 +97,7 @@ public class TNFSUser implements Callable<Integer>, ExceptionHandlerHost {
 				}
 			}
 			
-			authenticator = new Authentication(gconfig, userConfiguration);
+			authenticator = new DefaultAuthentication(gconfig, userConfiguration);
 		}
 		return authenticator;
 	}

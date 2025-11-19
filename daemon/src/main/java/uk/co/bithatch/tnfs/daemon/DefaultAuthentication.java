@@ -34,9 +34,11 @@ import java.util.stream.Stream;
 import com.sshtools.jini.config.Monitor;
 
 import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
-import uk.co.bithatch.tnfs.server.TNFSMounts.TNFSAuthenticator;
+import uk.co.bithatch.tnfs.server.AuthenticationType;
+import uk.co.bithatch.tnfs.server.TNFSAuthenticator;
+import uk.co.bithatch.tnfs.server.TNFSAuthenticatorFactory;
 
-public class Authentication extends AbstractConfiguration implements TNFSAuthenticator {
+public class DefaultAuthentication extends AbstractConfiguration implements TNFSAuthenticator, TNFSAuthenticatorFactory {
 
 	private final class ExtendedAuthUser implements UserPrincipal {
 		private final String username;
@@ -54,12 +56,17 @@ public class Authentication extends AbstractConfiguration implements TNFSAuthent
 
 	}
 
-	public Authentication(Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
+	public DefaultAuthentication(Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
 		this(Optional.empty(), configurationDir, userConfigurationDir);
 	}
 	
-	public Authentication(Optional<Monitor> monitor, Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
-		super(Authentication.class, "authentication", monitor, configurationDir, userConfigurationDir);
+	public DefaultAuthentication(Optional<Monitor> monitor, Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
+		super(DefaultAuthentication.class, "authentication", monitor, configurationDir, userConfigurationDir);
+	}
+
+	@Override
+	public String name() {
+		return "Default";
 	}
 
 	@Override
@@ -161,5 +168,15 @@ public class Authentication extends AbstractConfiguration implements TNFSAuthent
 	private Path resolveDir() {
 		return iniSet.appPathForScope(iniSet.writeScope()
 				.orElseThrow(() -> new IllegalStateException("No writable configuration directory found.")));
+	}
+
+	@Override
+	public Optional<TNFSAuthenticator> createAuthenticator(String path, AuthenticationType... authTypes) {
+		return Optional.of(this);
+	}
+
+	@Override
+	public int priority() {
+		return Integer.MIN_VALUE;
 	}
 }

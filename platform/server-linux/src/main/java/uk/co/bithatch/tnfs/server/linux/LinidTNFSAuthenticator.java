@@ -18,18 +18,46 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+package uk.co.bithatch.tnfs.server.linux;
 
-import uk.co.bithatch.tnfs.server.TNFSAuthenticatorFactory;
+import java.security.Principal;
+import java.util.Optional;
 
-open module uk.co.bithatch.tnfs.daemon {
-	requires info.picocli;
-	requires transitive uk.co.bithatch.tnfs.server;
-	requires transitive uk.co.bithatch.tnfs.server.extensions;
-	requires transitive uk.co.bithatch.tnfs.daemonlib;
-	requires org.slf4j.simple;
-	requires org.slf4j;
-	requires com.sshtools.porter;
-	requires com.sshtools.jini.config;
+import uk.co.bithatch.linid.Id;
+import uk.co.bithatch.linid.IdDb;
+import uk.co.bithatch.linid.Linid;
+import uk.co.bithatch.linid.PasswordChangeRequiredException;
+import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
+import uk.co.bithatch.tnfs.server.TNFSAuthenticator;
+
+public class LinidTNFSAuthenticator implements TNFSAuthenticator {
 	
-	uses TNFSAuthenticatorFactory;
+	private final IdDb database = Linid.get();
+
+	@Override
+	public Optional<Principal> authenticate(TNFSFileAccess fs, Optional<String> username, Optional<char[]> password) {
+		if(username.isPresent()) {
+			var uname = username.get();
+			var princ = locateUser(uname);
+			if(princ.isPresent() && password.isPresent()) {
+				var usr = princ.get();
+				try {
+					usr.verify(password.get());
+					return Optional.of(usr);
+				}
+				catch(PasswordChangeRequiredException pcre) {
+					return Optional.of(usr);
+				}
+				catch(Exception zpe) {
+					// Failure
+				}
+			}
+		}
+		return Optional.empty();
+	}
+
+	private Optional<Id> locateUser(String uname) {
+		return database.idByName(uname);
+	}
+
 }

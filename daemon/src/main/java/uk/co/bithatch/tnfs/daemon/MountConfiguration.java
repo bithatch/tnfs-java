@@ -23,12 +23,16 @@ package uk.co.bithatch.tnfs.daemon;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.channels.Channels;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.ServiceLoader;
+import java.util.ServiceLoader.Provider;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +40,8 @@ import org.slf4j.LoggerFactory;
 import com.sshtools.jini.config.Monitor;
 
 import uk.co.bithatch.tnfs.lib.OpenFlag;
+import uk.co.bithatch.tnfs.server.AuthenticationType;
+import uk.co.bithatch.tnfs.server.TNFSAuthenticatorFactory;
 import uk.co.bithatch.tnfs.server.TNFSInMemoryFileSystem;
 import uk.co.bithatch.tnfs.server.TNFSMounts;
 
@@ -49,7 +55,7 @@ public class MountConfiguration extends AbstractConfiguration {
 	}
 	
 	private final TNFSMounts mounts;
-	private final Authentication auth;
+	private final List<TNFSAuthenticatorFactory> authFactories;
 	private boolean demo;
 	private final List<Listener> listeners = new ArrayList<>();
 
@@ -58,7 +64,10 @@ public class MountConfiguration extends AbstractConfiguration {
 		
 		mounts = new TNFSMounts();
 		
-		auth = new Authentication(Optional.of(monitor), configurationDir, userConfigDir);
+		authFactories = Stream.concat(
+				Stream.of(new DefaultAuthentication(Optional.of(monitor), configurationDir, userConfigDir)), 
+				ServiceLoader.load(TNFSAuthenticatorFactory.class).stream().map(Provider::get)
+		).sorted().toList();
 		
 		document().onValueUpdate(vu -> {
 			configChanged();
@@ -67,6 +76,12 @@ public class MountConfiguration extends AbstractConfiguration {
 		document().onSectionUpdate(su -> {
 			configChanged();
 		});
+		
+		
+		LazyLog.LOG.info("Available authentication modules:");
+		for(var authFactory : authFactories) {
+			LazyLog.LOG.info("  {}", authFactory.name());
+		}
 		
 		remountAll();
 	}
@@ -89,13 +104,13 @@ public class MountConfiguration extends AbstractConfiguration {
 		document().allSectionsOr(Constants.MOUNT_KEY).ifPresentOrElse(mntsec-> {
 			Arrays.asList(mntsec).forEach(sec -> {
 				
-				var authTypes = Arrays.asList(sec.getAllEnumOr(AuthenticationType.class, Constants.AUTHENTICATION_KEY).orElse(new AuthenticationType[0]));
+				var authTypes = sec.getAllEnumOr(AuthenticationType.class, Constants.AUTHENTICATION_KEY).orElse(new AuthenticationType[0]);
 				var path = sec.get(Constants.PATH_KEY);
 				var local = Paths.get(sec.get(Constants.LOCAL_KEY));
 				var rdOnly = sec.getBoolean(Constants.READ_ONLY_KEY);
 				
 				try {
-					if(authTypes.isEmpty()) {
+					if(authTypes.length == 0) {
 						
 						if(rdOnly)
 							LazyLog.LOG.info("Anonymous mounting {} to {} as read only", local, path);
@@ -106,12 +121,24 @@ public class MountConfiguration extends AbstractConfiguration {
 					}
 					else {
 						
+						String authTypeListStr = String.join(", ", Arrays.asList(authTypes).stream().map(AuthenticationType::name).toList());
 						if(rdOnly)
-							LazyLog.LOG.info("Mounting {} to {} (using {} for auth) as read only", local, path, String.join(", ", authTypes.stream().map(AuthenticationType::name).toList()));
+							LazyLog.LOG.info("Mounting {} to {} (using {} for auth) as read only", local, path, authTypeListStr);
 						else
-							LazyLog.LOG.info("Mounting {} to {} (using {} for auth)", local, path, String.join(", ", authTypes.stream().map(AuthenticationType::name).toList()));
+							LazyLog.LOG.info("Mounting {} to {} (using {} for auth)", local, path, authTypeListStr);
 						
-						mounts.mount(path, local, auth, rdOnly);
+						
+						for(var authFactory : authFactories) {
+							var res = authFactory.createAuthenticator(path, authTypes);
+							if(res.isPresent()) {
+								LazyLog.LOG.info("Using {} for authenticator", authFactory.name());
+								mounts.mount(path, local, res.get(), rdOnly);
+								return;
+							}
+						}
+						
+						throw new AccessDeniedException("No authenticators were will to deal with the auth types " + authTypeListStr);
+						
 					}
 				}
 				catch(IOException ioe) {
@@ -140,9 +167,5 @@ public class MountConfiguration extends AbstractConfiguration {
 	
 	public TNFSMounts mounts() {
 		return mounts;
-	}
-	
-	public Authentication authentication() {
-		return auth;
 	}
 }

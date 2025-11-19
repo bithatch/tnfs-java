@@ -49,11 +49,6 @@ public class TNFSMounts implements TNFSFileSystemService {
 	public static final String GUEST_NAME = "<guest>";
 	public static final Principal GUEST = TNFSMounts.simpleUser(GUEST_NAME);
 
-	@FunctionalInterface
-	public interface TNFSAuthenticator {
-		Optional<Principal> authenticate(TNFSFileAccess fs, Optional<String> username, Optional<char[]> password);
-	}
-
 	public record TNFSMountRef(TNFSFileAccess fs, Optional<TNFSAuthenticator> auth) {
 	}
 

@@ -61,6 +61,7 @@
 		<module>extensions</module>
 		<module>it</module>
 		<module>sdk</module>
+		<module>platform</module>
 	</modules>
 	<inceptionYear>2025</inceptionYear>
 	<url>https://github.com/bithatch/tnfs-java</url>

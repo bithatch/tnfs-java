@@ -18,8 +18,24 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package uk.co.bithatch.tnfs.daemon;
+package uk.co.bithatch.tnfs.server.linux;
 
-public enum AuthenticationType {
-	BASIC, SCRAM
+import java.util.Optional;
+
+import uk.co.bithatch.tnfs.server.AuthenticationType;
+import uk.co.bithatch.tnfs.server.TNFSAuthenticator;
+import uk.co.bithatch.tnfs.server.TNFSAuthenticatorFactory;
+
+public class LinidTNFSAuthenticatorFactory implements TNFSAuthenticatorFactory {
+
+	@Override
+	public Optional<TNFSAuthenticator> createAuthenticator(String path, AuthenticationType... authTypes) {
+		return Optional.of(new LinidTNFSAuthenticator());
+	}
+
+	@Override
+	public String name() {
+		return "Linux System Users";
+	}
+
 }
