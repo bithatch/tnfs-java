@@ -32,5 +32,6 @@
   <name>TNFS Java - Platform Specific Modules</name>
   <modules>
   	<module>server-linux</module>
+  	<module>server-windows</module>
   </modules>
 </project>

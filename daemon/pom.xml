@@ -183,6 +183,8 @@
 									<buildArgs>
 										<buildArg>--install-exit-handlers</buildArg>
                                         <buildArg>-march=compatibility</buildArg>
+                                        <buildArg>-H:+AddAllCharsets</buildArg>
+                                        <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
 									</buildArgs>
 								</configuration>
 							</execution>
@@ -258,12 +260,15 @@
                     <family>windows</family>
                 </os>
             </activation>
+            <properties>
+				<graalvm.firstArgs>-H:+UnlockExperimentalVMOptions -H:+AddAllCharsets</graalvm.firstArgs>
+			</properties>
             <dependencies>
-                <!--<dependency>
+                <dependency>
                     <groupId>uk.co.bithatch</groupId>
                     <artifactId>tnfs-java-server-windows</artifactId>
                     <version>${project.version}</version>
-                </dependency>-->
+                </dependency>
             </dependencies>
         </profile>
         <profile>

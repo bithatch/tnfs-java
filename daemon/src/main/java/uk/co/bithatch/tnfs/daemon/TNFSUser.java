@@ -201,9 +201,6 @@ public class TNFSUser implements Callable<Integer>, ExceptionHandlerHost {
 	@Command(name = "list", aliases = { "ls", "users" }, description = "List all users.", mixinStandardHelpOptions = true)	
 	public final static class List extends UserCommand {
 		
-		@Parameters(arity = "1", description = "The username to set password for.")
-		private String username;
-
 		@Override
 		public Integer call() throws Exception {
 			var auth = parent().authenticator();

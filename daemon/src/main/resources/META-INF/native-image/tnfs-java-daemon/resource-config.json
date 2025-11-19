@@ -1,7 +1,0 @@
-{
-	"resources": [
-		{
-			"pattern": "uk/co/bithatch/tnfs/daemon/.*"
-		}
-	]
-}

@@ -138,12 +138,20 @@ public class DefaultAuthentication extends AbstractConfiguration implements TNFS
 	}
 
 	private void saveUsers(Properties users) {
-		try(var in = Files.newBufferedWriter(resolvePasswdFile())) {
-			users.store(in, "TNFS Simple User Accounts");
+		var passwdFile = resolvePasswdFile();
+		try(var in = Files.newBufferedWriter(passwdFile)) {
+			users.store(in, "TNFS Extended User Accounts");
 		}
 		catch(IOException ioe) {
 			throw new UncheckedIOException(ioe);
 		}
+		
+		var file = passwdFile.toFile();
+        file.setReadable(false, false);
+        file.setWritable(false, false);
+        file.setExecutable(false, false);
+        file.setReadable(true, true);
+        file.setWritable(true, true);
 	}
 	
 	private Properties loadUsers() {
