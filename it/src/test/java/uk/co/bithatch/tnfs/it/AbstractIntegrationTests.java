@@ -70,7 +70,7 @@ public abstract class AbstractIntegrationTests {
 	}
 	
 	static {
-		System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "TRACE");
+		System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "INFO");
 		
 		Thread.setDefaultUncaughtExceptionHandler((t,e) -> {
 			Lazy.LOG.error("Uncaught error in thread.", e);
