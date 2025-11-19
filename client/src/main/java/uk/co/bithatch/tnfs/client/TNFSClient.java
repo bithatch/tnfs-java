@@ -311,6 +311,12 @@ public final class TNFSClient implements Closeable {
 							LOG.debug("<: [{}] {}", buf.remaining(), Debug.dump(buf));
 						}
 						
+						if(ctx != null) {
+							for(var proc : mount.inProcessors()) {
+								proc.accept(ctx, buf);
+							}
+						}
+						
 						var msg = Message.decode(buf);
 						if(msg.seq() == pkt.seq()) {
 							return msg;

@@ -193,6 +193,8 @@ public class SecureMount extends AbstractTNFSClientExtension {
 				client().sendMessage(this, 
 						Command.MOUNT, Message.of(sessionId, Command.MOUNT, 
 								new Command.Mount(mountPath, username, password)));
+				
+				LOG.info("Securely mounted {}", mountPath);
 			}
 			catch(NoSuchAlgorithmException | InvalidKeySpecException | InvalidKeyException nsae) {
 				throw new IOException("Failed to start encryption.", nsae);
