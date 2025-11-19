@@ -22,13 +22,9 @@ package uk.co.bithatch.tnfs.it;
 
 import java.net.InetAddress;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import uk.co.bithatch.tnfs.lib.Protocol;
 
 public class InMemoryFSTCPIntegrationTests2 extends TCPIntegrationTests {
-	final static Logger LOG = LoggerFactory.getLogger(InMemoryFSTCPIntegrationTests2.class);
 
 	@Override
 	protected TNFSJServerBuilder createServerBuilder() {

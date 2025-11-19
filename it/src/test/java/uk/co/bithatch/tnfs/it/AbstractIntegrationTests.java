@@ -57,7 +57,9 @@ public abstract class AbstractIntegrationTests {
 		password = null;
 	}
 	
-	final static Logger LOG = LoggerFactory.getLogger(AbstractIntegrationTests.class);
+	final static class Lazy {
+		final static Logger LOG = LoggerFactory.getLogger(AbstractIntegrationTests.class);
+	}
 	
 	interface TestTask {
 		void run(TNFSClient clnt, ITNFSServer svr) throws Exception;
@@ -71,7 +73,7 @@ public abstract class AbstractIntegrationTests {
 		System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "TRACE");
 		
 		Thread.setDefaultUncaughtExceptionHandler((t,e) -> {
-			LOG.error("Uncaught error in thread.", e);
+			Lazy.LOG.error("Uncaught error in thread.", e);
 		});
 	}
 	
@@ -318,7 +320,7 @@ public abstract class AbstractIntegrationTests {
 	}
 
 	protected void testPutAndGetFile(TNFSMount mnt, TNFSClient clnt, ITNFSServer svr, String filename, long size) throws Exception {
-		LOG.info("Test put then get of {} bytes", size);
+		Lazy.LOG.info("Test put then get of {} bytes", size);
 		var buf = ByteBuffer.allocateDirect(clnt.size());
 		var wrtn = 0l;
 		try(var rc = new RandomReadableChannel(clnt.size(), size, false)) {
@@ -366,7 +368,7 @@ public abstract class AbstractIntegrationTests {
 		finally {
 			var ended = System.currentTimeMillis();
 			var took =  ended - started;
-			LOG.info("Test took: {}ms",  took);
+			Lazy.LOG.info("Test took: {}ms",  took);
 		}
 	}
 

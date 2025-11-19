@@ -85,8 +85,7 @@ public interface Encodeable {
 	
 	static ByteBuffer shortLPByteBuffer(ByteBuffer buf) {
 		var bbuf = ByteBuffer.allocateDirect(buf.getShort());
-		bbuf.put(buf);
-		bbuf.flip();
+		bbuf.put(0, buf, buf.position(), Math.min(bbuf.remaining(), buf.remaining()));
 		return bbuf;
 	}
 

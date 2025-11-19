@@ -20,17 +20,23 @@
  */
 package uk.co.bithatch.tnfs.it;
 
-import java.net.InetAddress;
+import uk.co.bithatch.tnfs.client.extensions.SecureMount;
 
-import uk.co.bithatch.tnfs.lib.Protocol;
-
-public class InMemoryFSUDPIntegrationTests extends UDPIntegrationTests {
-
+public class SecureAuthenticatedTCPIntegrationTests extends AuthenticatedTCPIntegrationTests {
+	
 	@Override
-	protected TNFSJServerBuilder createServerBuilder() {
-		return new TNFSJServerBuilder().
-				withProtocol(Protocol.UDP).
-				withHost(InetAddress.getLoopbackAddress());
+	protected void runMountTest(TestMountTask task) throws Exception {
+		runTest((clnt, svr) -> {
+
+			var mntBldr = clnt.extension(SecureMount.class).mount("/").
+					withUsername(username).
+					withPassword(password);	
+			
+			try(var mnt = mntBldr.build()) {
+				task.run(mnt, clnt, svr);
+			}
+		});
 	}
+
 
 }

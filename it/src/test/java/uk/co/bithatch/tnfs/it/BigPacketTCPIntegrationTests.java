@@ -24,14 +24,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class BigPacketTCPIntegrationTests extends TCPIntegrationTests {
-	final static Logger LOG = LoggerFactory.getLogger(BigPacketTCPIntegrationTests.class);
+	
+	final static class Lazy {
+		final static Logger LOG = LoggerFactory.getLogger(BigPacketTCPIntegrationTests.class);
+	}
 
 	
 	protected void doRunTest(TestTask task) throws Exception {
 		for (var sz : new int[] { 532, 768, 1024, 1300, 1400, 1500, 32768/* , 60000 */ }) {
-			LOG.info("-----------------------------------------------------------------------");
-			LOG.info("Testing with packets of {} bytes", sz);
-			LOG.info("-----------------------------------------------------------------------");
+			Lazy.LOG.info("-----------------------------------------------------------------------");
+			Lazy.LOG.info("Testing with packets of {} bytes", sz);
+			Lazy.LOG.info("-----------------------------------------------------------------------");
 			try(var svr = createServer(
 					createServerBuilder().
 					withClientSize(sz).
