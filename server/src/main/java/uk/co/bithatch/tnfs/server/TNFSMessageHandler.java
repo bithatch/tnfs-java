@@ -36,6 +36,8 @@ public interface TNFSMessageHandler {
 		
 		TNFSSession session();
 		
+		boolean hasSession();
+		
 		TNFSServer<?> server();
 
 		int nextFileHandle();

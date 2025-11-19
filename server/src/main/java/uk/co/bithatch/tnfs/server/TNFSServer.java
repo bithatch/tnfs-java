@@ -541,6 +541,11 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 					throw new IllegalStateException("No session.");
 				}
 			}
+
+			@Override
+			public boolean hasSession() {
+				return session != null;
+			}
 		});
 		
 		/* If we have the session, we can get the message size and create a slice for
