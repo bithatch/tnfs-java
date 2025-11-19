@@ -30,7 +30,6 @@ module uk.co.bithatch.tnfs.client.extensions {
 	requires transitive uk.co.bithatch.tnfs.client;
 	requires transitive uk.co.bithatch.tnfs.lib.extensions;
 	requires org.slf4j;
-	requires com.ongres.scram.client;
 	exports uk.co.bithatch.tnfs.client.extensions;
 	
 	provides TNFSClientExtension with Mounts, SecureMount;

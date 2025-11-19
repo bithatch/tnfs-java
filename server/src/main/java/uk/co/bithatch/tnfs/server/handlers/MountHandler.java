@@ -59,7 +59,11 @@ public class MountHandler implements TNFSMessageHandler {
 			var userMount = fact.createMount(mountmsg.path(), principal);
 			
 			/* Create and immediately authenticate the session */
-			context.newSession(userMount, mountmsg.version()).authenticate();
+			var session = context.session();
+			if(session == null) {
+				session = context.newSession(mountmsg.version());
+			}
+			session.mount(userMount);
 			
 			return new MountResult(ResultCode.SUCCESS,  context.server().retryTime());
 		}

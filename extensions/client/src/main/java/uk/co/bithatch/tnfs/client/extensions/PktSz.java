@@ -31,7 +31,7 @@ public class PktSz extends AbstractTNFSMountExtension {
 
 	public PktSizeResult packetSize(int size) throws IOException {
 		var client = mount.client();
-		var res = client.sendMessage(Extensions.PKTSZ, Message.of(mount.sessionId(), Extensions.PKTSZ, new Extensions.PktSize(size)));
+		var res = client.sendMessage(mount, Extensions.PKTSZ, Message.of(mount.sessionId(), Extensions.PKTSZ, new Extensions.PktSize(size)));
 		client.size(res.size());
 		return res;
 	}

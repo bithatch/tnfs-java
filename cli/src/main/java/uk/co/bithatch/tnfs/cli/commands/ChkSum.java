@@ -30,7 +30,7 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
 import uk.co.bithatch.tnfs.client.extensions.Sum;
-import uk.co.bithatch.tnfs.lib.extensions.Extensions.Checksum;
+import uk.co.bithatch.tnfs.lib.extensions.Extensions.Checksum; 
 
 /**
  * Checksum (requires extended server).

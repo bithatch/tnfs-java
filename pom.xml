@@ -36,6 +36,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     	<project.reporting.outputEncoding>UTF8</project.reporting.outputEncoding>
         <central-publishing-maven-plugin.version>0.8.0</central-publishing-maven-plugin.version>
+        <native.image.annotations.version>0.9.3</native.image.annotations.version>
 	</properties>
 	<developers>
 		<developer>
@@ -76,16 +77,6 @@
 	</scm>
 	<dependencyManagement>
 		<dependencies>
-			<dependency>
-			    <groupId>com.ongres.scram</groupId>
-			    <artifactId>scram-client</artifactId>
-			    <version>3.2</version>
-			</dependency>
-			<dependency>
-			    <groupId>com.ongres.scram</groupId>
-			    <artifactId>scram-common</artifactId>
-			    <version>3.2</version>
-			</dependency>
 			<dependency>
 				<groupId>com.sshtools</groupId>
 				<artifactId>jini-config</artifactId>
@@ -173,6 +164,11 @@
 				<artifactId>jmdns</artifactId>
 				<version>3.6.2</version>
 			</dependency>
+            <dependency>
+                <groupId>uk.co.bithatch</groupId>
+                <artifactId>native-image-annotations</artifactId>
+                <version>${native.image.annotations.version}</version>
+            </dependency>
 		</dependencies>
 	</dependencyManagement>
 	<build>

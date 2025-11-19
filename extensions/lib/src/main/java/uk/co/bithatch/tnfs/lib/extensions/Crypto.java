@@ -20,23 +20,17 @@
  */
 package uk.co.bithatch.tnfs.lib.extensions;
 
-import java.security.SecureRandom;
-
-import com.ongres.scram.common.ScramMechanism;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 
 public final class Crypto {
 
-	private final class Default {
-		private final static SecureRandom RANDOM = new SecureRandom();
-	}
-	
-	public static SecureRandom random() {
-		return Default.RANDOM;
-	}
+	public static byte[] deriveKey(byte[] sharedSecret, int keyBits) throws NoSuchAlgorithmException {
+        var sha256 = MessageDigest.getInstance("SHA-256");
+        var digest = sha256.digest(sharedSecret);
+        var keyBytes = keyBits / 8;
+        return Arrays.copyOf(digest, keyBytes);
+    }
 
-	public static final int NONCE_SIZE = 24;
-	public static final int SERVER_KEY_SIZE = 16;
-	public static final int SALT_SIZE = 8;
-	public static final ScramMechanism DEFAULT_MECHANISM = ScramMechanism.SCRAM_SHA_1;
-	public static final int DEFAULT_ITERATIONS = 4096;
 }

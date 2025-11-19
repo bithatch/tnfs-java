@@ -18,23 +18,18 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package uk.co.bithatch.tnfs.server.extensions;
+package uk.co.bithatch.tnfs.server;
 
-import java.security.Principal;
-import java.util.Optional;
+import java.nio.ByteBuffer;
+import java.util.function.BiConsumer;
 
-import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
-import uk.co.bithatch.tnfs.server.TNFSMounts.TNFSAuthenticator;
+import uk.co.bithatch.tnfs.server.TNFSServerPacketProcessor.PacketContext;
 
-public interface ScramTNFSAuthenticator extends TNFSAuthenticator {
-
-	@Override
-	default Optional<Principal> authenticate(TNFSFileAccess fs, Optional<String> username, Optional<char[]> password) {
-		throw new UnsupportedOperationException("This authenticator should be used with CLNTFRST only.");
-	}
-
-	Optional<ScramPrincipal> identify(TNFSFileAccess fs, String username);
+public interface TNFSServerPacketProcessor extends BiConsumer<PacketContext, ByteBuffer> {
 	
-	byte[] serverKey();
+	public interface PacketContext {
 
+		TNFSSession session();
+
+	}
 }

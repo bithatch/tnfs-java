@@ -22,9 +22,7 @@ import uk.co.bithatch.tnfs.server.TNFSMessageHandler;
 import uk.co.bithatch.tnfs.server.extensions.CopyHandler;
 import uk.co.bithatch.tnfs.server.extensions.MountsHandler;
 import uk.co.bithatch.tnfs.server.extensions.PktSzHandler;
-import uk.co.bithatch.tnfs.server.extensions.ScramClientFinishHandler;
-import uk.co.bithatch.tnfs.server.extensions.ScramClientFirstHandler;
-import uk.co.bithatch.tnfs.server.extensions.ServerCapsHandler;
+import uk.co.bithatch.tnfs.server.extensions.SecureMountHandler;
 import uk.co.bithatch.tnfs.server.extensions.SumHandler;
 
 module uk.co.bithatch.tnfs.server.extensions {
@@ -32,10 +30,6 @@ module uk.co.bithatch.tnfs.server.extensions {
 	requires transitive uk.co.bithatch.tnfs.lib.extensions;
 	requires transitive uk.co.bithatch.tnfs.server;
 	requires transitive org.slf4j;
-	requires transitive com.ongres.scram.common;
-	provides TNFSMessageHandler with ServerCapsHandler,
-									 ScramClientFirstHandler,
-									 ScramClientFinishHandler,
-									 SumHandler, CopyHandler, MountsHandler,
-									 PktSzHandler;
+	provides TNFSMessageHandler with SumHandler, CopyHandler, MountsHandler,
+									 PktSzHandler, SecureMountHandler;
 }

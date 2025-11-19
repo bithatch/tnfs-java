@@ -21,5 +21,4 @@
 module uk.co.bithatch.tnfs.lib.extensions {
 	exports uk.co.bithatch.tnfs.lib.extensions;
 	requires transitive uk.co.bithatch.tnfs.lib;
-	requires transitive com.ongres.scram.common;
 }

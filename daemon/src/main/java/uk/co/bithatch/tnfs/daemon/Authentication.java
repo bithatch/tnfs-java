@@ -21,42 +21,30 @@
 package uk.co.bithatch.tnfs.daemon;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.UserPrincipal;
 import java.security.Principal;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Stream;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.ongres.scram.common.ScramFunctions;
-import com.ongres.scram.common.ScramMechanism;
-import com.ongres.scram.common.StringPreparation;
 import com.sshtools.jini.config.Monitor;
 
 import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
-import uk.co.bithatch.tnfs.lib.Util;
-import uk.co.bithatch.tnfs.lib.extensions.Crypto;
-import uk.co.bithatch.tnfs.server.extensions.ScramPrincipal;
-import uk.co.bithatch.tnfs.server.extensions.ScramTNFSAuthenticator;
+import uk.co.bithatch.tnfs.server.TNFSMounts.TNFSAuthenticator;
 
-public class Authentication extends AbstractConfiguration implements ScramTNFSAuthenticator {
+public class Authentication extends AbstractConfiguration implements TNFSAuthenticator {
 
-	private static Logger LOG = LoggerFactory.getLogger(Authentication.class);
-	
-	private final class ExtendedAuthUser implements ScramPrincipal {
+	private final class ExtendedAuthUser implements UserPrincipal {
 		private final String username;
-		private final String[] arr;
+		private final char[] password;
 
-		private ExtendedAuthUser(String username, String record) {
+		private ExtendedAuthUser(String username, char[] password) {
 			this.username = username;
-			this.arr = record.split(":");
+			this.password = password;
 		}
 
 		@Override
@@ -64,30 +52,6 @@ public class Authentication extends AbstractConfiguration implements ScramTNFSAu
 			return username;
 		}
 
-		@Override
-		public String getSalt() {
-			return arr[2];
-		}
-
-		@Override
-		public String getStoredKey() {
-			return arr[3];
-		}
-
-		@Override
-		public int getIterationCount() {
-			return Integer.parseInt(arr[1]);
-		}
-
-		@Override
-		public ScramMechanism getMechanism() {
-			return ScramMechanism.valueOf(arr[0]);
-		}
-
-		@Override
-		public String getServerKey() {
-			return arr[4];
-		}
 	}
 
 	public Authentication(Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
@@ -96,22 +60,6 @@ public class Authentication extends AbstractConfiguration implements ScramTNFSAu
 	
 	public Authentication(Optional<Monitor> monitor, Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
 		super(Authentication.class, "authentication", monitor, configurationDir, userConfigurationDir);
-		
-		var srvkey = resolveServerKey();
-		if(!Files.exists(srvkey)) {
-			try(var out = new PrintWriter(Files.newBufferedWriter(srvkey), true)) {
-				out.println(Base64.getEncoder().encodeToString(Util.genRandom(Crypto.SERVER_KEY_SIZE)));
-			}
-			catch(IOException ioe) {
-				throw new UncheckedIOException(ioe);
-			}
-			LOG.info("Generated server key to {}.", srvkey);
-		}
-	}
-
-	@Override
-	public Optional<ScramPrincipal> identify(TNFSFileAccess fs, String username) {
-		return locateUser(username);
 	}
 
 	@Override
@@ -122,10 +70,7 @@ public class Authentication extends AbstractConfiguration implements ScramTNFSAu
 			if(princ.isPresent() && password.isPresent()) {
 				var usr = princ.get();
 				var pw = password.get();
-				var saltedPw = ScramFunctions.saltedPassword(usr.getMechanism(), StringPreparation.NO_PREPARATION, pw, Base64.getDecoder().decode(usr.getSalt()), usr.getIterationCount());
-				var ckey = ScramFunctions.clientKey(usr.getMechanism(), saltedPw);
-				var skey = ScramFunctions.clientKey(usr.getMechanism(), ckey);
-				if(Arrays.equals(Base64.getDecoder().decode(usr.getStoredKey()), skey)) {
+				if(Arrays.equals(((ExtendedAuthUser)usr).password, pw)) {
 					return princ.map(u -> (Principal)u);
 				}
 			}
@@ -133,12 +78,12 @@ public class Authentication extends AbstractConfiguration implements ScramTNFSAu
 		return Optional.empty();
 	}
 
-	private Optional<ScramPrincipal> locateUser(String username) {
+	private Optional<Principal> locateUser(String username) {
 		if(Files.exists(resolvePasswdFile())) {
 			var props = loadUsers();
 			var rec = props.getProperty(username);
 			if(rec != null && !rec.equals("")) {
-				return Optional.of(new ExtendedAuthUser(username, rec));
+				return Optional.of(new ExtendedAuthUser(username, rec.toCharArray()));
 			}
 		}
 		return Optional.empty();
@@ -157,72 +102,37 @@ public class Authentication extends AbstractConfiguration implements ScramTNFSAu
 		if(!users.containsKey(username))
 			throw new IllegalArgumentException("User does not exists.");
 
-		var rec = users.getProperty(username);
-		var arr = rec.split(":");
-		var mech = ScramMechanism.valueOf(arr[0]);
-		var iterations = Integer.valueOf(arr[1]);
-		savePassword(username, password, users, mech, iterations);
-		
+		savePassword(username, password, users);
 	}
 	
-	public void add(String username, ScramMechanism mech, int iterations, char[] password) {
+	public void add(String username, char[] password) {
 		var users = loadUsers();
 		if(users.containsKey(username))
 			throw new IllegalArgumentException("User already exists.");
 		
-		savePassword(username, password, users, mech, iterations);
+		savePassword(username, password, users);
 		
 	}
 
-	@Override
-	public byte[] serverKey() {
-		var keypath = resolveServerKey();
-		try(var in = Files.newBufferedReader(keypath)) {
-			return Base64.getDecoder().decode(in.readLine());	
-		}
-		catch(IOException ioe) {
-			throw new UncheckedIOException(ioe);
-		}
-	}
-
-	public Stream<ScramPrincipal> users() {
+	public Stream<Principal> users() {
 		if(Files.exists(resolvePasswdFile())) {
 			return loadUsers().entrySet().
 					stream().
-					map(ent -> new ExtendedAuthUser((String)ent.getKey(), ((String)ent.getValue())));
+					map(ent -> new ExtendedAuthUser((String)ent.getKey(), ((String)ent.getValue()).toCharArray()));
 		}
 		else
 			return Stream.empty();
 	}
 
-	private Path resolveServerKey() {
-		return resolveDir().resolve(document().section(Constants.AUTHENTICATION_SECTION).get(Constants.KEY_PATH_KEY));
-	}
 
-	private void savePassword(String username, char[] password, Properties users, ScramMechanism mech,
-			Integer iterations) {
-		var salt = ScramFunctions.salt(Crypto.SALT_SIZE, Crypto.random());
-		var saltedPw = ScramFunctions.saltedPassword(mech, StringPreparation.NO_PREPARATION, password, salt, iterations);
-		var clientKey = ScramFunctions.clientKey(mech, saltedPw);
-		var serverKey = ScramFunctions.serverKey(mech, saltedPw);
-		var storedKey = ScramFunctions.storedKey(mech, clientKey);
-		
-		users.put(username, 
-			String.format("%s:%d:%s:%s:%s", 
-				mech.name(), 
-				iterations,
-				Base64.getEncoder().encodeToString(salt),
-				Base64.getEncoder().encodeToString(storedKey),
-				Base64.getEncoder().encodeToString(serverKey)
-			)
-		);
-		
+	private void savePassword(String username, char[] password, Properties users) {
+		users.put(username, new String(password));
 		saveUsers(users);
 	}
 
 	private void saveUsers(Properties users) {
 		try(var in = Files.newBufferedWriter(resolvePasswdFile())) {
-			users.store(in, "TNFS Extended User Accounts");
+			users.store(in, "TNFS Simple User Accounts");
 		}
 		catch(IOException ioe) {
 			throw new UncheckedIOException(ioe);

@@ -44,12 +44,10 @@ import java.util.ServiceLoader;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import javax.security.auth.login.CredentialException;
-import javax.security.auth.login.LoginException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.co.bithatch.tnfs.client.TNFSClientPacketProcessor.PacketContext;
 import uk.co.bithatch.tnfs.lib.AbstractBuilder;
 import uk.co.bithatch.tnfs.lib.ByteBufferPool;
 import uk.co.bithatch.tnfs.lib.Command;
@@ -90,7 +88,7 @@ public final class TNFSClient implements Closeable {
 		}
 	}
 	
-	public record MessageResult<RESULT extends Result>(Message mesage, RESULT result) {}
+	public record MessageResult<RESULT extends Result>(Message message, RESULT result) {}
 	
 	final AbstractSelectableChannel channel;
 	
@@ -149,27 +147,32 @@ public final class TNFSClient implements Closeable {
 		}
 	}
 
-	public <RESULT extends Result> RESULT sendMessage(Command<?, RESULT> op, Message pkt) throws IOException {
-		return send(op, pkt).result;
+	public <RESULT extends Result> RESULT sendMessage(TNFSMount mount, Command<?, RESULT> op, Message pkt) throws IOException {
+		return send(mount, op, pkt).result;
 	}
 
-	public <RESULT extends Result> RESULT sendMessage(Command<?, RESULT> op, Message pkt, String path) throws IOException {
-		return send(op, pkt, path).result;
+	public <RESULT extends Result> RESULT sendMessage(TNFSMount mount, Command<?, RESULT> op, Message pkt, String path) throws IOException {
+		return send(mount, op, pkt, path).result;
 	}
 
-	public <RESULT extends Result> MessageResult<RESULT> send(Command<?, RESULT> op, Message pkt) throws IOException {
-		return send(op, pkt, Optional.empty());
+	public <RESULT extends Result> MessageResult<RESULT> send(TNFSMount mount, Command<?, RESULT> op, Message pkt) throws IOException {
+		return send(mount, op, pkt, Optional.empty());
 	}
 
-	public <RESULT extends Result> MessageResult<RESULT> send(Command<?, RESULT> op, Message pkt, String path) throws IOException {
-		return send(op, pkt, Optional.of(path));
+	public <RESULT extends Result> MessageResult<RESULT> send(TNFSMount mount, Command<?, RESULT> op, Message pkt, String path) throws IOException {
+		return send(mount, op, pkt, Optional.of(path));
 	}
 	
-	public <RESULT extends Result> MessageResult<RESULT> send(Command<?, RESULT> op, Message pkt, Optional<String> path) throws IOException {
+	public <RESULT extends Result> MessageResult<RESULT> send(TNFSMount mount, Command<?, RESULT> op, Message pkt, Optional<String> path) throws IOException {
 //		System.out.println("MG: " + op.name());
 		synchronized(lock) {
 			pkt = pkt.withSeq(nextSeq());
-			var reply = write(pkt);
+
+			if(LOG.isDebugEnabled()) {
+				LOG.debug("Sending message {} [{}]", pkt.command().name(), Byte.toUnsignedInt(pkt.command().code()));
+			}
+			
+			var reply = write(pkt, mount);
 			RESULT res = reply.resultPayload();
 			if(res.result().isOk()) {
 				return new MessageResult<>(reply, res);
@@ -218,18 +221,36 @@ public final class TNFSClient implements Closeable {
 		}
 	}
 
-	Message write(Message pkt) throws IOException, EOFException {
+	Message write(Message pkt, TNFSMount mount) throws IOException, EOFException {
 		try(var buflease = bufferPool.acquire(size)) {
 			var buf  = buflease.buffer();
 			pkt.encode(buf);
 			buf.flip();
+			PacketContext ctx;
+			
+			if(mount != null) {
+				ctx = new PacketContext() {
+					@Override
+					public TNFSMount session() {
+						return mount;
+					}
+				};
+				for(var proc : mount.outProcessors()) {
+					proc.accept(ctx, buf);
+				}
+			}
+			else {
+				ctx = null;
+			}
+			
+			if(LOG.isDebugEnabled()) {
+				LOG.debug(">: [{}] {}", buf.remaining(), Debug.dump(buf));
+			}
 			
 			if(channel instanceof DatagramChannel dchannel) {
+				
 				var wrtn = dchannel.send(buf, address);
 				
-				if(LOG.isDebugEnabled()) {
-					LOG.debug("Written {} byte to UDP", wrtn);
-				}
 				
 				buf.clear();
 				
@@ -245,6 +266,13 @@ public final class TNFSClient implements Closeable {
 				}
 				
 				if(buf.hasRemaining()) {
+					
+					if(ctx != null) {
+						for(var proc : mount.inProcessors()) {
+							proc.accept(ctx, buf);
+						}
+					}
+					
 					var msg = Message.decode(buf);
 					if(msg.seq() == pkt.seq()) {
 						return msg;

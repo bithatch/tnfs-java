@@ -30,6 +30,6 @@ import uk.co.bithatch.tnfs.lib.extensions.Extensions;
 public class Copy extends AbstractTNFSMountExtension {
 
 	public void copy(String path, String targetPath) throws IOException {
-		mount.client().sendMessage(Extensions.COPY, Message.of(mount.sessionId(), Extensions.COPY, new Extensions.Copy(path, targetPath, new CopyFlag[0])), path);
+		mount.client().sendMessage(mount, Extensions.COPY, Message.of(mount.sessionId(), Extensions.COPY, new Extensions.Copy(path, targetPath, new CopyFlag[0])), path);
 	}
 }

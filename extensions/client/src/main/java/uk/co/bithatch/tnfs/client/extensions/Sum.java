@@ -35,8 +35,8 @@ public class Sum extends AbstractTNFSMountExtension {
 	}
 
 	public String sum(Checksum type, String path) throws IOException {
-		return mount.client().sendMessage(Extensions.SUM,
-				Message.of(mount.sessionId(), Extensions.SUM, new Extensions.Sum(type, path)),
-				path).sum();
+		return mount.client().sendMessage(mount,
+				Extensions.SUM,
+				Message.of(mount.sessionId(), Extensions.SUM, new Extensions.Sum(type, path)), path).sum();
 	}
 }

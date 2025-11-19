@@ -27,6 +27,7 @@ import org.jline.reader.LineReaderBuilder;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 
+import picocli.CommandLine.Option;
 import uk.co.bithatch.tnfs.lib.Util;
 
 public abstract class AbstractTNFSFilesCommand extends AbstractTNFSCommand {
@@ -34,12 +35,19 @@ public abstract class AbstractTNFSFilesCommand extends AbstractTNFSCommand {
 	protected Terminal terminal;
 	protected LineReader reader;
 
+	@Option(names = { "--no-terminal" }, description = "Disable terminal.", hidden = true)
+	private boolean noTerminal;
+
 	/**
 	 * Constructor.
 	 */
 	public AbstractTNFSFilesCommand() {
 		try {
-			terminal = TerminalBuilder.builder().system(true).dumb(true).build();
+			terminal = TerminalBuilder.builder().
+					system(true).
+//					dumb(true).
+					build();
+			
 			reader = LineReaderBuilder.builder().terminal(terminal).build();
 		} catch (Exception e) {
 			if(verbosity != null && verbosity.length > 1)
@@ -51,7 +59,7 @@ public abstract class AbstractTNFSFilesCommand extends AbstractTNFSCommand {
     
 	@Override
 	protected String prompt(boolean password, String message, Object... args) {
-		if(terminal == null) {
+		if(noTerminal || terminal == null) {
 			return super.prompt(password, message, args);
 		}
 		else {

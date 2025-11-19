@@ -1,7 +1,5 @@
 uk.co.bithatch.tnfs.server.extensions.CopyHandler
 uk.co.bithatch.tnfs.server.extensions.MountsHandler
-uk.co.bithatch.tnfs.server.extensions.ServerCapsHandler
-uk.co.bithatch.tnfs.server.extensions.ScramClientFirstHandler
-uk.co.bithatch.tnfs.server.extensions.ScramClientFinishHandler
 uk.co.bithatch.tnfs.server.extensions.SumHandler
 uk.co.bithatch.tnfs.server.extensions.PktSzHandler
+uk.co.bithatch.tnfs.server.extensions.SecureMountHandler

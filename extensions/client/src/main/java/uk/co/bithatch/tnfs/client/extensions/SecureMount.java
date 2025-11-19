@@ -21,32 +21,43 @@
 package uk.co.bithatch.tnfs.client.extensions;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.security.InvalidKeyException;
+import java.security.KeyFactory;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
+import java.util.Optional;
+
+import javax.crypto.KeyAgreement;
+import javax.crypto.interfaces.DHPublicKey;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.ongres.scram.client.ScramClient;
-import com.ongres.scram.common.ScramMechanism;
-import com.ongres.scram.common.StringPreparation;
-import com.ongres.scram.common.exception.ScramInvalidServerSignatureException;
-import com.ongres.scram.common.exception.ScramParseException;
-import com.ongres.scram.common.exception.ScramServerErrorException;
 
 import uk.co.bithatch.tnfs.client.AbstractTNFSMount;
 import uk.co.bithatch.tnfs.client.AbstractTNFSMount.AbstractBuilder;
 import uk.co.bithatch.tnfs.client.TNFSClient;
 import uk.co.bithatch.tnfs.client.TNFSClientExtension.AbstractTNFSClientExtension;
+import uk.co.bithatch.tnfs.lib.Command;
+import uk.co.bithatch.tnfs.lib.Debug;
 import uk.co.bithatch.tnfs.lib.Message;
+import uk.co.bithatch.tnfs.lib.TNFS;
 import uk.co.bithatch.tnfs.lib.Version;
+import uk.co.bithatch.tnfs.lib.extensions.Crypto;
 import uk.co.bithatch.tnfs.lib.extensions.Extensions;
-import uk.co.bithatch.tnfs.lib.extensions.Extensions.ServerFinal;
+import uk.co.bithatch.tnfs.lib.extensions.Extensions.SecureMountResult;
+import uk.co.bithatch.tnfs.lib.extensions.SpeckEngine;
 
 public class SecureMount extends AbstractTNFSClientExtension {
 	
 	private final static Logger LOG = LoggerFactory.getLogger(SecureMount.class);
 	
 	public static class Builder extends AbstractBuilder<Builder> {
+		
+		private int blockSize = SpeckEngine.SPECK_128;
+		private Optional<Integer> keySize = Optional.empty();
 
 		/**
 		 * Construct a new mount builder.
@@ -66,6 +77,28 @@ public class SecureMount extends AbstractTNFSClientExtension {
 		 */
 		public SecureTNFSMount build() throws IOException {
 			return new SecureTNFSMount(this);
+		}
+		
+		/**
+		 * Set the block size in bits. See {@link SpeckEngine#SPECK_128} and others.
+		 * 
+		 * @param blockSize block size
+		 * @return this for chaining
+		 */
+		public Builder withBlockSize(int blockSize) {
+			this.blockSize = blockSize;
+			return  this;
+		}
+		
+		/**
+		 * Set the key size in bits. If not set, default is twice the key size.
+		 * 
+		 * @param keySize size in bit
+		 * @return this for chaining
+		 */
+		public Builder withKeySize(int keySize) {
+			this.keySize = Optional.of(keySize);
+			return  this;
 		}
 	}
 
@@ -92,66 +125,86 @@ public class SecureMount extends AbstractTNFSClientExtension {
 
 		private final int sessionId;
 		private final Version serverVersion;
+		private final int blockSize;
+		private final int keySize;
 
 		private SecureTNFSMount(Builder bldr) throws IOException {
 			super(bldr);
 			
-			/* Get the server capabilities to decide what hashing algorithms
-			 * we can advertise to actually use, and the server key for
-			 * potential channel binding
-			 */
-			var capsRes = client.send(Extensions.SRVRCAPS, Message.of(Extensions.SRVRCAPS, new Extensions.ServerCaps()));
-			var caps = capsRes.result();
-			var binding = Arrays.asList(caps.hashAlgos()).stream().map(ScramMechanism::valueOf).filter(f->f.isPlus()).findFirst().isPresent();
+			this.blockSize = bldr.blockSize;
+			this.keySize = bldr.keySize.orElse(blockSize * 2);
 			
-			LOG.info("Supported Hash Algos: {} (supports binding {})", Arrays.asList(caps.hashAlgos()), binding);
-			
-			var scramBldr = ScramClient.builder()
-				    .advertisedMechanisms(Arrays.asList(caps.hashAlgos()).stream().map(s -> s.replace("_", "-")).toList())
-				    .username(username.orElseThrow(() -> new IllegalStateException("Username is required for secure mount.")))
-				    .password(password.orElseThrow(() -> new IllegalStateException("Password is required for secure mount.")));
-			
-			if(binding) {
-				scramBldr.channelBinding("speck",  caps.srvKey()); // client supports channel binding
-			}
-			
-			var scramClient = scramBldr.stringPreparation(StringPreparation.NO_PREPARATION).
-					build();
-
-			LOG.info("Client decided on: {}",  scramClient.getScramMechanism());
-
-			var clientFirstMsg = scramClient.clientFirstMessage();
-			
-			LOG.info("Sending Client First: {}",  clientFirstMsg);
-
-			var srvRes = client.send(Extensions.CLNTFRST, Message.of(Extensions.CLNTFRST, new Extensions.ClientFirst(mountPath, clientFirstMsg.toString())));;
-			var res = srvRes.result();
-			
+			 // 1. Generate client's DH key pair
 			try {
-				serverVersion = res.version();
-				sessionId  = srvRes.mesage().connectionId();
-				
-				LOG.info("Received Server First: {}", res.serverFirstMessage());
-				scramClient.serverFirstMessage(res.serverFirstMessage());
-				var clientFinalMsg = scramClient.clientFinalMessage();
+		        var kpg = KeyPairGenerator.getInstance("DH");
+		        // This chooses DH parameters; the server will extract them from our public key
+		        kpg.initialize(512);
+		        var clientKp = kpg.generateKeyPair();
+		        var clientPubEnc = clientKp.getPublic().getEncoded();
+		        
+		        if(LOG.isDebugEnabled()) {
+		        	LOG.debug("Client public key: {}", Base64.getEncoder().encodeToString(clientPubEnc));
+		        }
+		        
+		        var dhParams = ((DHPublicKey) clientKp.getPublic()).getParams();
 
-//				LOG.info("Auth Message: {}", ScramFunctions.authMessage(clientFirstMsg, srvRes.result(), null));
+		        if(LOG.isDebugEnabled()) {
+		        	LOG.info("DH Params: G={}, L={}, P={}", dhParams.getG(), dhParams.getL(), dhParams.getP());
+		        }
+		
+		        // 2. Send opening message and receive server public key, session ID and server version
+				var serverResult= client().send(this, 
+						Extensions.SECMNT, Message.of(0, Extensions.SECMNT, 
+								new Extensions.SecureMount(TNFS.PROTOCOL_VERSION, keySize, blockSize, clientPubEnc)));
+				SecureMountResult serverReply = serverResult.result();
+				sessionId = serverResult.message().connectionId();
+				serverVersion = serverReply.version();
 				
-				LOG.info("Sending Client Final: {}", clientFinalMsg);
-				ServerFinal finRes = client.sendMessage(Extensions.CLNTFINL, Message.of(sessionId, Extensions.CLNTFINL, new Extensions.ClientFinal(clientFinalMsg.toString())));
+				var serverPubEnc = serverReply.key();
 
-				LOG.info("Received Server Final: {}", finRes.serverFinalMessage());
-				var serverFinal = scramClient.serverFinalMessage(finRes.serverFinalMessage());
+		        if(LOG.isDebugEnabled()) {
+		        	LOG.debug("Server public key: {}", Base64.getEncoder().encodeToString(serverPubEnc));
+		        }
+				
+		        // 3. Rebuild server public key
+		        var kf = KeyFactory.getInstance("DH");
+		        var x509KeySpec = new X509EncodedKeySpec(serverPubEnc);
+		        var serverPubKey = kf.generatePublic(x509KeySpec);
+		        
+		        // 4. Perform key agreement
+		        var ka = KeyAgreement.getInstance("DH");
+		        ka.init(clientKp.getPrivate());
+		        ka.doPhase(serverPubKey, true);
+		        var sharedSecret = ka.generateSecret();
+
+		        if(LOG.isTraceEnabled()) {
+		        	LOG.trace("Shared secret: {}", Base64.getEncoder().encodeToString(sharedSecret));
+		        }
+		        
+		        // 5. Derive symmetric key of desired size
+		        var derivedKey = Crypto.deriveKey(sharedSecret, keySize);
+
+		        if(LOG.isTraceEnabled()) {
+		        	LOG.trace("Derived key: {}", Base64.getEncoder().encodeToString(derivedKey));
+		        }
+				setupEncryption(derivedKey, blockSize);
+				
+				// 6. Send original mount command but with a sessionId
+				client().sendMessage(this, 
+						Command.MOUNT, Message.of(sessionId, Command.MOUNT, 
+								new Command.Mount(mountPath, username, password)));
 			}
-			catch(ScramParseException | ScramServerErrorException | ScramInvalidServerSignatureException spe) {
-				throw new IOException("SCRAM error.", spe);
+			catch(NoSuchAlgorithmException | InvalidKeySpecException | InvalidKeyException nsae) {
+				throw new IOException("Failed to start encryption.", nsae);
 			}
-			
-			
-//			if(res.result().isError()) {
-//				throw new TNFSException(res.result(), MessageFormat.format("Failed to mount {0}.", bldr.path));
-//			}
-//			sessionId = rep.connectionId();
+		}
+		
+		public int blockSize() {
+			return blockSize;
+		}
+		
+		public int keySize() {
+			return keySize;
 		}
 
 		@Override
@@ -162,6 +215,68 @@ public class SecureMount extends AbstractTNFSClientExtension {
 		@Override
 		public Version serverVersion() {
 			return serverVersion;
+		}
+		
+		private void setupEncryption(byte[] key, int blockSz) {
+			/* Decryption */
+	        
+			var decEngine = new SpeckEngine(blockSz);
+	        decEngine.init(false, key);
+			inProcessors().add((ctx, bufin) -> {
+
+				if(LOG.isTraceEnabled()) {
+					LOG.trace("Decrypting {} bytes", bufin.remaining());
+					LOG.trace("  " + Debug.dump(bufin));
+				}
+				
+				var sz = bufin.remaining() - 2;
+				var thisblkSz = sz;
+				if(thisblkSz < blockSz / 8) {
+
+					if(LOG.isTraceEnabled()) {
+						LOG.trace("Short block of {}, increasing to {}", thisblkSz, blockSz / 8);
+					}
+					
+					thisblkSz = blockSz / 8;
+					
+					bufin.limit(2 + thisblkSz);
+				}
+				
+				var work  = new byte[thisblkSz];
+				bufin.get(2, work, 0, sz);
+				decEngine.processBlock(work, 0, work, 0);
+				bufin.put(2, work, 0, thisblkSz);
+			});
+			
+			/* Encryption */
+	        var encEngine = new SpeckEngine(blockSz);
+	        encEngine.init(true, key);
+			outProcessors().add((ctx, bufin) -> {	
+
+				if(LOG.isTraceEnabled()) {
+					LOG.trace("Encrypting {} bytes", bufin.remaining());
+					LOG.trace("  " + Debug.dump(bufin));
+				}
+				
+				var sz = bufin.remaining() - 2;
+				var thisblkSz = sz;
+				if(thisblkSz < blockSz / 8) {
+					
+					if(LOG.isTraceEnabled()) {
+						LOG.trace("Short block of {}, increasing to {}", thisblkSz, blockSz / 8);
+					}
+					
+					thisblkSz = blockSz / 8;
+					
+					bufin.limit(2 + thisblkSz);
+				}
+				
+				var work  = new byte[thisblkSz];
+				bufin.get(2, work, 0, sz);
+				encEngine.processBlock(work, 0, work, 0);
+				
+				bufin.put(2, work, 0, thisblkSz);
+			});
 		}
 		
 	}

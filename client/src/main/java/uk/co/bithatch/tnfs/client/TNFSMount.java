@@ -28,6 +28,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -209,4 +210,8 @@ public interface TNFSMount extends TNFSFileAccess {
 	Version serverVersion();
 
 	int sessionId();
+	
+	List<TNFSClientPacketProcessor> inProcessors();
+	
+	List<TNFSClientPacketProcessor> outProcessors();
 }

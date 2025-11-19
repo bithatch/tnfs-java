@@ -340,7 +340,6 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 			try(var udpSrvr = new TNFSServer.Builder().
 					withFileSystemFactory(tnfsMounts).
 					withPort(port).
-					withServerKey(mountConfiguration.authentication()::serverKey).
 					withHost(actualAddress).
 					build();
 					
@@ -348,7 +347,6 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 						withFileSystemFactory(tnfsMounts).
 						withPort(port).
 						withHost(actualAddress).
-						withServerKey(mountConfiguration.authentication()::serverKey).
 						withTcp().
 						build()
 			) {
@@ -393,7 +391,6 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 							withFileSystemFactory(tnfsMounts).
 							withPort(port).
 							withHost(actualAddress).
-							withServerKey(mountConfiguration.authentication()::serverKey).
 							withTcp().
 							build()
 				) {
@@ -412,7 +409,6 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 				try(var udpSrvr = new TNFSServer.Builder().
 							withFileSystemFactory(tnfsMounts).
 							withPort(port).
-							withServerKey(mountConfiguration.authentication()::serverKey).
 							withHost(actualAddress).
 							build()
 				) {

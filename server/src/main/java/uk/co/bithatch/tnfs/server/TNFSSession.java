@@ -23,6 +23,8 @@ package uk.co.bithatch.tnfs.server;
 import java.io.Closeable;
 import java.io.IOException;
 import java.security.Principal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -39,7 +41,6 @@ public final class TNFSSession implements Closeable {
 
 	private static final int MAX_HANDLES = 256;
 
-	private final TNFSFileAccess mount;
 	private final int id;
 	
 	final Map<Integer, AbstractDirHandle<?>> dirHandles = new ConcurrentHashMap<>();
@@ -51,27 +52,31 @@ public final class TNFSSession implements Closeable {
 	private final TNFSServer<?> server;
 	private final Version version;
 
-	private final Principal principal;
 	private final Map<String, Object> state = new ConcurrentHashMap<>();
+	private final List<TNFSServerPacketProcessor> inProcessors = new ArrayList<>();
+	private final List<TNFSServerPacketProcessor> outProcessors = new ArrayList<>();
 	
-	private boolean authenticated;
 	private int size;
+	private TNFSFileAccess mount;
+	private Principal principal;
 	
-	TNFSSession(TNFSUserMount userMount, int id, TNFSServer<?> server, Version version) {
-		this.mount = userMount.fileSystem();
-		this.principal = userMount.user();
+	TNFSSession(int id, TNFSServer<?> server, Version version) {
 		this.id = id;
 		this.server = server;
 		this.version = version;
 		this.size = server.protocol() == Protocol.TCP ? TNFS.DEFAULT_TCP_MESSAGE_SIZE : TNFS.DEFAULT_UDP_MESSAGE_SIZE;
 	}
 	
-	public boolean authenticated() {
-		return authenticated;
+	public List<TNFSServerPacketProcessor> inProcessors() {
+		return inProcessors;
 	}
 	
-	public void authenticate() {
-		this.authenticated = true;
+	public List<TNFSServerPacketProcessor> outProcessors() {
+		return outProcessors;
+	}
+	
+	public boolean authenticated() {
+		return principal != null;
 	}
 	
 	public Map<String, Object> state() {
@@ -93,8 +98,20 @@ public final class TNFSSession implements Closeable {
 	public int id() {
 		return id;
 	}
+
+	public void mount(TNFSUserMount userMount) {
+		this.mount = userMount.fileSystem();
+		this.principal = userMount.user();
+	}
+
+	public boolean mounted() {
+		return mount != null;
+	}
 	
 	public TNFSFileAccess mount() {
+		if(mount == null) {
+			throw new IllegalStateException("Session has no mount.");
+		}
 		return mount;
 	}
 	

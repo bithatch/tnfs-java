@@ -42,7 +42,7 @@ public class MsgSize extends TNFSTPCommand implements Callable<Integer> {
 
 	@Override
 	protected Integer onCall() throws Exception {
-		var container = getContainer();
+		var container = getContainer(); 
 		System.out.format("%d%n", container.getMount().extension(PktSz.class).packetSize(size).size());
 		return 0;
 	}

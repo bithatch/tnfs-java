@@ -29,8 +29,10 @@ import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -68,12 +70,12 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 
 	public static final class ReadDirIterator implements Iterator<String> {
 		
-		public static final Stream<String> stream(TNFSClient client, int sessionId, HandleResult dir, Optional<String> path) {
+		public static final Stream<String> stream(TNFSClient client, TNFSMount mount, int sessionId, HandleResult dir, Optional<String> path) {
 			return StreamSupport
-	        .stream(Spliterators.spliteratorUnknownSize(new ReadDirIterator(client, sessionId, dir, path), Spliterator.ORDERED), false)
+	        .stream(Spliterators.spliteratorUnknownSize(new ReadDirIterator(client, mount, sessionId, dir, path), Spliterator.ORDERED), false)
 	        .onClose(() -> {
 	            try {
-	        		client.send(Command.CLOSEDIR, Message.of(sessionId, Command.CLOSEDIR, new Command.CloseHandle(dir.handle())), path);
+	        		client.send(mount, Command.CLOSEDIR, Message.of(sessionId, Command.CLOSEDIR, new Command.CloseHandle(dir.handle())), path);
 	            } catch (IOException e) {
 	                throw new UncheckedIOException(e);
 	            }
@@ -85,9 +87,11 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 		String next;
 		private final TNFSClient client;
 		private final int sessionId;
+		private final TNFSMount mount;
 
-		private ReadDirIterator(TNFSClient client, int sessionId, HandleResult dir, Optional<String> path) {
+		private ReadDirIterator(TNFSClient client, TNFSMount mount, int sessionId, HandleResult dir, Optional<String> path) {
 			this.dir = dir;
+			this.mount = mount;
 			this.path = path;
 			this.client = client;
 			this.sessionId = sessionId;
@@ -97,8 +101,8 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 			if(next == null) {
 				try {
 					next = client.send(
-							Command.READDIR, 
-							Message.of(sessionId, Command.READDIR, new Command.ReadDir(dir.handle())), path).result().entry();
+							mount, 
+							Command.READDIR, Message.of(sessionId, Command.READDIR, new Command.ReadDir(dir.handle())), path).result().entry();
 				}
 				catch(EOFException eof) {
 					//
@@ -203,6 +207,8 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 	protected final String mountPath;
 	protected Optional<String> username;
 	protected Optional<char[]> password;
+	private final List<TNFSClientPacketProcessor> inProcessors = new ArrayList<>();
+	private final List<TNFSClientPacketProcessor> outProcessors = new ArrayList<>();
 	
 	private final Map<Class<? extends TNFSMountExtension>, TNFSMountExtension> extensions;
 
@@ -229,7 +235,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 		if(LOG.isDebugEnabled()) {
 			LOG.debug("Requesting free at `{}`", mountPath);
 		}
-		return client.sendMessage(Command.FREE, Message.of(sessionId(), Command.FREE, new Command.Free()), mountPath()).free();
+		return client.sendMessage(this, Command.FREE, Message.of(sessionId(), Command.FREE, new Command.Free()), mountPath()).free();
 	}
 
 
@@ -239,7 +245,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 			LOG.debug("Requesting size at `{}`", mountPath);
 		}
 		
-		return client.sendMessage(Command.SIZE, Message.of(sessionId(), Command.SIZE, new Command.Size()), mountPath()).size();
+		return client.sendMessage(this, Command.SIZE, Message.of(sessionId(), Command.SIZE, new Command.Size()), mountPath()).size();
 	}
 
 	@Override
@@ -247,8 +253,9 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 		LOG.debug("Listing `{}` at `{}`", path,  mountPath);
 		return ReadDirIterator.stream(
 			client,
+			this,
 			sessionId(),
-			client.sendMessage(Command.OPENDIR, Message.of(sessionId(), Command.OPENDIR, new Command.OpenDir(path)), path), 
+			client.sendMessage(this, Command.OPENDIR, Message.of(sessionId(), Command.OPENDIR, new Command.OpenDir(path)), path), 
 			Optional.of(path)
 		);
 	}
@@ -361,7 +368,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 	
 
 	private TNFSDirectory directoryExtended(int maxResults, String path, String wildcard, DirOptionFlag[] dirOptions, DirSortFlag[] sortOptions) throws IOException {	
-		var dir = client.sendMessage(Command.OPENDIRX, Message.of(sessionId(), Command.OPENDIRX, new Command.OpenDirX(dirOptions, sortOptions, maxResults, wildcard, path)), path);
+		var dir = client.sendMessage(this, Command.OPENDIRX, Message.of(sessionId(), Command.OPENDIRX, new Command.OpenDirX(dirOptions, sortOptions, maxResults, wildcard, path)), path);
 		var it = new Iterator<Entry>() {
 
 			Iterator<Entry> next;
@@ -377,7 +384,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 
 				if(next == null) {
 					try {
-						var readDirXReply = client.sendMessage(Command.READDIRX, Message.of(sessionId(), Command.READDIRX, new Command.ReadDirX(dir.handle(), maxEntries)), path);
+						var readDirXReply = client.sendMessage(AbstractTNFSMount.this, Command.READDIRX, Message.of(sessionId(), Command.READDIRX, new Command.ReadDirX(dir.handle(), maxEntries)), path);
 						next = Arrays.asList(readDirXReply.entries()).iterator();
 					}
 					catch(EOFException eof) {
@@ -418,7 +425,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 	        		if(LOG.isDebugEnabled()) {
 	        			LOG.debug("Closing directory stream `{}` at `{}`", path, mountPath);
 	        		}
-	        		client.sendMessage(Command.CLOSEDIR, Message.of(sessionId(), Command.CLOSEDIR, new Command.CloseHandle(dir.handle())), path);
+	        		client.sendMessage(this, Command.CLOSEDIR, Message.of(sessionId(), Command.CLOSEDIR, new Command.CloseHandle(dir.handle())), path);
 	            } catch (IOException e) {
 	                throw new UncheckedIOException(e);
 	            }
@@ -438,7 +445,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 
 			@Override
 			public long tell() throws IOException {
-				return client.sendMessage(Command.TELLDIR, Message.of(sessionId(), Command.TELLDIR, new Command.TellDir(dir.handle()))).position();
+				return client.sendMessage(AbstractTNFSMount.this, Command.TELLDIR, Message.of(sessionId(), Command.TELLDIR, new Command.TellDir(dir.handle()))).position();
 			}
 
 			@Override
@@ -448,7 +455,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
         			LOG.debug("Seeking directory stream `{}` at `{}` to `{}`", path, mountPath, position);
         		}
         		
-				client.sendMessage(Command.SEEKDIR, Message.of(sessionId(), Command.SEEKDIR, new Command.SeekDir(dir.handle(), position)));
+				client.sendMessage(AbstractTNFSMount.this, Command.SEEKDIR, Message.of(sessionId(), Command.SEEKDIR, new Command.SeekDir(dir.handle(), position)));
 			}
 
 		};
@@ -462,7 +469,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 					String.join(", ", Arrays.asList(flags).stream().map(d -> d.name()).toList()));
 		}
 		
-		var fh = client.sendMessage(Command.OPEN, Message.of(sessionId(), Command.OPEN, new Command.Open(flags, mode, path)), path);
+		var fh = client.sendMessage(this, Command.OPEN, Message.of(sessionId(), Command.OPEN, new Command.Open(flags, mode, path)), path);
 		return new SeekableByteChannel() {
 
 			boolean open = true;
@@ -475,7 +482,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 					if(dst.remaining() < max) {
 						max = dst.remaining();
 					}
-					var rd = client.sendMessage(Command.READ, Message.of(sessionId(), Command.READ, new Command.Read(fh.handle(), max)), path);
+					var rd = client.sendMessage(AbstractTNFSMount.this, Command.READ, Message.of(sessionId(), Command.READ, new Command.Read(fh.handle(), max)), path);
 					dst.put(rd.data());
 					var r = rd.read();
 					position += r;
@@ -497,7 +504,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 	        		if(LOG.isDebugEnabled()) {
 	        			LOG.debug("Closing close `{}` at `{}`", path, mountPath);
 	        		}
-					client.sendMessage(Command.CLOSE, Message.of(sessionId(), Command.CLOSE, new Command.CloseHandle(fh.handle())), path);
+					client.sendMessage(AbstractTNFSMount.this, Command.CLOSE, Message.of(sessionId(), Command.CLOSE, new Command.CloseHandle(fh.handle())), path);
 					open = false;
 				}
 			}
@@ -512,9 +519,9 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 				}
 				
 				
-				var w = client.sendMessage(Command.WRITE,
-						Message.of(sessionId(), Command.WRITE, 
-								new Command.Write(fh.handle(), src)), path).written();
+				var w = client.sendMessage(AbstractTNFSMount.this,
+						Command.WRITE, Message.of(sessionId(), Command.WRITE, 
+										new Command.Write(fh.handle(), src)), path).written();
 				position += w;
 				if(waslimit > -1) {
 					src.limit(waslimit);
@@ -532,7 +539,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
         		if(LOG.isDebugEnabled()) {
         			LOG.debug("Seek `{}` at `{}` to `{}`", path, mountPath, newPosition);
         		}
-				client.sendMessage(Command.LSEEK, Message.of(sessionId(), Command.LSEEK, new Command.LSeek(fh.handle(), SeekType.SEEK_SET, newPosition)), path);
+				client.sendMessage(AbstractTNFSMount.this, Command.LSEEK, Message.of(sessionId(), Command.LSEEK, new Command.LSeek(fh.handle(), SeekType.SEEK_SET, newPosition)), path);
 				position = newPosition;
 				return this;
 			}
@@ -560,7 +567,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 			LOG.debug("Unlink `{}` at `{}` to `{}`", path, mountPath);
 		}
 		
-		client.sendMessage(Command.UNLINK, Message.of(sessionId(), Command.UNLINK, new Command.Unlink(path)), path);
+		client.sendMessage(this, Command.UNLINK, Message.of(sessionId(), Command.UNLINK, new Command.Unlink(path)), path);
 	}
 
 	@Override
@@ -570,7 +577,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 			LOG.debug("Rename `{}` to `{}` at `{}` to `{}`", path, targetPath, mountPath);
 		}
 		
-		client.sendMessage(Command.RENAME, Message.of(sessionId(), Command.RENAME, new Command.Rename(path, targetPath)), path);
+		client.sendMessage(this, Command.RENAME, Message.of(sessionId(), Command.RENAME, new Command.Rename(path, targetPath)), path);
 	}
 
 	@Override
@@ -580,7 +587,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 			LOG.debug("Mkdir `{}` at `{}`", path, mountPath);
 		}
 		
-		client.sendMessage(Command.MKDIR, Message.of(sessionId(), Command.MKDIR, new Command.MkDir(path)), path);
+		client.sendMessage(this, Command.MKDIR, Message.of(sessionId(), Command.MKDIR, new Command.MkDir(path)), path);
 	}
 
 	@Override
@@ -588,7 +595,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 		if(LOG.isDebugEnabled()) {
 			LOG.debug("Stat `{}` at `{}`", path, mountPath);
 		}
-		return client.sendMessage(Command.STAT, Message.of(sessionId(), Command.STAT, new Command.Stat(path)), path);
+		return client.sendMessage(this, Command.STAT, Message.of(sessionId(), Command.STAT, new Command.Stat(path)), path);
 	}
 
 	@Override
@@ -598,7 +605,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 					String.join(", ", Arrays.asList(modes).stream().map(d -> d.name()).toList()));
 		}
 		
-		client.sendMessage(Command.CHMOD, Message.of(sessionId(), Command.CHMOD, new Command.Chmod(modes, path)), path);
+		client.sendMessage(this, Command.CHMOD, Message.of(sessionId(), Command.CHMOD, new Command.Chmod(modes, path)), path);
 	}
 
 	@Override
@@ -608,7 +615,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 			LOG.debug("Rkdir `{}` at `{}`", path, mountPath);
 		}
 		
-		client.sendMessage(Command.RMDIR, Message.of(sessionId(), Command.RMDIR, new Command.RmDir(path)), path);
+		client.sendMessage(this, Command.RMDIR, Message.of(sessionId(), Command.RMDIR, new Command.RmDir(path)), path);
 	}
 
 	@Override
@@ -624,7 +631,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 		}
 		
 		try {
-			client.sendMessage(Command.UMOUNT, Message.of(sessionId(), Command.UMOUNT, new Command.HeaderOnly()));
+			client.sendMessage(this, Command.UMOUNT, Message.of(sessionId(), Command.UMOUNT, new Command.HeaderOnly()));
 		} finally {
 			onClose();	
 		}
@@ -718,6 +725,16 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 	@Override
 	public final TNFSClient client() {
 		return client;
+	}
+
+	@Override
+	public List<TNFSClientPacketProcessor> inProcessors() {
+		return inProcessors;
+	}
+
+	@Override
+	public List<TNFSClientPacketProcessor> outProcessors() {
+		return outProcessors;
 	}
 
 	private BasicFileAttributes fileToBasicAttributes(TNFSFile file) {

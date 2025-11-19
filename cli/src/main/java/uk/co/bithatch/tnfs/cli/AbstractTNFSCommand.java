@@ -24,6 +24,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
+import java.nio.file.AccessDeniedException;
 import java.text.MessageFormat;
 import java.time.Duration;
 import java.util.Optional;
@@ -39,9 +40,7 @@ import uk.co.bithatch.tnfs.client.TNFSMount;
 import uk.co.bithatch.tnfs.client.extensions.SecureMount;
 import uk.co.bithatch.tnfs.lib.Message;
 import uk.co.bithatch.tnfs.lib.Protocol;
-import uk.co.bithatch.tnfs.lib.ResultCode;
 import uk.co.bithatch.tnfs.lib.TNFS;
-import uk.co.bithatch.tnfs.lib.TNFSException;
 import uk.co.bithatch.tnfs.lib.extensions.Extensions;
 
 /**
@@ -220,12 +219,9 @@ public abstract class AbstractTNFSCommand {
 					return setupMount(client, mntBldr.build());
 				}
 			}
-			catch(TNFSException tnfse) {
-				if(tnfse.code() != ResultCode.PERM) 
-					throw tnfse;
-				else
-					username = "";
-			}		
+			catch(AccessDeniedException ade) { 
+				username = "";
+			}
 		}
 		throw new IllegalStateException("Too many authentication attempts.");
 	}
@@ -233,13 +229,15 @@ public abstract class AbstractTNFSCommand {
 	protected TNFSMount setupMount(TNFSClient client, TNFSMount mnt) throws IOException {
 		if(size.isPresent()) {
 			try {
-				var res = client.sendMessage(Extensions.PKTSZ, Message.of(mnt.sessionId(), Extensions.PKTSZ, new Extensions.PktSize(size.get())));
+				var res = client.sendMessage(mnt, Extensions.PKTSZ, Message.of(mnt.sessionId(), Extensions.PKTSZ, new Extensions.PktSize(size.get())));
 				client.size(res.size());
 			}
 			catch(Exception e) {
 				error("Failed to set packet size.", e);
 			}
 		}
+		
+		
 		return mnt;
 	}
 	

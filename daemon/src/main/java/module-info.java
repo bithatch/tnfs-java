@@ -27,5 +27,4 @@ open module uk.co.bithatch.tnfs.daemon {
 	requires org.slf4j;
 	requires com.sshtools.porter;
 	requires com.sshtools.jini.config;
-	requires com.ongres.scram.common;
 }

@@ -31,7 +31,7 @@ import uk.co.bithatch.tnfs.lib.extensions.Extensions;
 public class Mounts extends AbstractTNFSClientExtension {
 
 	public Stream<String> mounts() throws IOException {
-		return Arrays.asList(client.sendMessage(Extensions.MOUNTS,
-				Message.of(0, Extensions.MOUNTS, new Extensions.Mounts())).mounts()).stream();
+		return Arrays.asList(client.sendMessage(null,
+				Extensions.MOUNTS, Message.of(0, Extensions.MOUNTS, new Extensions.Mounts())).mounts()).stream();
 	}
 }

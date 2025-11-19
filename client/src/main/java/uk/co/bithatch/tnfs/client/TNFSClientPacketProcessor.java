@@ -18,21 +18,18 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package uk.co.bithatch.tnfs.server.extensions;
+package uk.co.bithatch.tnfs.client;
 
-import java.security.Principal;
+import java.nio.ByteBuffer;
+import java.util.function.BiConsumer;
 
-import com.ongres.scram.common.ScramMechanism;
+import uk.co.bithatch.tnfs.client.TNFSClientPacketProcessor.PacketContext;
 
-public interface ScramPrincipal extends Principal {
+public interface TNFSClientPacketProcessor extends BiConsumer<PacketContext, ByteBuffer> {
+	
+	public interface PacketContext {
 
-	String getSalt();
-	
-	String getStoredKey();
-	
-	String getServerKey();
-	
-	int getIterationCount();
-	
-	ScramMechanism getMechanism();
+		TNFSMount session();
+
+	}
 }

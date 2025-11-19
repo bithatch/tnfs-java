@@ -60,9 +60,9 @@ public final class DefaultTNFSMount extends AbstractTNFSMount {
 	private DefaultTNFSMount(Builder bldr) throws IOException {
 		super(bldr); 
 		try {
-			var rep = client.send(Command.MOUNT, Message.of(Command.MOUNT, new Command.Mount(bldr.path, username, password)));
+			var rep = client.send(null, Command.MOUNT, Message.of(Command.MOUNT, new Command.Mount(bldr.path, username, password)));
 			MountResult res = rep.result();
-			sessionId = rep.mesage().connectionId();
+			sessionId = rep.message().connectionId();
 			serverVersion = res.version();
 		}
 		catch(SocketTimeoutException ste) {

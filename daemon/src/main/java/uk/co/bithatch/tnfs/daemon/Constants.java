@@ -39,7 +39,6 @@ public class Constants {
 	public static final String PATH_KEY = "path";
 	public static final String LOCAL_KEY = "local";
 	public static final String AUTHENTICATION_KEY = "authentication";
-	public static final String KEY_PATH_KEY = "key-path";
 	public static final String READ_ONLY_KEY = "read-only";
 
 }

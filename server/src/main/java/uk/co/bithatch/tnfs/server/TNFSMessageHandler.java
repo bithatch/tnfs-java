@@ -42,7 +42,7 @@ public interface TNFSMessageHandler {
 
 		int nextDirHandle();
 
-		TNFSSession newSession(TNFSUserMount userMount, Version version);
+		TNFSSession newSession(Version version);
 	}
 	
 	Command.Result handle(Message message, HandlerContext context);

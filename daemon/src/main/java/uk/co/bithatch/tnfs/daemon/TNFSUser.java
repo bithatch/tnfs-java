@@ -27,8 +27,6 @@ import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
-import com.ongres.scram.common.ScramMechanism;
-
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
@@ -37,7 +35,6 @@ import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Spec;
 import uk.co.bithatch.tnfs.daemon.ExceptionHandler.ExceptionHandlerHost;
 import uk.co.bithatch.tnfs.lib.AppLogLevel;
-import uk.co.bithatch.tnfs.lib.extensions.Crypto;
 
 @Command(name = "tnfs-user", description = "Manage TNFS users.", mixinStandardHelpOptions = true,
 	subcommands = { TNFSUser.AddUser.class, TNFSUser.RemoveUser.class, TNFSUser.Password.class, TNFSUser.List.class })
@@ -119,9 +116,6 @@ public class TNFSUser implements Callable<Integer>, ExceptionHandlerHost {
 	@Command(name = "add", aliases = { "create", "new" }, description = "Add a new user.", mixinStandardHelpOptions = true)	
 	public final static class AddUser extends UserCommand {
 		
-		@Option(names = { "-m" ,"--mech", "--mechanism"}, description = "The scram mechansimm to use.")
-		private ScramMechanism mech = Crypto.DEFAULT_MECHANISM;
-		
 		@Parameters(arity = "1", description = "The username to use for the new user.")
 		private String username;
 		
@@ -136,7 +130,7 @@ public class TNFSUser implements Callable<Integer>, ExceptionHandlerHost {
 				}
 				var confirmPw = prompt(true, "Confirm Password: ");
 				if(pw.equals(confirmPw)) {
-					auth.add(username, mech, Crypto.DEFAULT_ITERATIONS, pw.toCharArray());
+					auth.add(username, pw.toCharArray());
 					return 0;
 				}
 			}
