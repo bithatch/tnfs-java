@@ -24,6 +24,6 @@ import java.security.Principal;
 
 import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
 
-public record TNFSUserMount(TNFSFileAccess fileSystem, Principal user) {
+public record TNFSUserMount(TNFSFileSystem fileSystem, Principal user) {
 
 }

@@ -61,6 +61,7 @@ import uk.co.bithatch.tnfs.lib.TNFSException;
 import uk.co.bithatch.tnfs.lib.Util;
 import uk.co.bithatch.tnfs.lib.Version;
 import uk.co.bithatch.tnfs.server.TNFSServerPacketProcessor.PacketContext;
+import uk.co.bithatch.tnfs.server.TNFSSession.Flag;
 
 
 public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Closeable {
@@ -499,13 +500,13 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 			}
 
 			@Override
-			public TNFSSession newSession(Version version) {
+			public TNFSSession newSession(Version version, Flag... flags) {
 				if(sessions().size() == server().maxSessions()) {
 					LOG.error("Too many mounts for connection {}.", address());
 					throw new TNFSException(ResultCode.USERS);
 				}
 				var mountSessionId = nextSessionId();
-				var session = new TNFSSession(mountSessionId, TNFSServer.this, version);
+				var session = new TNFSSession(mountSessionId, TNFSServer.this, version, flags);
 				sessions.put(mountSessionId, session);
 				newSession.set(mountSessionId);
 				sessionDecorator.ifPresent(sd -> sd.accept(session));
@@ -620,26 +621,36 @@ public abstract class TNFSServer<CHAN extends Channel> implements Runnable, Clos
 		inBuffer.position(inBuffer.position() - 2);
 		
 		var session = sessions.get((int)sessionId);
-		if(session != null) {
+		if(session == null) {
 			
-			var ctx = new PacketContext() {
-				@Override
-				public TNFSSession session() {
-					return session;
-				}
-			};
-			
-			for(var proc : session.inProcessors()) {
-				proc.accept(ctx, inBuffer);
+			if(LOG.isTraceEnabled()) {
+				LOG.trace("Read {} bytes from {}", inBuffer.remaining(), address());
+				LOG.trace("  " + Debug.dump(inBuffer));
 			}
-		}
-		
-		if(LOG.isTraceEnabled()) {
-			LOG.trace("Read {} bytes from {}", inBuffer.remaining(), address());
-			LOG.trace("  " + Debug.dump(inBuffer));
-		}
 
-		handle(session, inBuffer, Message.decode(inBuffer), channel, addr);
+			handle(session, inBuffer, Message.decode(inBuffer), channel, addr);
+		}
+		else {
+			TNFSSession.runAs(session, () -> {
+				var ctx = new PacketContext() {
+					@Override
+					public TNFSSession session() {
+						return session;
+					}
+				};
+				
+				for(var proc : session.inProcessors()) {
+					proc.accept(ctx, inBuffer);
+				}
+				
+				if(LOG.isTraceEnabled()) {
+					LOG.trace("Read {} bytes from {}", inBuffer.remaining(), address());
+					LOG.trace("  " + Debug.dump(inBuffer));
+				}
+
+				handle(session, inBuffer, Message.decode(inBuffer), channel, addr);
+			});
+		}
 	}
 
 	protected abstract void write(ByteBuffer outBuffer, SocketChannel tnfsPeer, SocketAddress addr) throws IOException;

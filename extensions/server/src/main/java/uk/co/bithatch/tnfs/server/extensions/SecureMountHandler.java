@@ -45,6 +45,7 @@ import uk.co.bithatch.tnfs.lib.extensions.Extensions.SecureMount;
 import uk.co.bithatch.tnfs.lib.extensions.Extensions.SecureMountResult;
 import uk.co.bithatch.tnfs.lib.extensions.SpeckEngine;
 import uk.co.bithatch.tnfs.server.TNFSMessageHandler;
+import uk.co.bithatch.tnfs.server.TNFSSession.Flag;
 
 public class SecureMountHandler implements TNFSMessageHandler {
 	private final static Logger LOG = LoggerFactory.getLogger(SecureMountHandler.class);
@@ -63,7 +64,7 @@ public class SecureMountHandler implements TNFSMessageHandler {
 		
 		var res = ioCall(() -> {
 			
-			var session = context.newSession(mountmsg.version());
+			var session = context.newSession(mountmsg.version(), Flag.ENCRYPTED);
 			
 			var clientKeyBits = mountmsg.derivedKeyBits();
 			if (clientKeyBits < MIN_KEY_BITS || clientKeyBits > MAX_KEY_BITS || clientKeyBits % 8 != 0) {

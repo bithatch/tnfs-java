@@ -58,7 +58,7 @@ import uk.co.bithatch.tnfs.lib.ResultCode;
 import uk.co.bithatch.tnfs.lib.TNFSDirectory;
 import uk.co.bithatch.tnfs.lib.Util;
 
-public class TNFSInMemoryFileSystem implements TNFSFileSystem {
+public class TNFSInMemoryFileSystem extends AbstractTNFSFileSystem {
 	private final static Logger LOG = LoggerFactory.getLogger(TNFSInMemoryFileSystem.class);
 
 	private static final int BUFFER_BLOCK_SIZE = 256;
@@ -90,11 +90,12 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 	private final long size;
 
 
-	public TNFSInMemoryFileSystem(String mountPath) {
-		this(mountPath, 20 * 1024 * 1024); // 20MiB
+	public TNFSInMemoryFileSystem(String mountPath, TNFSAccessCheck accessCheck) {
+		this(mountPath, 20 * 1024 * 1024, accessCheck); // 20MiB
 	}
 
-	public TNFSInMemoryFileSystem(String mountPath, long size) {
+	public TNFSInMemoryFileSystem(String mountPath, long size, TNFSAccessCheck accessCheck) {
+		super(accessCheck);
 		this.mountPath = mountPath;
 		this.size = size;
 		try {
@@ -115,13 +116,11 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 	}
 
 	@Override
-	public void rmdir(String path) throws IOException {
+	protected void onRmdir(String path) throws IOException {
 
 		if(LOG.isDebugEnabled()) {
 			LOG.debug("Remove directory {}", path);
 		}
-		
-		checkReadOnly();
 		var p = processPath(path, '/');
 		if(p.equals("/")) {
 			throw new AccessDeniedException(path);
@@ -147,18 +146,15 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 	}
 
 	@Override
-	public void chmod(String path, ModeFlag... modes) throws IOException {
-
+	protected void onChmod(String path, ModeFlag... modes) throws IOException {
 		if(LOG.isDebugEnabled()) {
 			LOG.debug("Chmod file or directory {} to {}", path, String.join(", ", Arrays.asList(modes).stream().map(ModeFlag::name).toList()));
 		}
-		
-		checkReadOnly();
 		stat(path);
 	}
 
 	@Override
-	public StatResult stat(String path) throws IOException {
+	protected StatResult onStat(String path) throws IOException {
 		if(path.equals("mydir/")) {
 			System.out.println("brk");
 		}
@@ -181,13 +177,12 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 	}
 
 	@Override
-	public void mkdir(String path) throws IOException {
+	protected void onMkdir(String path) throws IOException {
 
 		if(LOG.isDebugEnabled()) {
 			LOG.debug("Create directory {}", path);
 		}
 		
-		checkReadOnly();
 		var p = processPath(path, '/');
 		synchronized(fs) {
 			if(fs.containsKey(p)) {
@@ -198,13 +193,12 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 	}
 
 	@Override
-	public void unlink(String path) throws IOException {
+	protected void onUnlink(String path) throws IOException {
 		
 		if(LOG.isDebugEnabled()) {
 			LOG.debug("Remove file {}", path);
 		}
 		
-		checkReadOnly();
 		var p = processPath(path, '/');
 		synchronized(fs) {
 			var f = fs.get(p);
@@ -224,13 +218,11 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 	}
 
 	@Override
-	public SeekableByteChannel open(String path, ModeFlag[] mode, OpenFlag... flags) throws IOException {
-		var flgs = Arrays.asList(flags);
-		
+	protected SeekableByteChannel onOpen(String path, ModeFlag[] mode, List<OpenFlag> flgs) throws IOException {
 		if(LOG.isDebugEnabled()) {
 			LOG.debug("Open in memory file at {}. Modes {}. Flags {}.", path,
 					String.join(", ", Arrays.asList(mode).stream().map(ModeFlag::name).toList()),
-					String.join(", ", Arrays.asList(flags).stream().map(OpenFlag::name).toList())
+					String.join(", ", flgs.stream().map(OpenFlag::name).toList())
 					);
 		}
 		
@@ -430,7 +422,7 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 	}
 
 	@Override
-	public Stream<String> list(String path) throws IOException {
+	protected Stream<String> onList(String path) throws IOException {
 		var p = processPath(path, '/');
 		var stat = stat(path);
 		if(Arrays.asList(stat.mode()).contains(ModeFlag.IFDIR)) {
@@ -450,11 +442,10 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 			throw new NotDirectoryException(path);
 		}
 		
-		
 	}
 
 	@Override
-	public long free() throws IOException {
+	protected long onFree() throws IOException {
 		var total = 0l;
 		for(var v : fs.values()) {
 			total += v.output.limit();
@@ -463,25 +454,23 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 	}
 
 	@Override
-	public long size() throws IOException {
+	protected long onSize() throws IOException {
 		return size;
 	}
 
 	@Override
-	public TNFSDirectory directory(String path, String wildcard) throws IOException {
+	protected TNFSDirectory onDirectory(String path, String wildcard) throws IOException {
 		
 
 		return new InMemoryDirectory(wildcard, path);
 	}
 
 	@Override
-	public void rename(String path, String targetPath) throws IOException {
+	protected void onRename(String path, String targetPath) throws IOException {
 
 		if(LOG.isDebugEnabled()) {
 			LOG.debug("Rename {} to {}", path, targetPath);
 		}
-		
-		checkReadOnly();
 
 		var p = processPath(path, '/');
 		var tp = processPath(targetPath, '/');
@@ -540,22 +529,6 @@ public class TNFSInMemoryFileSystem implements TNFSFileSystem {
 		
 	}
 
-	@Override
-	public boolean readOnly() {
-		return readOnly;
-	}
-
-	public void readOnly(boolean readOnly) {
-		this.readOnly = readOnly;
-	}
-	
-	private void checkReadOnly() {
-		if(readOnly) {
-			throw new ReadOnlyFileSystemException();
-		}
-	}
-	
-	
 	private final class InMemoryDirectory implements TNFSDirectory {
 		private final String wildcard;
 		private final String path;

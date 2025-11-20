@@ -40,5 +40,5 @@ public interface TNFSAuthenticatorFactory extends Comparable<TNFSAuthenticatorFa
 		return p1.compareTo(o.priority()) * -1;
 	}
 
-	Optional<TNFSAuthenticator> createAuthenticator(String path, AuthenticationType... authTypes);
+	Optional<TNFSAuthenticator> createAuthenticator(String path);
 }

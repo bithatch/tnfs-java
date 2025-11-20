@@ -26,6 +26,7 @@ import java.nio.channels.Channels;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.ReadOnlyFileSystemException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -37,13 +38,18 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.sshtools.jini.INI.Section;
 import com.sshtools.jini.config.Monitor;
 
 import uk.co.bithatch.tnfs.lib.OpenFlag;
-import uk.co.bithatch.tnfs.server.AuthenticationType;
+import uk.co.bithatch.tnfs.server.TNFSAccessCheck;
+import uk.co.bithatch.tnfs.server.TNFSAccessCheck.Operation;
 import uk.co.bithatch.tnfs.server.TNFSAuthenticatorFactory;
+import uk.co.bithatch.tnfs.server.TNFSFileSystem;
 import uk.co.bithatch.tnfs.server.TNFSInMemoryFileSystem;
 import uk.co.bithatch.tnfs.server.TNFSMounts;
+import uk.co.bithatch.tnfs.server.TNFSSession;
+import uk.co.bithatch.tnfs.server.TNFSSession.Flag;
 
 public class MountConfiguration extends AbstractConfiguration {
 	private final static class LazyLog {
@@ -59,12 +65,14 @@ public class MountConfiguration extends AbstractConfiguration {
 	private boolean demo;
 	private final List<Listener> listeners = new ArrayList<>();
 	private final Authentication authConfig;
+	private final Section mountsConfig;
 
 	public MountConfiguration(Monitor monitor, Configuration configuration, Optional<Path> configurationDir, Optional<Path> userConfigDir) {
 		super(MountConfiguration.class, "mounts", Optional.of(monitor), configurationDir, userConfigDir);
 		
 		mounts = new TNFSMounts();
-		
+
+		mountsConfig = configuration.mounts();
 		authConfig = new Authentication(Optional.of(monitor), configurationDir, userConfigDir);
 		var disabledAuthenticators = Arrays.asList(authConfig.document().getAllElse(Constants.DISABLE_AUTHENTICATOR_KEY));
 		authFactories = Stream.concat(
@@ -107,42 +115,23 @@ public class MountConfiguration extends AbstractConfiguration {
 		document().allSectionsOr(Constants.MOUNT_KEY).ifPresentOrElse(mntsec-> {
 			Arrays.asList(mntsec).forEach(sec -> {
 				
-				var authTypes = sec.getAllEnumOr(AuthenticationType.class, Constants.AUTHENTICATION_KEY).orElse(new AuthenticationType[0]);
 				var path = sec.get(Constants.PATH_KEY);
 				var local = Paths.get(sec.get(Constants.LOCAL_KEY));
-				var rdOnly = sec.getBoolean(Constants.READ_ONLY_KEY);
 				
 				try {
-					if(authTypes.length == 0) {
-						
-						if(rdOnly)
-							LazyLog.LOG.info("Anonymous mounting {} to {} as read only", local, path);
-						else
-							LazyLog.LOG.info("Anonymous mounting {} to {}", local, path);
-						
-						mounts.mount(path, local, rdOnly);
-					}
-					else {
-						
-						String authTypeListStr = String.join(", ", Arrays.asList(authTypes).stream().map(AuthenticationType::name).toList());
-						if(rdOnly)
-							LazyLog.LOG.info("Mounting {} to {} (using {} for auth) as read only", local, path, authTypeListStr);
-						else
-							LazyLog.LOG.info("Mounting {} to {} (using {} for auth)", local, path, authTypeListStr);
-						
-						
-						for(var authFactory : authFactories) {
-							var res = authFactory.createAuthenticator(path, authTypes);
-							if(res.isPresent()) {
-								LazyLog.LOG.info("Using {} for authenticator", authFactory.name());
-								mounts.mount(path, local, res.get(), rdOnly);
-								return;
-							}
+					LazyLog.LOG.info("Mounting {} to {}", local, path);
+					
+					 
+					for(var authFactory : authFactories) {
+						var res = authFactory.createAuthenticator(path);
+						if(res.isPresent()) {
+							LazyLog.LOG.info("Using {} for authenticator", authFactory.name());
+							mounts.mount(path, local, res.get(), (mnt, fp, ops) -> checkAccess(sec, mnt, fp, ops));
+							return;
 						}
-						
-						throw new AccessDeniedException("No authenticators were will to deal with the auth types " + authTypeListStr);
-						
 					}
+					
+					throw new AccessDeniedException("No authenticators");
 				}
 				catch(IOException ioe) {
 					throw new UncheckedIOException(ioe);
@@ -151,7 +140,7 @@ public class MountConfiguration extends AbstractConfiguration {
 		}, () -> {
 			LazyLog.LOG.info("Mounting / to default demonstration in-memory file system. Add your own mount to override this behaviour.");
 			demo = true;
-			var memFs = new TNFSInMemoryFileSystem("/");
+			var memFs = new TNFSInMemoryFileSystem("/", TNFSAccessCheck.READ_WRITE);
 			mounts.mount("/", memFs);
 			try(var in = getClass().getResourceAsStream("readme.txt")) {
 				try(var out = Channels.newOutputStream(memFs.open("/readme.txt", OpenFlag.WRITE, OpenFlag.CREATE))) {
@@ -162,6 +151,102 @@ public class MountConfiguration extends AbstractConfiguration {
 				throw new UncheckedIOException(ioe);
 			}
 		});
+	}
+	
+	private void checkAccess(Section mountConfig, TNFSFileSystem fs, String path, Operation... ops) throws ReadOnlyFileSystemException, AccessDeniedException {
+		var session = TNFSSession.get();
+		var user = session.user();
+		var authenticated = session.authenticated();
+		var opList = Arrays.asList(ops);
+		var guest = session.guest();
+		var authenticatedUser = authenticated && !guest;
+		
+		/* Get  configuration for the mount */
+		var mountAllowRead = mountConfig.getAllElse(Constants.ALLOW_READ_KEY);
+		var mountAllowWrite= mountConfig.getAllElse(Constants.ALLOW_WRITE_KEY);
+		var mountDenyRead = mountConfig.getAllElse(Constants.DENY_READ_KEY);
+		var mountDenyWrite= mountConfig.getAllElse(Constants.DENY_WRITE_KEY);
+
+		/* Get global configuration */
+		var globalAllowRead = mountsConfig.getAllElse(Constants.ALLOW_READ_KEY);
+		var globalAllowWrite= mountsConfig.getAllElse(Constants.ALLOW_WRITE_KEY);
+		var globalDenyRead = mountsConfig.getAllElse(Constants.DENY_READ_KEY);
+		var globalDenyWrite= mountsConfig.getAllElse(Constants.DENY_WRITE_KEY);
+
+		/* Resolve the actual lists we will use */
+		var allowRead = Arrays.asList(mountAllowRead.length == 0 ? globalAllowRead : mountAllowRead);
+		var allowWrite = Arrays.asList(mountAllowWrite.length == 0 ? globalAllowWrite : mountAllowWrite);
+		var denyRead = Stream.concat(Arrays.asList(globalDenyRead).stream(), Arrays.asList(mountDenyRead).stream()).toList();
+		var denyWrite = Stream.concat(Arrays.asList(globalDenyWrite).stream(), Arrays.asList(mountDenyWrite).stream()).toList();
+				
+		/* Evaluate each required operation. If any fails, access is denied */
+		for(var op : ops) {
+			switch(op) {
+			case READ:
+				if(!allowRead.isEmpty()) {
+					if(authenticatedUser && allowRead.contains(user.getName())) {
+						LazyLog.LOG.debug("Potentially allow READ access to {} because {} was explicitly allowed", path, user.getName());
+					}
+					else if(authenticatedUser && allowRead.contains("?")) {
+						LazyLog.LOG.debug("Potentially allow READ access to {} authenticated users are allowed (`?`)", path);
+					}
+					else if(authenticatedUser && session.flags().contains(Flag.ENCRYPTED) && allowRead.contains("!")) {
+						LazyLog.LOG.debug("Potentially allow READ access to {} authenticated+encrypted users are allowed (`!`)", path);
+					}
+					else if(allowRead.contains("*")) {
+						LazyLog.LOG.debug("Potentially allow READ access to {} all users are allowed (`*`)", path);
+					}
+					else {
+						LazyLog.LOG.debug("Denied READ access to {} because {} matched no allow rules", path, user.getName());
+						throw new AccessDeniedException(path);
+					}
+				}
+				
+				if(authenticatedUser && denyRead.contains(user.getName())) {
+					LazyLog.LOG.debug("Denied READ access to {} because {} was explicitly denied", path, user.getName());
+					throw new AccessDeniedException(path);
+				}
+				break;
+			case WRITE:
+
+				if(allowWrite.isEmpty() || allowWrite.contains("@")) {
+					LazyLog.LOG.debug("Denied WRITE access to {} by {} there are no users allowed to write", path, user.getName());
+					throw new AccessDeniedException(path);
+				}
+				else {
+					if(authenticatedUser && allowWrite.contains(user.getName())) {
+						LazyLog.LOG.debug("Potentially allow WRITE access to {} because {} was explicitly allowed", path, user.getName());
+					}
+					else if(authenticatedUser && allowWrite.contains("?")) {
+						LazyLog.LOG.debug("Potentially allow WRITE access to {} authenticated users are allowed (`?`)", path);
+					}
+					else if(authenticatedUser && session.flags().contains(Flag.ENCRYPTED) && allowWrite.contains("!")) {
+						LazyLog.LOG.debug("Potentially allow READ access to {} authenticated+encrypted users are allowed (`!`)", path);
+					}
+					else if(allowWrite.contains("*")) {
+						LazyLog.LOG.debug("Potentially allow WRITE access to {} all users are allowed (`*`)", path);
+					}
+					else if(allowWrite.contains("*")) {
+						LazyLog.LOG.debug("Potentially allow WRITE access to {} all users are allowed (`*`)", path);
+					}
+					else {
+						LazyLog.LOG.debug("Denied WRITE access to {} because {} matched no allow rules", path, user.getName());
+						throw new AccessDeniedException(path);
+					}
+				}
+				
+				if(authenticatedUser && denyWrite.contains(user.getName())) {
+					LazyLog.LOG.debug("Denied WRITE access to {} because {} was explicitly denied", path, user.getName());
+					throw new AccessDeniedException(path);
+				}
+				break;
+			default:
+				throw new UnsupportedOperationException();
+			}
+		}
+		
+
+		LazyLog.LOG.debug("Allowed {} to {} as {}",  String.join(", ", opList.stream().map(Operation::name).toList()), path, user == null ? "anonymous" : user.getName());
 	}
 	
 	public boolean isDemo() {

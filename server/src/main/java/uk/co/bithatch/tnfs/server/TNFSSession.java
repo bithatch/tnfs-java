@@ -26,6 +26,7 @@ import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
@@ -37,9 +38,48 @@ import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
 import uk.co.bithatch.tnfs.lib.Version;
 
 public final class TNFSSession implements Closeable {
+	
+	public enum Flag {
+		ENCRYPTED
+	}
+	
 	private final static Logger LOG = LoggerFactory.getLogger(TNFSSession.class);
+	
 
 	private static final int MAX_HANDLES = 256;
+	
+	private final static ThreadLocal<TNFSSession> current = new ThreadLocal<>();
+	
+	@FunctionalInterface
+	public interface IORunnable {
+		void run() throws IOException;
+	}
+
+	public static boolean isActive() {
+		return current.get() != null;
+	}
+	
+	public static void runAs(TNFSSession session, IORunnable r) throws IOException {
+		var was = current.get();
+		current.set(session);
+		try {
+			r.run();
+		}
+		finally {
+			if(was == null)
+				current.remove();
+			else
+				current.set(was);
+		}
+	}
+	
+	public static TNFSSession get() {
+		var s = current.get();
+		if(s == null)
+			throw new IllegalStateException("Not in session context.");
+		else
+			return s;
+	}
 
 	private final int id;
 	
@@ -57,14 +97,20 @@ public final class TNFSSession implements Closeable {
 	private final List<TNFSServerPacketProcessor> outProcessors = new ArrayList<>();
 	
 	private int size;
-	private TNFSFileAccess mount;
+	private TNFSFileSystem mount;
 	private Principal principal;
+	private Set<Flag> flags;
 	
-	TNFSSession(int id, TNFSServer<?> server, Version version) {
+	TNFSSession(int id, TNFSServer<?> server, Version version, Flag... flags) {
 		this.id = id;
+		this.flags = Set.of(flags);
 		this.server = server;
 		this.version = version;
 		this.size = server.protocol() == Protocol.TCP ? TNFS.DEFAULT_TCP_MESSAGE_SIZE : TNFS.DEFAULT_UDP_MESSAGE_SIZE;
+	}
+	
+	public Set<Flag> flags() {
+		return flags;
 	}
 	
 	public List<TNFSServerPacketProcessor> inProcessors() {
@@ -77,6 +123,10 @@ public final class TNFSSession implements Closeable {
 	
 	public boolean authenticated() {
 		return principal != null;
+	}
+	
+	public boolean guest() {
+		return authenticated() && principal.equals(TNFSMounts.GUEST);
 	}
 	
 	public Map<String, Object> state() {
@@ -99,9 +149,13 @@ public final class TNFSSession implements Closeable {
 		return id;
 	}
 
-	public void mount(TNFSUserMount userMount) {
+	public void mount(TNFSUserMount userMount) throws IOException {
 		this.mount = userMount.fileSystem();
 		this.principal = userMount.user();
+		
+		runAs(this, () -> {
+			mount.checkAccess();
+		});
 	}
 
 	public boolean mounted() {

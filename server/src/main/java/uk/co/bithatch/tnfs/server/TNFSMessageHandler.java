@@ -25,6 +25,7 @@ import java.util.Map;
 import uk.co.bithatch.tnfs.lib.Command;
 import uk.co.bithatch.tnfs.lib.Message;
 import uk.co.bithatch.tnfs.lib.Version;
+import uk.co.bithatch.tnfs.server.TNFSSession.Flag;
 
 public interface TNFSMessageHandler {
 
@@ -44,7 +45,7 @@ public interface TNFSMessageHandler {
 
 		int nextDirHandle();
 
-		TNFSSession newSession(Version version);
+		TNFSSession newSession(Version version, Flag... flags);
 	}
 	
 	Command.Result handle(Message message, HandlerContext context);

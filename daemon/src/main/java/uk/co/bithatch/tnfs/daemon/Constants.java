@@ -25,6 +25,7 @@ public class Constants {
 	public static final String SERVER_SECTION = "server";
 	public static final String MDNS_SECTION = "mdns";
 	public static final String AUTHENTICATION_SECTION = "authentication";
+	public static final String MOUNTS_SECTION = "mounts";
 	
 	public static final String ANNOUNCE_KEY = "announce";
 	public static final String UPNP_KEY = "upnp";
@@ -38,8 +39,10 @@ public class Constants {
 
 	public static final String PATH_KEY = "path";
 	public static final String LOCAL_KEY = "local";
-	public static final String AUTHENTICATION_KEY = "authentication";
-	public static final String READ_ONLY_KEY = "read-only";
+	public static final String ALLOW_READ_KEY = "allow-read";
+	public static final String ALLOW_WRITE_KEY = "allow-write";
+	public static final String DENY_READ_KEY = "deny-read";
+	public static final String DENY_WRITE_KEY = "deny-write";
 	public static final String DISABLE_AUTHENTICATOR_KEY = "disable-authenticator";
 
 }

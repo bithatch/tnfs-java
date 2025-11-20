@@ -183,7 +183,7 @@ public abstract class AbstractTNFSCommand {
 				if(secure) {
 
 					var mntBldr = client.extension(SecureMount.class).mount(mntPath);
-					if(username.equals("")) {
+					if(username.equals("") && i > 0) {
 						username = promptForUsername();
 					}
 					
@@ -203,6 +203,10 @@ public abstract class AbstractTNFSCommand {
 				
 					var mntBldr = client.mount(mntPath);
 					if(username.equals("") && i > 0) {
+
+						if(!quiet && i == 1) {
+							insecureWarning();
+						}
 						username = promptForUsername();
 					}
 					
@@ -224,6 +228,9 @@ public abstract class AbstractTNFSCommand {
 			}
 		}
 		throw new IllegalStateException("Too many authentication attempts.");
+	}
+
+	protected void insecureWarning() {
 	}
 
 	protected TNFSMount setupMount(TNFSClient client, TNFSMount mnt) throws IOException {

@@ -23,6 +23,7 @@ package uk.co.bithatch.tnfs.lib;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.channels.SeekableByteChannel;
+import java.nio.file.AccessDeniedException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;

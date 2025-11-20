@@ -24,9 +24,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
-public final class Crypto {
+import javax.security.auth.Subject;
 
+public final class Crypto {
+	
 	public static byte[] deriveKey(byte[] sharedSecret, int keyBits) throws NoSuchAlgorithmException {
+		
         var sha256 = MessageDigest.getInstance("SHA-256");
         var digest = sha256.digest(sharedSecret);
         var keyBytes = keyBits / 8;

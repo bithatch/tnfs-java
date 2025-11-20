@@ -29,7 +29,7 @@ import uk.co.bithatch.tnfs.server.TNFSMounts.TNFSMountRef;
 
 public final class DefaultInMemoryFileSystemService implements TNFSFileSystemService {
 	
-	private TNFSInMemoryFileSystem defaultMount = new TNFSInMemoryFileSystem("/");
+	private TNFSInMemoryFileSystem defaultMount = new TNFSInMemoryFileSystem("/", TNFSAccessCheck.READ_WRITE);
 	private TNFSMountRef ref = new TNFSMountRef(defaultMount, Optional.empty());
 
 	@Override

@@ -22,14 +22,13 @@ package uk.co.bithatch.tnfs.server.linux;
 
 import java.util.Optional;
 
-import uk.co.bithatch.tnfs.server.AuthenticationType;
 import uk.co.bithatch.tnfs.server.TNFSAuthenticator;
 import uk.co.bithatch.tnfs.server.TNFSAuthenticatorFactory;
 
 public class LinidTNFSAuthenticatorFactory implements TNFSAuthenticatorFactory {
 
 	@Override
-	public Optional<TNFSAuthenticator> createAuthenticator(String path, AuthenticationType... authTypes) {
+	public Optional<TNFSAuthenticator> createAuthenticator(String path) {
 		return Optional.of(new LinidTNFSAuthenticator());
 	}
 

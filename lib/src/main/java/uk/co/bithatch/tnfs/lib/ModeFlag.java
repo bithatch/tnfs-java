@@ -32,6 +32,7 @@ import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public enum ModeFlag implements BitSet {
 	
@@ -286,5 +287,29 @@ public enum ModeFlag implements BitSet {
 		}
 		catch(IOException ioe) {}
 		return l.toArray(new DirEntryFlag[0]);
+	}
+
+	public static String toMnemonics(ModeFlag... modes) {
+		var l = Arrays.asList(modes);
+		var b = new StringBuffer();
+		appendFlag(l, b, ModeFlag.IRUSR, 'r');
+		appendFlag(l, b, ModeFlag.IWUSR, 'w');
+		appendFlag(l, b, ModeFlag.IXUSR, 'x');
+		appendFlag(l, b, ModeFlag.IRGRP, 'r');
+		appendFlag(l, b, ModeFlag.IWGRP, 'w');
+		appendFlag(l, b, ModeFlag.IXGRP, 'x');
+		appendFlag(l, b, ModeFlag.IROTH, 'r');
+		appendFlag(l, b, ModeFlag.IWOTH, 'w');
+		appendFlag(l, b, ModeFlag.IXOTH, 'x');
+		return b.toString();
+	}
+
+	private static void appendFlag(List<ModeFlag> l, StringBuffer b, ModeFlag flg, char ch) {
+		if(l.contains(flg)) {
+			b.append(ch);
+		}
+		else {
+			b.append('-');
+		}
 	}
 }

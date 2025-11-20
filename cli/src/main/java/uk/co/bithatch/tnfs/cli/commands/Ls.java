@@ -25,8 +25,8 @@ import static uk.co.bithatch.tnfs.lib.Util.absolutePath;
 import static uk.co.bithatch.tnfs.lib.Util.basename;
 import static uk.co.bithatch.tnfs.lib.Util.dirname;
 
+import java.io.IOException;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,6 +43,7 @@ import uk.co.bithatch.tnfs.cli.TNFSTP.FilenameCompletionMode;
 import uk.co.bithatch.tnfs.lib.DirEntryFlag;
 import uk.co.bithatch.tnfs.lib.DirOptionFlag;
 import uk.co.bithatch.tnfs.lib.DirSortFlag;
+import uk.co.bithatch.tnfs.lib.ModeFlag;
 import uk.co.bithatch.tnfs.lib.Util;
 
 /**
@@ -60,6 +61,9 @@ public class Ls extends TNFSTPCommand implements Callable<Integer> {
 	
 	@Option(names = {"-a", "--all"}, description = "Show all files.")
 	private boolean all;
+	
+	@Option(names = {"-p", "--permissions"}, description = "Show POSIX permissions.")
+	private boolean permissions;
 	
 	@Option(names = {"-r", "--reverse"}, description = "Reverse sort order.")
 	private boolean reverse;
@@ -147,11 +151,12 @@ public class Ls extends TNFSTPCommand implements Callable<Integer> {
 				if(width == 0)
 					width = 132;
 				
-				var longNameWidth = width - 30;
+				var longNameWidth = width - 30 - (permissions ? 9 : 0);
+				var dirPath = container.localToNativePath(path);
 				
 				try(var dir = container.getMount().directory(
 						maxResults,
-						container.localToNativePath(path),
+						dirPath,
 						wildcard,
 						dirOptions.toArray(new DirOptionFlag[0]),
 						dirSort.toArray(new DirSortFlag[0])
@@ -165,7 +170,17 @@ public class Ls extends TNFSTPCommand implements Callable<Integer> {
 							var sizeStr = exactSizes 
 								? String.valueOf(file.size()) 
 								: Util.formatSize(file.size());
+							
 							var flagsStr = flags.contains(DirEntryFlag.DIR) ? "D" : ( flags.contains(DirEntryFlag.SPECIAL) ? "S" : "-");
+							if(permissions) {
+								try {
+									flagsStr += ModeFlag.toMnemonics(container.getMount().stat(dirPath + "/" + file.name()).mode());
+								}
+								catch(IOException ioe) {
+									flagsStr += "?????????";
+								};
+							}
+							
 							var displayName = TNFSTP.getDisplay(
 								getContainer().getTerminal(), 
 								file, 
@@ -174,6 +189,7 @@ public class Ls extends TNFSTPCommand implements Callable<Integer> {
 								getContainer().getSeparator(), 
 								false
 							);
+							
 							var modTime = ofLocalizedDateTime(FormatStyle.SHORT).format(file.mtime().toInstant().atZone(ZoneId.systemDefault()));
 							
 							wtr.println(String.format("%1s %s %8s %15s",

@@ -20,15 +20,15 @@
  */
 package uk.co.bithatch.tnfs.server;
 
+import java.nio.file.AccessDeniedException;
+
 import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
 
 public interface TNFSFileSystem extends TNFSFileAccess {
 
 	/**
-	 * Get if the whole file system is read only.
-	 * 
-	 * @return read Only
+	 * Check whether the file system is accessable in  the current context, e.g.
+	 * the active {@link TNFSSession}. 
 	 */
-	boolean readOnly();
-
+	void checkAccess() throws AccessDeniedException;
 }

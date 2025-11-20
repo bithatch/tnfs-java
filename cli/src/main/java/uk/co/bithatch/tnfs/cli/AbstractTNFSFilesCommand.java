@@ -26,6 +26,8 @@ import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
+import org.jline.utils.AttributedStringBuilder;
+import org.jline.utils.AttributedStyle;
 
 import picocli.CommandLine.Option;
 import uk.co.bithatch.tnfs.lib.Util;
@@ -70,6 +72,23 @@ public abstract class AbstractTNFSFilesCommand extends AbstractTNFSCommand {
 				return reader.readLine(MessageFormat.format(message, args));
 			}
 		}
+	}
+
+	 @Override
+	protected void insecureWarning() {
+		var trm = terminal.writer();
+        var sb = new AttributedStringBuilder();
+        sb.style(AttributedStyle.BOLD);
+        sb.style(new AttributedStyle().foreground(AttributedStyle.RED));
+        sb.append("This connection is insecure, your username and password will be transmitted without protection");
+        sb.style(AttributedStyle.DEFAULT);
+        sb.println(terminal);
+        sb = new AttributedStringBuilder();
+        sb.style(new AttributedStyle().faint());
+        sb.append("Use the `-S` or `--secure` arguments if the server supports TNFSJ extensions.");
+        sb.style(AttributedStyle.DEFAULT);
+        sb.println(terminal);
+		trm.flush();
 	}
 
 	 protected char getSeparator(boolean useForwardSlash) {

@@ -22,7 +22,8 @@ package uk.co.bithatch.tnfs.server.handlers;
 
 import static uk.co.bithatch.tnfs.server.Tasks.ioCall;
 
-import java.nio.file.AccessDeniedException;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Optional;
 
 import uk.co.bithatch.tnfs.lib.Command;
@@ -50,11 +51,6 @@ public class MountHandler implements TNFSMessageHandler {
 				auth.authenticate(ref.fs(), mountmsg.userId(), mountmsg.password())
 			).orElse(Optional.empty());
 			
-			if(ref.auth().isPresent() && !mountmsg.userId().isPresent())
-				throw new AccessDeniedException("Authentication required for " + mountmsg.normalizedPath());
-			else if(ref.auth().isPresent() && !principal.isPresent())
-				throw new AccessDeniedException("Authentication failed for " + mountmsg.normalizedPath());
-			
 			/* Create mount */
 			var userMount = fact.createMount(mountmsg.path(), principal);
 			
@@ -62,8 +58,16 @@ public class MountHandler implements TNFSMessageHandler {
 			var session = context.hasSession() ? context.session() : null;
 			if(session == null) {
 				session = context.newSession(mountmsg.version());
+				try {
+					session.mount(userMount);
+				}
+				catch(IOException | RuntimeException re) {
+					throw re;
+				}
 			}
-			session.mount(userMount);
+			else {
+				session.mount(userMount);
+			}
 			
 			return new MountResult(ResultCode.SUCCESS,  context.server().retryTime());
 		}

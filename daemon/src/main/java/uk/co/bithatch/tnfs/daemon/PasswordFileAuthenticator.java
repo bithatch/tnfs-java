@@ -25,7 +25,6 @@ import java.security.Principal;
 import java.util.Optional;
 
 import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
-import uk.co.bithatch.tnfs.server.AuthenticationType;
 import uk.co.bithatch.tnfs.server.TNFSAuthenticator;
 import uk.co.bithatch.tnfs.server.TNFSAuthenticatorFactory;
 
@@ -60,7 +59,7 @@ public class PasswordFileAuthenticator  implements TNFSAuthenticator, TNFSAuthen
 	}
 
 	@Override
-	public Optional<TNFSAuthenticator> createAuthenticator(String path, AuthenticationType... authTypes) {
+	public Optional<TNFSAuthenticator> createAuthenticator(String path) {
 		return Optional.of(this);
 	}
 

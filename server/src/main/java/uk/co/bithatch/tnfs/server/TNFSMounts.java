@@ -32,8 +32,6 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
-
 public class TNFSMounts implements TNFSFileSystemService {
 	private final static Logger LOG = LoggerFactory.getLogger(TNFSMounts.class);
 
@@ -49,37 +47,37 @@ public class TNFSMounts implements TNFSFileSystemService {
 	public static final String GUEST_NAME = "<guest>";
 	public static final Principal GUEST = TNFSMounts.simpleUser(GUEST_NAME);
 
-	public record TNFSMountRef(TNFSFileAccess fs, Optional<TNFSAuthenticator> auth) {
+	public record TNFSMountRef(TNFSFileSystem fs, Optional<TNFSAuthenticator> auth) {
 	}
 
 	private Map<String, TNFSMountRef> mounts = Collections.synchronizedMap(new LinkedHashMap<>());
 
 	public TNFSMounts mount(String path, Path root) throws IOException {
-		return mount(path, root, false);
+		return mount(path, root, TNFSAccessCheck.READ_WRITE);
 	}
 
-	public TNFSMounts mount(String path, Path root, boolean readOnly) throws IOException {
-		return mount(path, new TNFSDefaultFileSystem(root, path, readOnly));
+	public TNFSMounts mount(String path, Path root, TNFSAccessCheck access) throws IOException {
+		return mount(path, new TNFSDefaultFileSystem(root, path, access));
 	}
 
 	public TNFSMounts mount(String path, Path root, TNFSAuthenticator authenticator) throws IOException {
-		return mount(path, root, authenticator, false);
+		return mount(path, root, authenticator, TNFSAccessCheck.READ_WRITE);
 	}
 
-	public TNFSMounts mount(String path, Path root, TNFSAuthenticator authenticator, boolean readOnly)
+	public TNFSMounts mount(String path, Path root, TNFSAuthenticator authenticator, TNFSAccessCheck access)
 			throws IOException {
-		return mount(path, new TNFSDefaultFileSystem(root, path, readOnly), authenticator);
+		return mount(path, new TNFSDefaultFileSystem(root, path, access), authenticator);
 	}
 
-	public TNFSMounts mount(String path, TNFSFileAccess mount) {
+	public TNFSMounts mount(String path, TNFSFileSystem mount) {
 		return mount(path, mount, Optional.empty());
 	}
 
-	public TNFSMounts mount(String path, TNFSFileAccess mount, TNFSAuthenticator authenticator) {
+	public TNFSMounts mount(String path, TNFSFileSystem mount, TNFSAuthenticator authenticator) {
 		return mount(path, mount, Optional.of(authenticator));
 	}
 
-	private TNFSMounts mount(String path, TNFSFileAccess mount, Optional<TNFSAuthenticator> authenticator) {
+	private TNFSMounts mount(String path, TNFSFileSystem mount, Optional<TNFSAuthenticator> authenticator) {
 		synchronized (mounts) {
 			if (mounts.containsKey(path))
 				throw new IllegalArgumentException("Already mounted to " + path);

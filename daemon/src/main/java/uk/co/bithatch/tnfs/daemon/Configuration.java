@@ -37,6 +37,10 @@ public final class Configuration extends AbstractConfiguration {
 		return document().section(Constants.SERVER_SECTION);
 	}
 	
+	public Section mounts() {
+		return document().section(Constants.MOUNTS_SECTION);
+	}
+	
 	public Section mdns() {
 		return document().section(Constants.MDNS_SECTION);
 	}

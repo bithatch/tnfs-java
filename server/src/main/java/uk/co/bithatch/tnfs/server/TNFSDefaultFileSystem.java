@@ -28,12 +28,11 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
-import java.nio.file.ReadOnlyFileSystemException;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.DosFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFilePermission;
-import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -55,31 +54,25 @@ import uk.co.bithatch.tnfs.lib.TNFSDirectory;
  * files that cannot be traversed. This is to prevent symbolic links being followed
  * when deleting a file system contents.
  */
-public class TNFSDefaultFileSystem implements TNFSFileSystem {
+public class TNFSDefaultFileSystem extends AbstractTNFSFileSystem {
 	private final static Logger LOG = LoggerFactory.getLogger(TNFSDefaultFileSystem.class);
 	
 	private final String mountPath;
 	private final Path root;
-	private final boolean readOnly;
 
-	public TNFSDefaultFileSystem(Path root, String mountPath, boolean readOnly) throws IOException {
+	public TNFSDefaultFileSystem(Path root, String mountPath, TNFSAccessCheck accessCheck) throws IOException {
+		super(accessCheck);
 		if(!Files.exists(root))
 			throw new NoSuchFileException(root.toString());
 		if(!Files.isDirectory(root))
 			throw new NotDirectoryException(root.toString());
 		this.mountPath = mountPath;
 		this.root = root;
-		this.readOnly = readOnly;
 	}
 
 	@Override
-	public boolean readOnly() {
-		return readOnly;
-	}
-
-	@Override
-	public void chmod(String path, ModeFlag... modes) throws IOException {
-		checkReadOnly();
+	protected void onChmod(String path, ModeFlag... modes) throws IOException {
+		
 		var resolved = resolve(path); 
 		checkFileSymbolicLink(resolved, path);
 		checkDescendant(resolved, path);
@@ -116,7 +109,8 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 	}
 
 	@Override
-	public TNFSDirectory directory(String path, String wildcard) throws IOException {
+	protected TNFSDirectory onDirectory(String path, String wildcard) throws IOException {
+		
 		var resolved = resolve(path);
 		
 		if(LOG.isDebugEnabled()) {
@@ -170,12 +164,13 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 	}
 
 	@Override
-	public long free() throws IOException {
+	protected long onFree() throws IOException {		
 		return Math.min(Files.getFileStore(root).getUsableSpace() / 1024l, (long)Integer.MAX_VALUE * 2l);
 	}
 
 	@Override
-	public Stream<String> list(String path) throws IOException {
+	protected Stream<String> onList(String path) throws IOException {
+		
 		var rpath = resolve(path);
 		if(isSymbolicLink(rpath)) {
 			throw new NotDirectoryException(path);
@@ -185,8 +180,8 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 	}
 
 	@Override
-	public void mkdir(String path) throws IOException {
-		checkReadOnly();
+	protected void onMkdir(String path) throws IOException {
+		
 		var rpath = resolve(path);
 		checkFileSymbolicLink(rpath, path);
 		checkDescendant(rpath, path);
@@ -199,16 +194,12 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 	}
 
 	@Override
-	public SeekableByteChannel open(String path, ModeFlag[] mode, OpenFlag... flags) throws IOException {
-		var flgs = Arrays.asList(flags);
-		if(readOnly && (flgs.contains(OpenFlag.CREATE) || flgs.contains(OpenFlag.WRITE) || flgs.contains(OpenFlag.APPEND) || flgs.contains(OpenFlag.TRUNCATE))) {
-			throw new ReadOnlyFileSystemException();
-		}
+	protected SeekableByteChannel onOpen(String path, ModeFlag[] mode, List<OpenFlag> flgs) throws IOException {
 		
 		var rpath = resolve(path);
 		checkFileSymbolicLink(rpath, path);
 		checkDescendant(rpath, path);
-		var oflgs = OpenFlag.encodeOptions(flags);
+		var oflgs = OpenFlag.encodeOptions(flgs.toArray(new OpenFlag[0]));
 		var chnl = Files.newByteChannel(rpath, oflgs);
 		
 		if(flgs.contains(OpenFlag.CREATE)) {
@@ -219,9 +210,7 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 	}
 
 	@Override
-	public void rename(String path, String targetPath) throws IOException {
-		checkReadOnly();
-		
+	protected void onRename(String path, String targetPath) throws IOException {
 		var rpath1 = resolve(path);
 		checkFileSymbolicLink(rpath1, path);
 		checkDescendant(rpath1, path);
@@ -234,8 +223,8 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 	}
 
 	@Override
-	public void rmdir(String path) throws IOException {
-		checkReadOnly();
+	protected void onRmdir(String path) throws IOException {
+
 		var dpath = resolve(path);
 		checkFileSymbolicLink(dpath, path);
 		checkDescendant(dpath, path);
@@ -246,12 +235,14 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 	}
 	
 	@Override
-	public long size() throws IOException {
+	protected long onSize() throws IOException {
+		
 		return Math.min(Files.getFileStore(root).getTotalSpace() / 1024l, (long)Integer.MAX_VALUE * 2l);
 	}
 
 	@Override
-	public StatResult stat(String path) throws IOException {
+	protected StatResult onStat(String path) throws IOException {
+		
 		var p = resolve(path);
 		checkFileSymbolicLink(p, path);
 		checkDescendant(p, path);
@@ -308,18 +299,12 @@ public class TNFSDefaultFileSystem implements TNFSFileSystem {
 	}
 
 	@Override
-	public void unlink(String path) throws IOException {
-		checkReadOnly();
+	protected void onUnlink(String path) throws IOException {
+		
 		var rpath = resolve(path);
 		checkFileSymbolicLink(rpath, path);
 		checkDescendant(rpath, path);
 		Files.delete(rpath);
-	}
-	
-	private void checkReadOnly() {
-		if(readOnly) {
-			throw new ReadOnlyFileSystemException();
-		}
 	}
 
 	private Stream<Path> list(Path path) throws IOException {
