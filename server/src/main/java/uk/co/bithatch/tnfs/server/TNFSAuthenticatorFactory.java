@@ -24,8 +24,18 @@ import java.util.Optional;
 
 public interface TNFSAuthenticatorFactory extends Comparable<TNFSAuthenticatorFactory> {
 	
+	public interface TNFSAuthenticatorContext {
+	}
+	
+	default void init(TNFSAuthenticatorContext context) {
+	}
+	
 	default String name() {
 		return getClass().getSimpleName();
+	}
+	
+	default boolean valid() {
+		return true;
 	}
 	
 	String id();

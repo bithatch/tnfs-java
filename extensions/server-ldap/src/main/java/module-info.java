@@ -18,30 +18,16 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package uk.co.bithatch.tnfs.daemon;
+import uk.co.bithatch.tnfs.ldap.LDAPAuthenticatorConfigurer;
+import uk.co.bithatch.tnfs.ldap.LDAPAuthenticatorFactory;
+import uk.co.bithatch.tnfs.server.TNFSAuthenticatorFactory;
 
-import java.nio.file.Path;
-import java.util.Optional;
-
-import com.sshtools.jini.INI.Section;
-import com.sshtools.jini.config.Monitor;
-
-public class Authentication extends AbstractConfiguration {
-
-	public Authentication(Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
-		this(Optional.empty(), configurationDir, userConfigurationDir);
-	}
+module uk.co.bithatch.tnfs.ldap {
+	exports uk.co.bithatch.tnfs.ldap;
+	requires transitive uk.co.bithatch.tnfs.server;
+	requires java.naming;
+	requires static uk.co.bithatch.nativeimage.annotations;
+	uses LDAPAuthenticatorConfigurer;
+	provides TNFSAuthenticatorFactory with LDAPAuthenticatorFactory;
 	
-	public Authentication(Optional<Monitor> monitor, Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
-		super(Authentication.class, "authentication", monitor, configurationDir, userConfigurationDir);
-	}
-
-	public Path passwdFile() {
-		return iniSet.appPathForScope(iniSet.writeScope()
-				.orElseThrow(() -> new IllegalStateException("No writable configuration directory found."))).resolve("password.properties");
-	}
-	
-	public Section ldap() {
-		return document().section(Constants.LDAP_SECTION);
-	}
 }

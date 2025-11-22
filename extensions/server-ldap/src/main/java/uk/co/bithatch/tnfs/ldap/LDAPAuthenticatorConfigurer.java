@@ -18,30 +18,13 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package uk.co.bithatch.tnfs.daemon;
+package uk.co.bithatch.tnfs.ldap;
 
-import java.nio.file.Path;
-import java.util.Optional;
+import uk.co.bithatch.tnfs.server.TNFSAuthenticatorFactory.TNFSAuthenticatorContext;
 
-import com.sshtools.jini.INI.Section;
-import com.sshtools.jini.config.Monitor;
+public interface LDAPAuthenticatorConfigurer {
 
-public class Authentication extends AbstractConfiguration {
+	void configure(TNFSAuthenticatorContext context, LDAPAuthenticator.Builder builder);
 
-	public Authentication(Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
-		this(Optional.empty(), configurationDir, userConfigurationDir);
-	}
-	
-	public Authentication(Optional<Monitor> monitor, Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
-		super(Authentication.class, "authentication", monitor, configurationDir, userConfigurationDir);
-	}
-
-	public Path passwdFile() {
-		return iniSet.appPathForScope(iniSet.writeScope()
-				.orElseThrow(() -> new IllegalStateException("No writable configuration directory found."))).resolve("password.properties");
-	}
-	
-	public Section ldap() {
-		return document().section(Constants.LDAP_SECTION);
-	}
+	boolean valid(TNFSAuthenticatorContext context);
 }

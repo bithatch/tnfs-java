@@ -19,12 +19,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import uk.co.bithatch.tnfs.daemon.LDAPConfigurer;
+import uk.co.bithatch.tnfs.ldap.LDAPAuthenticatorConfigurer;
 import uk.co.bithatch.tnfs.server.TNFSAuthenticatorFactory;
 
 open module uk.co.bithatch.tnfs.daemon {
 	requires info.picocli;
 	requires transitive uk.co.bithatch.tnfs.server;
 	requires transitive uk.co.bithatch.tnfs.server.extensions;
+	requires transitive uk.co.bithatch.tnfs.ldap;
 	requires transitive uk.co.bithatch.tnfs.daemonlib;
 	requires org.slf4j.simple;
 	requires org.slf4j;
@@ -32,4 +35,5 @@ open module uk.co.bithatch.tnfs.daemon {
 	requires com.sshtools.jini.config;
 	
 	uses TNFSAuthenticatorFactory;
+	provides LDAPAuthenticatorConfigurer with LDAPConfigurer;
 }

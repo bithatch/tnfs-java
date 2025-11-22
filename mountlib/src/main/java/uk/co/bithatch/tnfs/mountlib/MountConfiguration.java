@@ -36,7 +36,10 @@ import org.slf4j.LoggerFactory;
 
 import com.sshtools.jini.INI;
 import com.sshtools.jini.INI.Section;
+import com.sshtools.jini.INIReader.DuplicateAction;
+import com.sshtools.jini.INIReader.MultiValueMode;
 import com.sshtools.jini.INIReader;
+import com.sshtools.jini.INIWriter;
 import com.sshtools.jini.config.INISet;
 import com.sshtools.jini.config.INISet.CreateDefaultsMode;
 import com.sshtools.jini.config.INISet.Scope;
@@ -53,8 +56,11 @@ public final class MountConfiguration {
 	public MountConfiguration(String appName, String configName, Monitor monitor, Optional<Path> configDir, Optional<Path> userConfigDir) {
 		var bldr =  new INISet.Builder(configName).
 				withApp(appName).
+				withWriterFactory(() -> new INIWriter.Builder().withMultiValueMode(MultiValueMode.REPEATED_KEY)).
 				withReaderFactory(() ->
 					new INIReader.Builder().
+						withDuplicateKeysAction(DuplicateAction.APPEND).
+						withMultiValueMode(MultiValueMode.REPEATED_KEY).
 						withInterpolator((data, k) -> {
 							if(k.startsWith("env:")) {
 								var vk = k.substring(4);

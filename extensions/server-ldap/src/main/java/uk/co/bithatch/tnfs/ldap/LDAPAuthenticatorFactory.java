@@ -18,30 +18,47 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package uk.co.bithatch.tnfs.daemon;
+package uk.co.bithatch.tnfs.ldap;
 
-import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
+import java.util.ServiceLoader;
+import java.util.ServiceLoader.Provider;
 
-import com.sshtools.jini.INI.Section;
-import com.sshtools.jini.config.Monitor;
+import uk.co.bithatch.tnfs.server.TNFSAuthenticator;
+import uk.co.bithatch.tnfs.server.TNFSAuthenticatorFactory;
 
-public class Authentication extends AbstractConfiguration {
+public class LDAPAuthenticatorFactory implements TNFSAuthenticatorFactory {
 
-	public Authentication(Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
-		this(Optional.empty(), configurationDir, userConfigurationDir);
-	}
+	private TNFSAuthenticatorContext context;
+	private List<LDAPAuthenticatorConfigurer> configurers;
 	
-	public Authentication(Optional<Monitor> monitor, Optional<Path> configurationDir, Optional<Path> userConfigurationDir) {
-		super(Authentication.class, "authentication", monitor, configurationDir, userConfigurationDir);
+	public LDAPAuthenticatorFactory() {
+
+		configurers = ServiceLoader.load(LDAPAuthenticatorConfigurer.class).stream().map(Provider::get).toList();
 	}
 
-	public Path passwdFile() {
-		return iniSet.appPathForScope(iniSet.writeScope()
-				.orElseThrow(() -> new IllegalStateException("No writable configuration directory found."))).resolve("password.properties");
+	@Override
+	public String id() {
+		return "ldap";
 	}
-	
-	public Section ldap() {
-		return document().section(Constants.LDAP_SECTION);
+
+	@Override
+	public boolean valid() {
+		return configurers.stream().filter(c -> c.valid(context)).findFirst().isPresent();
 	}
+
+	@Override
+	public void init(TNFSAuthenticatorContext context) {
+		this.context = context;
+	}
+
+	@Override
+	public Optional<TNFSAuthenticator> createAuthenticator(String path) {
+		var cfg = new LDAPAuthenticator.Builder();
+		return configurers.stream().peek(p -> p.configure(context, cfg)).findFirst().map(bldr -> {
+					return cfg.build();
+				});
+	}
+
 }

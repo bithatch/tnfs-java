@@ -23,7 +23,6 @@ package uk.co.bithatch.tnfs.lib.extensions;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Optional;
 
 import uk.co.bithatch.tnfs.lib.Command;
 import uk.co.bithatch.tnfs.lib.Command.HeaderOnlyResult;
@@ -42,8 +41,7 @@ public class Extensions {
 	public final static Command<Copy,HeaderOnlyResult> COPY = new Command<>(0x91, "COPY", Copy::decode, Copy::encode, HeaderOnlyResult::decode);
 	public final static Command<Mounts,MountsResult> MOUNTS = new Command<>(0x92, "MOUNTS", Mounts::decode, Mounts::encode, MountsResult::decode);
 	public final static Command<PktSize,PktSizeResult> PKTSZ = new Command<>(0x93, "PKTSZ", PktSize::decode, PktSize::encode, PktSizeResult::decode);
-	public final static Command<SecureMount,SecureMountResult> SECMNT= new Command<>(0x94, "STRTENCR", SecureMount::decode, SecureMount::encode, SecureMountResult::decode);
-	public final static Command<AuthenticateMount,HeaderOnlyResult> AUTHMNT = new Command<>(0x95, "AUTHMNT", AuthenticateMount::decode, AuthenticateMount::encode, HeaderOnlyResult::decode);
+	public final static Command<SecureMount,SecureMountResult> SECMNT= new Command<>(0x94, "SECMNT", SecureMount::decode, SecureMount::encode, SecureMountResult::decode);
 
 	public record ServerCaps() implements Encodeable {
 		
@@ -227,22 +225,5 @@ public class Extensions {
 			Encodeable.byteArray(buf, key);
 			return buf;
 		}
-	}
-
-	public record AuthenticateMount(Optional<String> userId, Optional<char[]> password) implements Encodeable {
-		
-		public static AuthenticateMount decode(ByteBuffer buf) {
-			return new AuthenticateMount(
-					Encodeable.emptyIfBlank(Encodeable.cString(buf)),
-					Encodeable.emptyIfBlank(Encodeable.cString(buf)).map(String::toCharArray));
-		}
-
-		@Override
-		public ByteBuffer encode(ByteBuffer buf) {
-			Encodeable.cString(userId.orElse(""), buf);
-			Encodeable.cString(password.map(String::new).orElse(""), buf);
-			return buf;
-		}
-		
 	}
 }

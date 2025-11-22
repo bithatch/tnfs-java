@@ -6,15 +6,18 @@ In the meantime, clients could simple attempt to use such extended commands, and
 
 Each extension requires a client part and a server part. See [server](server) and [client](client) respectively for how to use them. Common extension code is found in the extensions [lib](lib) module.
 
-*WARNING Work in progress. The server implementation of SCRAM authentication is incomplete.*
+### Authentication Extensions
+
+See [server-ldap](server-ldap) to enable LDAP based authentication in the server. Only safe when used in conjunction with a secure mount (see below).
 
 ### File System Extensions
 
 | Code | Name | Description | Status |
 | --- | --- | --- | --- |
-| 0x81 | SUM | Returns a checksum using one of several algorithms from CRC32 to SHA-512.  | COMPLETE |
-| 0x82 | COPY | Performs a copy of one remote file to another. | COMPLETE |
-| 0x83 | MOUNTS | Returns a `READDIR` handle that can be used to list all available mounts. No session required. | COMPLETE |
+| 0x90 | SUM | Returns a checksum using one of several algorithms from CRC32 to SHA-512.  | COMPLETE |
+| 0x91 | COPY | Performs a copy of one remote file to another. | COMPLETE |
+| 0x92 | MOUNTS | Returns a (limited by packet size) list of public mount path names. | COMPLETE |
+| 0x93 | PKTSZ | Sets packet size and returns actual packet size in case server limits. | COMPLETE |
 
 ### Security Extensions
  
@@ -22,9 +25,6 @@ As with all TNFS servers and clients, it is built for a more naive time. Securit
 
 *TNFS Java* though, supports some protocol extensions that I hope will address this a little.
 
-
 | Code | Name | Description | Status |
 | --- | --- | --- | --- |
-| 0x80 | STRTSECM | Start secure mount. An alternative to official `MOUNT` that starts a SCRAM-like authentication handshake  | WIP |
-| 0x91 | COMPSECM | Complete secure mount, completes `STRTSECM`. | NOT STARTED |
-| 0x92 | STRTENCR | Complete secure mount, complets `STRTSECM`. | NOT STARTED |
+| 0x94 | SECMNT | Start secure mount. Initiates a Diffie Hellman exchange, then starts encrypting all packets with SPECK. Connection ID is returned, and must be followed by a standard `MOUNT` but using the returned connection ID instead of zero. | COMPLETE |

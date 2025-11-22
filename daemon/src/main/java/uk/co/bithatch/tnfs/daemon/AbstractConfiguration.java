@@ -33,6 +33,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.sshtools.jini.INI;
+import com.sshtools.jini.INIReader;
+import com.sshtools.jini.INIReader.DuplicateAction;
+import com.sshtools.jini.INIReader.MultiValueMode;
+import com.sshtools.jini.INIWriter;
 import com.sshtools.jini.config.INISet;
 import com.sshtools.jini.config.INISet.CreateDefaultsMode;
 import com.sshtools.jini.config.INISet.Scope;
@@ -51,6 +55,10 @@ public abstract class AbstractConfiguration {
 			Optional<Path> userConfigDir) {
 		var bldr =  new INISet.Builder(cfgName).
 				withApp("tnfsjd").
+				withReaderFactory(() -> new INIReader.Builder().
+						withMultiValueMode(MultiValueMode.REPEATED_KEY).
+						withDuplicateKeysAction(DuplicateAction.APPEND)).
+				withWriterFactory(() -> new INIWriter.Builder().withMultiValueMode(MultiValueMode.REPEATED_KEY)).
 				withCreateDefaults(CreateDefaultsMode.valueOf(System.getProperty(cfgName + ".create-defaults-mode", "NONE"))).
 				withSchema(schema);
 		

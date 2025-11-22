@@ -45,13 +45,14 @@ import uk.co.bithatch.tnfs.lib.OpenFlag;
 import uk.co.bithatch.tnfs.server.TNFSAccessCheck;
 import uk.co.bithatch.tnfs.server.TNFSAccessCheck.Operation;
 import uk.co.bithatch.tnfs.server.TNFSAuthenticatorFactory;
+import uk.co.bithatch.tnfs.server.TNFSAuthenticatorFactory.TNFSAuthenticatorContext;
 import uk.co.bithatch.tnfs.server.TNFSFileSystem;
 import uk.co.bithatch.tnfs.server.TNFSInMemoryFileSystem;
 import uk.co.bithatch.tnfs.server.TNFSMounts;
 import uk.co.bithatch.tnfs.server.TNFSSession;
 import uk.co.bithatch.tnfs.server.TNFSSession.Flag;
 
-public class MountConfiguration extends AbstractConfiguration {
+public class MountConfiguration extends AbstractConfiguration implements TNFSAuthenticatorContext {
 	private final static class LazyLog {
 		private static Logger LOG = LoggerFactory.getLogger(MountConfiguration.class);
 	}
@@ -61,7 +62,7 @@ public class MountConfiguration extends AbstractConfiguration {
 	}
 	
 	private final TNFSMounts mounts;
-	private final List<TNFSAuthenticatorFactory> authFactories;
+	private final List<TNFSAuthenticatorFactory> allAuthFactories;
 	private boolean demo;
 	private final List<Listener> listeners = new ArrayList<>();
 	private final Authentication authConfig;
@@ -74,11 +75,15 @@ public class MountConfiguration extends AbstractConfiguration {
 
 		mountsConfig = configuration.mounts();
 		authConfig = new Authentication(Optional.of(monitor), configurationDir, userConfigDir);
-		var disabledAuthenticators = Arrays.asList(authConfig.document().getAllElse(Constants.DISABLE_AUTHENTICATOR_KEY));
-		authFactories = Stream.concat(
+		
+		allAuthFactories = Stream.concat(
 				Stream.of(new PasswordFileAuthenticator(authConfig)), 
-				ServiceLoader.load(TNFSAuthenticatorFactory.class).stream().map(Provider::get).filter(p -> !disabledAuthenticators.contains(p.id()))
+				ServiceLoader.load(TNFSAuthenticatorFactory.class).
+				stream().
+				map(Provider::get)
 		).sorted().toList();
+		
+		allAuthFactories.forEach(af -> af.init(this));
 		
 		document().onValueUpdate(vu -> {
 			configChanged();
@@ -90,19 +95,35 @@ public class MountConfiguration extends AbstractConfiguration {
 		
 		
 		LazyLog.LOG.info("Available authentication modules:");
-		for(var authFactory : authFactories) {
-			LazyLog.LOG.info("  {}", authFactory.name());
+		for(var authFactory : allAuthFactories) {
+			LazyLog.LOG.info("  {} [{}]", authFactory.name(), authFactory.id());
+		}
+		LazyLog.LOG.info("Active authentication modules:");
+		for(var authFactory : activeFactories()) {
+			LazyLog.LOG.info("  {} [{}]", authFactory.name(), authFactory.id());
 		}
 		
 		remountAll();
 	}
 	
+	public Authentication authConfig() {
+		return authConfig;
+	}
+
 	public void addListener(Listener listener) {
 		this.listeners.add(listener);
 	}
 	
 	public void removeListener(Listener listener) {
 		this.listeners.remove(listener);
+	}
+	
+	private List<TNFSAuthenticatorFactory> activeFactories() {
+		var disabledAuthenticators = Arrays.asList(authConfig.document().getAllElse(Constants.DISABLE_AUTHENTICATOR_KEY));
+		return allAuthFactories.stream().
+				filter(p -> p.valid()).
+				filter(p -> !disabledAuthenticators.contains(p.id())).
+				toList();
 	}
 
 	protected void configChanged() {
@@ -122,7 +143,7 @@ public class MountConfiguration extends AbstractConfiguration {
 					LazyLog.LOG.info("Mounting {} to {}", local, path);
 					
 					 
-					for(var authFactory : authFactories) {
+					for(var authFactory : activeFactories()) {
 						var res = authFactory.createAuthenticator(path);
 						if(res.isPresent()) {
 							LazyLog.LOG.info("Using {} for authenticator", authFactory.name());

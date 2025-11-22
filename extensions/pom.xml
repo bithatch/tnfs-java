@@ -37,5 +37,6 @@
 		<module>lib</module>
 		<module>client</module>
 		<module>server</module>
+		<module>server-ldap</module>
 	</modules>
 </project>

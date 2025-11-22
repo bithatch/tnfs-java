@@ -36,7 +36,10 @@ import org.slf4j.LoggerFactory;
 
 import com.sshtools.jini.INI;
 import com.sshtools.jini.INI.Section;
+import com.sshtools.jini.INIReader.DuplicateAction;
+import com.sshtools.jini.INIReader.MultiValueMode;
 import com.sshtools.jini.INIReader;
+import com.sshtools.jini.INIWriter;
 import com.sshtools.jini.Interpolation;
 import com.sshtools.jini.config.INISet;
 import com.sshtools.jini.config.INISet.CreateDefaultsMode;
@@ -52,8 +55,11 @@ public final class Configuration {
 	public Configuration(Monitor monitor, Optional<Path> configDir, Optional<Path> userConfigDir) {
 		var bldr =  new INISet.Builder("tnfsjd-web").
 				withApp("tnfsjd-web").
+				withWriterFactory(() -> new INIWriter.Builder().withMultiValueMode(MultiValueMode.REPEATED_KEY)).
 				withReaderFactory(() ->
 					new INIReader.Builder().
+						withDuplicateKeysAction(DuplicateAction.APPEND).
+						withMultiValueMode(MultiValueMode.REPEATED_KEY).
 						withInterpolator((data, k) -> {
 							if(k.startsWith("env:")) {
 								var vk = k.substring(4);

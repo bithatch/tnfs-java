@@ -27,6 +27,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.sshtools.jini.INI;
+import com.sshtools.jini.INIReader;
+import com.sshtools.jini.INIWriter;
+import com.sshtools.jini.INIReader.DuplicateAction;
+import com.sshtools.jini.INIReader.MultiValueMode;
 import com.sshtools.jini.config.INISet;
 import com.sshtools.jini.config.INISet.Scope;
 import com.sshtools.jini.config.Monitor;
@@ -45,6 +49,10 @@ public final class Configuration {
 
 		var builder = new INISet.Builder(APPNAME).
 				withApp(APPNAME).
+				withReaderFactory(() -> new INIReader.Builder().
+						withDuplicateKeysAction(DuplicateAction.APPEND).
+						withMultiValueMode(MultiValueMode.REPEATED_KEY)).
+				withWriterFactory(() -> new INIWriter.Builder().withMultiValueMode(MultiValueMode.REPEATED_KEY)).
 				withMonitor(monitor);
 		
 		iniSet = builder.

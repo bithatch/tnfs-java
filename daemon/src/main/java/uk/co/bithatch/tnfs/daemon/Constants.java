@@ -26,10 +26,18 @@ public class Constants {
 	public static final String MDNS_SECTION = "mdns";
 	public static final String AUTHENTICATION_SECTION = "authentication";
 	public static final String MOUNTS_SECTION = "mounts";
+	public static final String LDAP_SECTION = "ldap";
 	
 	public static final String ANNOUNCE_KEY = "announce";
 	public static final String UPNP_KEY = "upnp";
 
+	public static final String HOSTNAME_KEY = "hostname";
+	public static final String SSL_KEY = "ssl";
+	public static final String IGNORE_SSL_ERRORS_KEY = "ignore-ssl-errors";
+	public static final String BASE_DN_KEY = "base-dn";
+	public static final String BIND_DN_KEY = "bind-dn";
+	public static final String BIND_DN_PASSWORD_KEY = "bind-dn-password";
+	public static final String USER_SEARCH_FILTER_KEY = "user-search-filter";
 	public static final String ADDRESS_KEY = "address";
 	public static final String PORT_KEY = "port";
 	public static final String PROTOCOLS_KEY = "protocols";

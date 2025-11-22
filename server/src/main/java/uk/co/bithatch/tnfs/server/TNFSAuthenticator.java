@@ -27,5 +27,6 @@ import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
 
 @FunctionalInterface
 public interface TNFSAuthenticator {
+	
 	Optional<Principal> authenticate(TNFSFileAccess fs, Optional<String> username, Optional<char[]> password);
 }
