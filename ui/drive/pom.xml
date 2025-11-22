@@ -42,7 +42,7 @@
 		<main.class>uk.co.bithatch.tnfs.drive.Drive</main.class>
 		<javafx.maven.plugin.version>0.0.8</javafx.maven.plugin.version>
 		<gluonfx.maven.plugin.version>1.0.27</gluonfx.maven.plugin.version>
-		<javafx.version>25.0.1</javafx.version>
+		<javafx.version>25.0.2-ea+3</javafx.version>
 
 		<build.projectProperties>${basedir}/bithatch.build.properties</build.projectProperties>
 		<build.userProperties>${user.home}/.bithatch.build.properties</build.userProperties>
