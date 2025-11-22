@@ -32,6 +32,7 @@ public class Constants {
 	public static final String MDNS_SECTION = "mdns";
 	
 	public static final String NAME_KEY = "name";
+	public static final String SECURE_KEY = "secure";
 	public static final String HOSTNAME_KEY = "hostname";
 	public static final String PATH_KEY = "path";
 	public static final String ANNOUNCE_KEY = "announce";

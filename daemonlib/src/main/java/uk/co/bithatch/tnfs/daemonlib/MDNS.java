@@ -26,6 +26,8 @@ import java.net.InetAddress;
 import javax.jmdns.JmDNS;
 import javax.jmdns.JmmDNS;
 import javax.jmdns.ServiceInfo;
+import javax.jmdns.ServiceListener;
+import javax.jmdns.ServiceTypeListener;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +38,10 @@ public class MDNS {
 
 	private final JmmDNS mmDNS;
 	private final JmDNS mDNS;
+
+	public static final String MDNS_TNFS_UDP_LOCAL = "_tnfs._udp.local.";
+
+	public static final String MDNS_TNFS_TCP_LOCAL = "_tnfs._tcp.local.";
 
 	public MDNS(InetAddress address) throws IOException {
 		
@@ -58,6 +64,29 @@ public class MDNS {
 		}
 	}
 
+	public void removeListener(ServiceListener listener) {
+
+		if(mDNS == null) {
+			mmDNS.removeServiceListener(MDNS_TNFS_UDP_LOCAL, listener);
+			mmDNS.removeServiceListener(MDNS_TNFS_TCP_LOCAL, listener);
+		}
+		else {
+			mDNS.removeServiceListener(MDNS_TNFS_UDP_LOCAL, listener);
+			mDNS.removeServiceListener(MDNS_TNFS_TCP_LOCAL, listener);
+		}
+	}
+	
+	public void addListener(ServiceListener listener) {
+		if(mDNS == null) {
+			mmDNS.addServiceListener(MDNS_TNFS_UDP_LOCAL, listener);
+			mmDNS.addServiceListener(MDNS_TNFS_TCP_LOCAL, listener);
+		}
+		else {
+			mDNS.addServiceListener(MDNS_TNFS_UDP_LOCAL, listener);
+			mDNS.addServiceListener(MDNS_TNFS_TCP_LOCAL, listener);
+		}
+	}
+	
 	public void unregisterAllServices() {
 		if(mDNS == null) {
 			mmDNS.unregisterAllServices();

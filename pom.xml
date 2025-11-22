@@ -58,7 +58,9 @@
 		<module>fuse</module>
 		<module>nio</module>
 		<module>web</module>
+		<module>mountlib</module>
 		<module>extensions</module>
+		<module>ui</module>
 		<module>it</module>
 		<module>sdk</module>
 		<module>platform</module>

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.String?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<StackPane id="options" xmlns="http://javafx.com/javafx/24.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="uk.co.bithatch.tnfs.drive.OptionsPage">
+   <children>
+      <AnchorPane>
+         <children>
+            <BorderPane AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+               <bottom>
+                  <HBox BorderPane.alignment="CENTER">
+                     <children>
+                        <Hyperlink onAction="#back" text="%back">
+                           <graphic>
+                              <FontIcon iconLiteral="fas-arrow-alt-circle-left" iconSize="24" styleClass="icon-accent" />
+                           </graphic>
+                        </Hyperlink>
+                     </children>
+                  </HBox>
+               </bottom>
+               <center>
+                  <VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" styleClass="spaced" BorderPane.alignment="TOP_LEFT">
+                     <children>
+                        <Label text="%appearance">
+                           <styleClass>
+                              <String fx:value="h3" />
+                              <String fx:value="tpad" />
+                           </styleClass>
+                        </Label>
+                        <HBox alignment="CENTER_LEFT" styleClass="spaced">
+                           <children>
+                              <Label prefWidth="120.0" text="%darkMode" />
+                              <ComboBox fx:id="darkMode" prefWidth="150.0" />
+                           </children>
+                        </HBox>
+                        <Label text="%mounts">
+                           <styleClass>
+                              <String fx:value="h3" />
+                              <String fx:value="tpad" />
+                           </styleClass>
+                        </Label>
+                        <HBox alignment="CENTER_LEFT" styleClass="spaced">
+                           <children>
+                              <Label prefWidth="120.0" text="%mountPath" />
+                              <TextField fx:id="mountPath" prefWidth="300.0">
+                                 <tooltip>
+                                    <Tooltip text="%mountPath.tooltip" />
+                                 </tooltip>
+                              </TextField>
+                              <Button mnemonicParsing="false" onAction="#browse" text="%browse" />
+                           </children>
+                        </HBox>
+                        <CheckBox fx:id="discover" mnemonicParsing="false" text="%discover">
+                           <styleClass>
+                              <String fx:value="lpad" />
+                              <String fx:value="tpad" />
+                           </styleClass>
+                           <tooltip>
+                              <Tooltip text="%discover.tooltip" />
+                           </tooltip>
+                        </CheckBox>
+                        <CheckBox fx:id="automountDiscovered" mnemonicParsing="false" styleClass="lpad" text="%automountDiscovered">
+                           <tooltip>
+                              <Tooltip text="%automountDiscovered.tooltip" />
+                           </tooltip>
+                        </CheckBox>
+                     </children>
+                  </VBox>
+               </center>
+            </BorderPane>
+         </children>
+      </AnchorPane>
+   </children>
+</StackPane>

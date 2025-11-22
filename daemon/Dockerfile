@@ -37,6 +37,10 @@ FROM debian:stable-slim
 ENV TNFS_LOG_LEVEL=INFO
 COPY --from=build /usr/app/daemon/target/tnfsjd /app/tnfsjd
 COPY --from=build /usr/app/daemon/target/tnfs-user /app/tnfs-user
+COPY --from=build /usr/app/daemon/src/main/docker/scripts/tnfs-user-add /bin/tnfs-user-add
+COPY --from=build /usr/app/daemon/src/main/docker/scripts/tnfs-user-remove /bin/tnfs-user-remove
+COPY --from=build /usr/app/daemon/src/main/docker/scripts/tnfs-user-password /bin/tnfs-user-password
+COPY --from=build /usr/app/daemon/src/main/docker/scripts/tnfs-user-list /bin/tnfs-user-list
 COPY --from=build /usr/app/daemon/src/main/docker/configuration /etc/tnfsjd
 COPY --from=build /usr/app/daemon/src/main/docker/public-files /public-files
 EXPOSE 16384

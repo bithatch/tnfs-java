@@ -55,6 +55,7 @@ import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Spec;
 import uk.co.bithatch.tnfs.client.TNFSClient;
+import uk.co.bithatch.tnfs.client.extensions.SecureMount;
 import uk.co.bithatch.tnfs.daemonlib.MDNS;
 import uk.co.bithatch.tnfs.lib.AppLogLevel;
 import uk.co.bithatch.tnfs.lib.Net;
@@ -212,6 +213,7 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 		configuration.mounts().forEach(mnt -> {
 			var hostname = Net.parseAddress(mnt.get(Constants.HOSTNAME_KEY)).getHostAddress();
 			var port = mnt.getInt(Constants.PORT_KEY);
+			var secure = mnt.getBoolean(Constants.SECURE_KEY);
 			var path = mnt.get(Constants.PATH_KEY);
 			var name = mnt.getOr(Constants.NAME_KEY).orElseGet(() -> {
 				if (port != TNFS.DEFAULT_PORT) {
@@ -226,7 +228,11 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 
 			try {
 				var clnt = new TNFSClient.Builder().withAddress(hostname, port).build();
-				var tnfsmnt = clnt.mount(path).build();
+				
+				var tnfsmnt = secure
+						? clnt.extension(SecureMount.class).mount(path).build()
+						: clnt.mount(path).build();
+				
 				var vol = new TNFSMountVolume(tnfsmnt, name);
 				var ref = new DefaultVolumeRef( String.valueOf(Integer.toUnsignedLong(name.hashCode())), vol);
 				

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.ContextMenu?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.BorderPane?>
+
+<AnchorPane focusTraversable="true" xmlns="http://javafx.com/javafx/24.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="uk.co.bithatch.tnfs.drive.MountsPage">
+   <children>
+      <BorderPane fx:id="container" focusTraversable="true" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+         <center>
+            
+         </center>
+         <center>
+            <ListView fx:id="mounts" prefHeight="500.0" prefWidth="420.0" BorderPane.alignment="CENTER">
+               <contextMenu>
+                  <ContextMenu>
+                    <items>
+                      <MenuItem fx:id="open" mnemonicParsing="false" text="%open" onAction="#open"/>
+                      <MenuItem fx:id="mount" mnemonicParsing="false" text="%mount" onAction="#mount" />
+                      <MenuItem fx:id="unmount" mnemonicParsing="false" text="%unmount"  onAction="#unmount"/>
+                      <MenuItem fx:id="remove" mnemonicParsing="false" text="%remove"  onAction="#remove"/>
+                    </items>
+                  </ContextMenu>
+               </contextMenu></ListView>
+         </center>
+      </BorderPane>
+   </children>
+</AnchorPane>

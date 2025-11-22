@@ -1,0 +1,3 @@
+#!/bin/bash
+
+/app/tnfs-user -O /configuration remove $@

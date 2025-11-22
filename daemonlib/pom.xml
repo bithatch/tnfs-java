@@ -31,7 +31,7 @@
 		<relativePath>../</relativePath>
 	</parent>
 	<artifactId>tnfs-java-daemonlib</artifactId>
-	<name>Java TNFS - Daemon Library</name>
+	<name>TNFS Java - Daemon Library</name>
 	<dependencies>
         <dependency>
 		    <groupId>org.jmdns</groupId>

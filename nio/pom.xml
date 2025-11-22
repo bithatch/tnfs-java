@@ -34,7 +34,7 @@
 		<!--<maven.compiler.release>22</maven.compiler.release>-->
 	</properties>
 	<artifactId>tnfs-java-nio</artifactId>
-	<name>Java TNFS - NIO File System</name>
+	<name>TNFS Java - NIO File System</name>
 	<description>A provider for Javas built in virtual file system, allows you treat TNFS resources as any other `Path`.</description>
 	<dependencies>
 		<dependency>

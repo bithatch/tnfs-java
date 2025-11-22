@@ -82,4 +82,5 @@
 			</plugin>
 		</plugins>
 	</build>
+	<name>TNSF Java - Windows Server platform specific features</name>
 </project>

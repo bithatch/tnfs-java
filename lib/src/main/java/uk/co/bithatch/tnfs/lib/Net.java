@@ -33,6 +33,15 @@ import java.util.List;
 
 public class Net {
 
+	public static String tryAddress(String address) {
+		try {
+			return parseAddress(address).getHostAddress();
+		}
+		catch(UncheckedIOException uhe) {
+			return address;
+		}
+	}
+
 	public static InetAddress parseAddress(String address) {
 		return parseAddress(address, "localhost");
 	}

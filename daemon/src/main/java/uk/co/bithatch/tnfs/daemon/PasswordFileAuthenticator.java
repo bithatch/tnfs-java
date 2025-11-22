@@ -45,7 +45,7 @@ public class PasswordFileAuthenticator  implements TNFSAuthenticator, TNFSAuthen
 	public Optional<Principal> authenticate(TNFSFileAccess fs, Optional<String> username, Optional<char[]> password) {
 		if(username.isPresent()) {
 			var uname = username.get();
-			if(passwd.verifyUser(uname, password.get())) {
+			if(passwd.verifyUser(uname, password.orElseThrow(() -> new IllegalArgumentException("Username was provided, but password wasn't.")))) {
 				return Optional.of(new UserPrincipal() {
 					
 					@Override

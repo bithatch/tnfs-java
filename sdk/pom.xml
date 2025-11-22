@@ -31,7 +31,7 @@
 	</parent>
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>tnfs-java-sdk</artifactId>
-	<name>Java TNFS - SDK</name>
+	<name>TNFS Java - SDK</name>
 	<description>This project assembles all built tools and libraries into a distributable archive known as the TNFS Java SDK.</description>
 	<url>${scmWebRoot}/${project.artifactId}/</url>
 	<properties>

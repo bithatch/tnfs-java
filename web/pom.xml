@@ -31,7 +31,7 @@
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 	<artifactId>tnfs-java-web</artifactId>
-	<name>Java TNFS - Web</name>
+	<name>TNFS Java - Web</name>
 	<dependencies>
 		<dependency> 
 			<groupId>${project.groupId}</groupId>
@@ -212,6 +212,9 @@
 									<buildArgs>
 										<buildArg>--install-exit-handlers</buildArg>
                                         <buildArg>-march=compatibility</buildArg>
+                                        <buildArg>-H:+AddAllCharsets</buildArg>
+                                        <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
+                                        <buildArg>-R:MaxHeapSize=64m</buildArg>
 									</buildArgs>
 								</configuration>
 							</execution>

@@ -1,0 +1,484 @@
+<!--
+
+    Copyright © 2025 Bithatch (brett@bithatch.co.uk)
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of this
+    software and associated documentation files (the “Software”), to deal in the Software
+    without restriction, including without limitation the rights to use, copy, modify,
+    merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+    permit persons to whom the Software is furnished to do so, subject to the following
+    conditions:
+
+    The above copyright notice and this permission notice shall be included in all copies
+    or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+    INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+    PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+    HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+    OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>uk.co.bithatch</groupId>
+		<artifactId>tnfs-java-ui</artifactId>
+		<version>0.9.0-SNAPSHOT</version>
+		<relativePath>../</relativePath>
+	</parent>
+	<artifactId>tnfs-java-drive</artifactId>
+	<name>TNFS Java - Drive</name>
+	<description>A little GUI tool to manage TNFS fuse mounts without messing with configuration files.</description>
+	<packaging>jar</packaging>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<main.class>uk.co.bithatch.tnfs.drive.Drive</main.class>
+		<javafx.maven.plugin.version>0.0.8</javafx.maven.plugin.version>
+		<gluonfx.maven.plugin.version>1.0.27</gluonfx.maven.plugin.version>
+		<javafx.version>25.0.1</javafx.version>
+
+		<build.projectProperties>${basedir}/bithatch.build.properties</build.projectProperties>
+		<build.userProperties>${user.home}/.bithatch.build.properties</build.userProperties>
+
+	</properties>
+	<dependencies>
+
+
+		<!-- <dependency> <groupId>com.gluonhq</groupId> <artifactId>gluonfx-maven-plugin</artifactId> 
+			<version>${gluonfx.maven.plugin.version}</version> </dependency> -->
+ 		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>tnfs-java-mountlib</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>tnfs-java-fuse</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.sshtools</groupId>
+			<artifactId>jini-config</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>uk.co.bithatch</groupId>
+			<artifactId>native-image-annotations</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.openjfx</groupId>
+			<artifactId>javafx-fxml</artifactId>
+			<version>${javafx.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openjfx</groupId>
+			<artifactId>javafx-controls</artifactId>
+			<version>${javafx.version}</version>
+		</dependency> 
+		<dependency>
+			<groupId>uk.co.bithatch</groupId>
+			<artifactId>FX-BorderlessScene</artifactId>
+			<version>5.0.12</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.openjfx</groupId>
+					<artifactId>javafx-controls</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.openjfx</groupId>
+					<artifactId>javafx-graphics</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.openjfx</groupId>
+					<artifactId>javafx-fxml</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>io.github.palexdev</groupId>
+			<artifactId>scenicview</artifactId>
+			<version>17.0.2</version>
+			<optional>true</optional>
+			<scope>provided</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.openjfx</groupId>
+					<artifactId>javafx-controls</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.openjfx</groupId>
+					<artifactId>javafx-graphics</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.openjfx</groupId>
+					<artifactId>javafx-fxml</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.openjfx</groupId>
+					<artifactId>javafx-base</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		
+		<!-- <dependency> <groupId>com.install4j</groupId> <artifactId>install4j-runtime</artifactId> 
+			<version>10.0.6</version> MUST be provided, the runtime is added by I4J itself 
+			<scope>provided</scope> </dependency> -->
+		<dependency>
+			<groupId>com.sshtools</groupId>
+			<artifactId>jajafx-lib</artifactId>
+			<version>0.9.10</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.openjfx</groupId>
+					<artifactId>javafx-controls</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.openjfx</groupId>
+					<artifactId>javafx-fxml</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.openjfx</groupId>
+					<artifactId>javafx-graphics</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>com.sshtools</groupId>
+			<artifactId>jajafx-jmetro</artifactId>
+			<version>0.9.10</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.openjfx</groupId>
+					<artifactId>javafx-controls</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.openjfx</groupId>
+					<artifactId>javafx-fxml</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.openjfx</groupId>
+					<artifactId>javafx-graphics</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>info.picocli</groupId>
+			<artifactId>picocli</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.jfxtras</groupId>
+			<artifactId>jmetro</artifactId>
+			<version>11.6.16</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.openjfx</groupId>
+					<artifactId>javafx-controls</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.openjfx</groupId>
+					<artifactId>javafx-base</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.openjfx</groupId>
+					<artifactId>javafx-graphics</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.openjfx</groupId>
+					<artifactId>javafx-fxml</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.glassfish</groupId>
+			<artifactId>javax.json</artifactId>
+			<version>1.1.4</version>
+		</dependency>
+		<dependency>
+			<groupId>uk.co.bithatch</groupId>
+			<artifactId>tnfs-java-fuse</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+	</dependencies>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>properties-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>build-number-property</id>
+						<goals>
+							<goal>regex-property</goal>
+						</goals>
+						<phase>initialize</phase>
+						<configuration>
+							<name>product.version</name>
+							<value>${project.version}</value>
+							<regex>^([0-9]+)\.([0-9]+)\.([0-9]+)-([0-9A-Za-z]+)$</regex>
+							<replacement>$1.$2.$3</replacement>
+							<failIfNoMatch>false</failIfNoMatch>
+						</configuration>
+					</execution>
+					<execution>
+						<id>product-version-property</id>
+						<goals>
+							<goal>regex-property</goal>
+						</goals>
+						<phase>initialize</phase>
+						<configuration>
+							<name>build.number</name>
+							<value>0${env.BUILD_NUMBER}</value>
+							<regex>^(?:0?)([0-9]+)(?:\$\{env\.BUILD_NUMBER\})?$</regex>
+							<replacement>$1</replacement>
+							<failIfNoMatch>false</failIfNoMatch>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>info.picocli</groupId>
+							<artifactId>picocli-codegen</artifactId>
+							<version>4.6.1</version>
+						</path>
+						<path>
+							<groupId>uk.co.bithatch</groupId>
+							<artifactId>native-image-annotations</artifactId>
+							<version>${native.image.annotations.version}</version>
+						</path>
+					</annotationProcessorPaths>
+					<compilerArgs>
+						<arg>-Aproject=${project.groupId}/${project.artifactId}</arg>
+					</compilerArgs>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.openjfx</groupId>
+				<artifactId>javafx-maven-plugin</artifactId>
+				<version>${javafx.maven.plugin.version}</version>
+				<configuration>
+					<mainClass>${main.class}</mainClass>
+				</configuration>
+			</plugin>
+		</plugins>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>versions-maven-plugin</artifactId>
+					<version>2.15.0</version>
+				</plugin>
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>properties-maven-plugin</artifactId>
+					<version>1.0.0</version>
+					<executions>
+						<execution>
+							<phase>initialize</phase>
+							<goals>
+								<goal>read-project-properties</goal>
+							</goals>
+							<configuration>
+								<quiet>true</quiet>
+								<files>
+									<file>${build.projectProperties}</file>
+									<file>${build.userProperties}</file>
+								</files>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>3.10.1</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-dependency-plugin</artifactId>
+					<version>3.5.0</version>
+				</plugin>
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>build-helper-maven-plugin</artifactId>
+					<version>3.3.0</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-antrun-plugin</artifactId>
+					<version>1.8</version>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+	<profiles>
+		<profile>
+			<id>mac-jfx</id>
+			<activation>
+				<os>
+					<family>mac</family>
+				</os>
+			</activation>
+			<properties>
+				<javafx.os.family>mac</javafx.os.family>
+			</properties>
+		</profile>
+		<profile>
+			<id>linux-jfx</id>
+			<activation>
+				<os>
+					<family>linux</family>
+				</os>
+			</activation>
+			<properties>
+				<javafx.os.family>linux</javafx.os.family>
+			</properties>
+		</profile>
+		<profile>
+			<id>windows-jfx</id>
+			<activation>
+				<os>
+					<family>windows</family>
+				</os>
+			</activation>
+			<properties>
+				<javafx.os.family>windows</javafx.os.family>
+			</properties>
+		</profile>
+		
+		<!-- Graal Native Image -->
+		<profile>
+			<id>ZZZZZZinstaller</id>
+			
+			<build>
+				<plugins>
+				
+					<plugin>
+					    <artifactId>maven-jlink-plugin</artifactId>
+				        <version>3.2.0</version>
+				        <extensions>true</extensions>
+						<executions>
+							<execution>
+								<id>build-drive-jlink</id>
+								<phase>package</phase>
+								<goals>
+									<goal>jlink</goal>
+								</goals>
+							</execution>
+						</executions>
+					    <configuration>
+					    </configuration>
+					</plugin>
+					
+				    <plugin>
+					    <groupId>org.panteleyev</groupId>
+					    <artifactId>jpackage-maven-plugin</artifactId>
+						<version>1.7.1</version>
+						<executions>
+							<!--<execution>
+								<id>build-drive-jpackage</id>
+								<phase>package</phase>
+								<goals>
+									<goal>jpackage</goal>
+								</goals>
+							</execution>-->
+						</executions>
+					    <configuration>
+					        <name>Drive</name>
+					        <appVersion>${project.version}</appVersion>
+					        <vendor>Bithatch</vendor>
+					        <!-- Entire JDK is used as runtime image -->
+					        <runtimeImage>${java.home}</runtimeImage>
+					        <module>uk.co.bithatch.tnfs.drive/${main.class}</module>
+					        <!--<modulePaths>
+					            <modulePath>${project.build.directory}/mods</modulePath>
+					        </modulePaths>-->
+					        <destination>${project.build.directory}/dist</destination>
+					        <removeDestination>true</removeDestination>
+					    </configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		
+
+		<!-- Flatpak -->
+		<profile>
+			<id>flatpak</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>uk.co.bithatch</groupId>
+						<artifactId>flatpak-maven-plugin</artifactId>
+						<version>0.0.3</version>
+						<executions>
+							<execution>
+								<id>drive-prep-flatpak</id>
+								<phase>package</phase>
+								<goals>
+									<goal>generate</goal>
+								</goals>
+								<configuration>
+                                    <classpath>false</classpath>
+                                    <desktopEntry>
+                                        <name>TNFS Drive</name>
+                                    </desktopEntry>
+									<manifest>
+                                        <runtimeVersion>24.08</runtimeVersion>
+										<sdkExtensions>
+											<sdkExtension>
+												org.freedesktop.Sdk.Extension.openjdk21</sdkExtension>
+										</sdkExtensions>
+										<finishArgs>
+											<finishArg>--socket=x11</finishArg>
+											<finishArg>--device=dri</finishArg>
+											<finishArg>--filesystem=home</finishArg>
+										</finishArgs>
+									</manifest>
+									<mainClass>uk.co.bithatch.tnfs.drive/${main.class}</mainClass>
+									<iconFile>src/main/resources/uk/co/bithatch/tnfs/drive/icon.png</iconFile>
+								</configuration>
+							</execution>
+							<execution>
+                                <id>drive-build-flatpak</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>build</goal>
+                                </goals>
+                                
+                                <configuration>
+                                    <install>true</install>
+                                </configuration>
+                            </execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+	<repositories>
+		<repository>
+			<id>oss-snapshots</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+			<snapshots />
+			<releases>
+				<enabled>false</enabled>
+			</releases>
+		</repository>
+	</repositories>
+</project>

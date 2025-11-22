@@ -31,7 +31,7 @@
 	</parent>
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>tnfs-java-cli</artifactId>
-	<name>Java TNFS - CLI tools</name>
+	<name>TNFS Java - CLI tools</name>
 	<description>Commands for accessing TNFS file systems.
 
 tnfscp - Copy files

@@ -351,16 +351,19 @@ public class TNFSFUSEFileSystem implements FuseOperations {
 		try {
 			return task.call();
 		} catch (IllegalArgumentException e) {
-			LOG.error("EINVAL. ", e);
+			LOG.debug("EINVAL. ", e);
 			return -errno.einval();
 		} catch (UnsupportedOperationException e) {
-			LOG.error("ENOSYS. ", e);
+			if(LOG.isDebugEnabled())
+				LOG.error("ENOSYS. ", e);
+			else
+				LOG.error("ENOSYS. {}", e.getMessage() == null ? "No message supplied." : e.getMessage());
 			return -errno.enosys();
 		} catch (FileAlreadyExistsException e) {
-			LOG.error("EEXIST. ", e);
+			LOG.debug("EEXIST. ", e);
 			return -errno.eexist();
 		} catch (NotDirectoryException e) {
-			LOG.error("ENOTDIR. ", e);
+			LOG.debug("ENOTDIR. ", e);
 			return -errno.enotdir();
 		} catch (FileNotFoundException | NoSuchFileException e) {
 			if(LOG.isDebugEnabled()) {
@@ -373,7 +376,7 @@ public class TNFSFUSEFileSystem implements FuseOperations {
 			}
 			return -errno.enoent();
 		} catch (UncheckedIOException | IOException e) {
-			LOG.error("EIO. ", e);
+			LOG.debug("EIO. ", e);
 			return -errno.eio();
 		} catch (Exception e) {
 			return -errno.eio();

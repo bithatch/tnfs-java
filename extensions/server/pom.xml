@@ -31,7 +31,7 @@
 		<relativePath>../</relativePath>
 	</parent>
 	<artifactId>tnfs-java-server-extensions</artifactId>
-	<name>Java TNFS - Server Extensions</name>
+	<name>TNFS Java - Server Extensions</name>
 	<dependencies>
 		<dependency>
 			<groupId>${project.groupId}</groupId>

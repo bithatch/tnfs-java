@@ -164,7 +164,7 @@ public class Extensions {
 			var res = Result.decodeResult(buf);
 			return new PktSizeResult(
 				res, 
-				Short.toUnsignedInt(buf.getShort())
+				buf.remaining() > 1 ? Short.toUnsignedInt(buf.getShort()) : 0
 			);
 		}
 

@@ -17,6 +17,7 @@ I started this to help me understand the TNFS protocol, as I intend to implement
  * `tnfs-fuse`. Mount TNFS resources to your file system and access them easily in any program. Makes use of [libfuse](https://github.com/libfuse/libfuse).
  * `tnfsjd`. An alternative server implementation with extra features such as mDNS support, UPnP support, and enhanced file systemm and security features, particularly when used with *TNFS Java* client tools.
  * `tnfsjd-web`. An alternative web front-end based on [elFinder](https://github.com/Studio-42/elFinder).
+ * `tnfs-drive`. A desktop application for discovering, managing and accessing TNFS resources with ease.
  * All server tools have a `Dockerfile` to build your own docker containers. 
  
 *A pre-built SDK including all components is available from my [Downloads](https://bithatch.co.uk/?page_id=344) page. Some platforms have full natively compiled builds, for everyone else there are pure Java builds.*
@@ -29,7 +30,7 @@ I started this to help me understand the TNFS protocol, as I intend to implement
  * TNFS authentication supported in client and server libraries and all tools.
  * Client and server are fully extendable.
  * Includes an optional Java NIO file system library. Access TNFS resources with just a `Path`. 
- * Unofficial protocol extensions for massively increasing authentication security, remote copy, checksums and mount listing.
+ * Unofficial protocol extensions for massively increasing speed, authentication security, remote copy, checksums and mount listing.
  * Pick the tools you need, or download the full [SDK](sdk).
  * Use on your PC as a reference client or server implementation to develop TNFS applications for with low power computers, such as retro 8-bit and 16-bit machines. Or perhaps directly with Java capable modern IOT devices. 
  * Libraries can be used with Java 17 or higher, the tools need at least Java 21. For building the entire project, Java 24 is currently recommended. 
@@ -51,10 +52,12 @@ This project is separated into several modules.
 | tnfs-java-nio | [nio](nio/README.md) | 17 | Use in Java applications to treat TNFS as a `Path`. Great for quickly adding TNFS support to existing applications. |
 | tnfs-java-server | [server](server) | 17 | The base server library. Use this if you wish to build your own TNFS based server.  |
 | tnfs-java-extensions | [extensions](extensions) | 17 | Unofficial protocol extension for the server and client.  |
+| tnfs-java-platform | [platform](platform) | 24 | Platform specific modules (current for the server) such as system user database integration.  |
 | tnfs-java-cli | [cli](cli) | 24 | Some read-to-use tools for working with TNFS. A simple copy tool, and an FTP-like client. |
 | tnfs-java-daemon | [daemon](daemon) | 24 | A fully featured TNFS server. |
 | tnfs-java-fuse | [fuse](fuse) | 22 | A jFUSE implementation for TNFS. Mount TNFS resources as a local file system. |
 | tnfs-java-web | [web](web) | 24 | A fully featured front-end to TNFS that runs in your browser. |
+| tnfs-java-ui | [ui](ui) | 24 | Desktop applications for TNFS Java. |
 | tnfs-java-sdk | [sdk](sdk) | 24 | Assembly for a complete TNFS Development Kit including executables, libraries and documentation. |
 
 

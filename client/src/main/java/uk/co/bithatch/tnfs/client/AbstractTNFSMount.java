@@ -172,7 +172,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 		 * @return this for chaining
 		 */
 		public BLDR withPassword(String password) {
-			return withPassword(new String(password));
+			return withPassword(password.toCharArray());
 		}
 
 		/**
@@ -632,6 +632,7 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 		
 		try {
 			client.sendMessage(this, Command.UMOUNT, Message.of(sessionId(), Command.UMOUNT, new Command.HeaderOnly()));
+		} catch(EOFException eofe) {
 		} finally {
 			onClose();	
 		}

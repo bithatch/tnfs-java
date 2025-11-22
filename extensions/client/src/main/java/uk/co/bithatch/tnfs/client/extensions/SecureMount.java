@@ -29,6 +29,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Optional;
+import java.util.Set;
 
 import javax.crypto.KeyAgreement;
 import javax.crypto.interfaces.DHPublicKey;
@@ -127,6 +128,8 @@ public class SecureMount extends AbstractTNFSClientExtension {
 		private final Version serverVersion;
 		private final int blockSize;
 		private final int keySize;
+		
+		private boolean authenticated;
 
 		private SecureTNFSMount(Builder bldr) throws IOException {
 			super(bldr);
@@ -190,6 +193,7 @@ public class SecureMount extends AbstractTNFSClientExtension {
 				setupEncryption(derivedKey, blockSize);
 				
 				// 6. Send original mount command but with a sessionId
+				authenticated = username.isPresent();
 				client().sendMessage(this, 
 						Command.MOUNT, Message.of(sessionId, Command.MOUNT, 
 								new Command.Mount(mountPath, username, password)));
@@ -201,6 +205,16 @@ public class SecureMount extends AbstractTNFSClientExtension {
 			}
 		}
 		
+		@Override
+		public Set<Flag> flags() {
+			if(authenticated) {
+				return Set.of(Flag.AUTHENTICATED, Flag.ENCRYPTED);
+			}
+			else {
+				return Set.of(Flag.ENCRYPTED);
+			}
+		}
+
 		public int blockSize() {
 			return blockSize;
 		}

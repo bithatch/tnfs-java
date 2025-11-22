@@ -120,7 +120,6 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 
 	@Override
     public Integer call() throws Exception {
-
 		
     	try(var monitor = new Monitor()) {
 			
@@ -270,6 +269,7 @@ public class TNFSDaemon implements Callable<Integer>, ExceptionHandlerHost {
 			log.info("De-registering mDNS");
 			jmdns.unregisterAllServices();
 			deregistered.set(true);
+			log.info("Done De-registering mDNS");
 		}
 	}
 

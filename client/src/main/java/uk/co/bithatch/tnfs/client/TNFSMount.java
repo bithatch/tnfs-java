@@ -28,8 +28,10 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import uk.co.bithatch.tnfs.lib.DirOptionFlag;
@@ -41,6 +43,19 @@ import uk.co.bithatch.tnfs.lib.TNFSFileAccess;
 import uk.co.bithatch.tnfs.lib.Version;
 
 public interface TNFSMount extends TNFSFileAccess {
+	
+	public enum Flag {
+		ENCRYPTED, AUTHENTICATED
+	}
+	
+	/**
+	 * Get any flags that describe the capabilities or state of this mount.
+	 * 
+	 * @return flags
+	 */
+	default Set<Flag> flags() {
+		return Collections.emptySet();
+	}
 
 	/**
 	 * List all the names of entries in the root of this mount. This is a convenience method

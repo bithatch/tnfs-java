@@ -31,7 +31,7 @@
 		<relativePath>../</relativePath>
 	</parent>
 	<artifactId>tnfs-java-lib</artifactId>
-	<name>Java TNFS - Common Library</name>
+	<name>TNFS Java - Common Library</name>
 	<dependencies>
 		<dependency>
 			<groupId>org.slf4j</groupId>

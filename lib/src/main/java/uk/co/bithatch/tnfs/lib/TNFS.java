@@ -27,6 +27,7 @@ public final class TNFS {
 	public static final int MAX_UDP_MESSAGE_SIZE = 65535;
 	public static final int DEFAULT_TCP_MESSAGE_SIZE = 532;
 	public static final int MAX_TCP_MESSAGE_SIZE = 65535;
+	public static final int LARGE_MESSAGE_SIZE = 32768;
 	
 	public static final Version PROTOCOL_VERSION = Version.fromString("1.2");
 	public static final Version READ_DIRX_REQUIRES_VERSION = Version.fromString("1.2");

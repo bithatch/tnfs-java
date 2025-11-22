@@ -1,0 +1,39 @@
+.root { -fx-background-color:background_color; }
+
+.title-bar FontIcon {
+    -fx-icon-size: 20px;
+}
+
+.borderless-root .vdu, .borderless-root .emulator-roots {  
+    -fx-background-radius: 0 0 8px 8px;
+} 
+
+.borderless-root .title-bar {   
+    -fx-background-radius: 8px 8px 0 0;
+}
+
+.dialog-pane {
+    -fx-padding: 0;
+}
+
+UpdatePane,
+AboutPane, 
+ActionsPane,
+Options,
+AboutPane ImageView {
+    -fx-background-color: dialog_background_color !important;
+    -fx-padding: 8;
+    -fx-background-radius: 0 0 8px 8px;
+}
+
+ActionsPane .viewport, UpdatePane .root {
+    -fx-background-color: transparent !important;
+}
+
+.root.popup {
+    -fx-cursor: default;
+}
+
+.optionsTab {
+    -fx-padding: 24;
+}

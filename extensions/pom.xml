@@ -32,7 +32,7 @@
 	</parent>
     <packaging>pom</packaging>
 	<artifactId>tnfs-java-extensions</artifactId>
-	<name>Java TNFS - Extensions</name>
+	<name>TNFS Java - Extensions</name>
 	<modules>
 		<module>lib</module>
 		<module>client</module>

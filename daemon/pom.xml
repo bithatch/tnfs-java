@@ -31,7 +31,7 @@
 		<relativePath>../</relativePath> 
 	</parent> 
 	<artifactId>tnfs-java-daemon</artifactId>
-	<name>Java TNFS - Daemon</name>
+	<name>TNFS Java - Daemon</name>
 	<dependencies>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
@@ -185,6 +185,7 @@
                                         <buildArg>-march=compatibility</buildArg>
                                         <buildArg>-H:+AddAllCharsets</buildArg>
                                         <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
+                                        <buildArg>-R:MaxHeapSize=64m</buildArg>
 									</buildArgs>
 								</configuration>
 							</execution>

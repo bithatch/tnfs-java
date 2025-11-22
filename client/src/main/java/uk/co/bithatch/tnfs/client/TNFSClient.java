@@ -111,7 +111,7 @@ public final class TNFSClient implements Closeable {
 		
 		address = new InetSocketAddress(hostname.orElse("localhost"), port.orElse(TNFS.DEFAULT_PORT));
 		
-		LOG.info("Will connect to {}", address);
+		LOG.info("Will connect to {} on {}", address, protocol);
 		
 		if(protocol == Protocol.UDP) {
 			channel=  DatagramChannel.open();
