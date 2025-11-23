@@ -155,7 +155,7 @@
             <plugin>
                 <groupId>com.sshtools</groupId>
                 <artifactId>jini-maven-plugin</artifactId>
-                <version>0.6.4-SNAPSHOT</version>
+                <version>0.6.5</version>
                 <executions>	
                 	<execution>
                 		<id>generate-config-files</id>
