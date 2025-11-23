@@ -5,6 +5,12 @@
     "allPublicConstructors" : true,
     "allDeclaredMethods" : true,
     "allPublicMethods" : true
+  },{
+    "name" : "com.sun.jndi.ldap.LdapCtxFactory",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
   },
 	{
 	  "name":"java.lang.Object",

@@ -31,12 +31,12 @@
  */
 package uk.co.bithatch.tnfs.web.elfinder.support.content.detect;
 
-import org.apache.tika.Tika;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+
+import org.apache.tika.Tika;
 
 /**
  * NIO file type detector implementation that uses Tika API.

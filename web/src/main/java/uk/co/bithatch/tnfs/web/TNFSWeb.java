@@ -25,13 +25,10 @@ import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.MessageFormat;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.jmdns.ServiceInfo;
 
@@ -54,20 +51,16 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Spec;
-import uk.co.bithatch.tnfs.client.TNFSClient;
-import uk.co.bithatch.tnfs.client.extensions.SecureMount;
 import uk.co.bithatch.tnfs.daemonlib.MDNS;
 import uk.co.bithatch.tnfs.lib.AppLogLevel;
 import uk.co.bithatch.tnfs.lib.Net;
-import uk.co.bithatch.tnfs.lib.TNFS;
-import uk.co.bithatch.tnfs.lib.TNFSException;
+import uk.co.bithatch.tnfs.mountlib.MountConfiguration;
+import uk.co.bithatch.tnfs.mountlib.MountConstants;
+import uk.co.bithatch.tnfs.mountlib.MountManager;
 import uk.co.bithatch.tnfs.web.ExceptionHandler.ExceptionHandlerHost;
 import uk.co.bithatch.tnfs.web.elfinder.ElFinderConstants;
 import uk.co.bithatch.tnfs.web.elfinder.core.ElfinderContext;
 import uk.co.bithatch.tnfs.web.elfinder.service.ElfinderStorageFactory;
-import uk.co.bithatch.tnfs.web.elfinder.service.impl.DefaultElfinderStorage;
-import uk.co.bithatch.tnfs.web.elfinder.service.impl.DefaultElfinderStorageFactory;
-import uk.co.bithatch.tnfs.web.elfinder.service.impl.DefaultVolumeRef;
 
 /**
  * Simple web front-end to TNFS resources.
@@ -108,7 +101,7 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 	}
 
 	private ServiceCommandFactory commandFactory;
-	private DefaultElfinderStorageFactory storageFactory;
+	private ElfinderStorageFactory storageFactory;
 	private Configuration configuration;
 	private Optional<MDNS> mdns;
 	private Logger log;
@@ -116,6 +109,9 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 	private RootContext httpd;
 
 	private Thread shutdownHook;
+
+	private MountConfiguration mountConfiguration;
+	private MountManager mountManager;
 
 	public TNFSWeb() {
 
@@ -153,12 +149,13 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 				if(httpd != null)
 					httpd.close();
 			});
+			
+			mountConfiguration = new MountConfiguration(Configuration.TNFSJD_WEB, "mounts", monitor, configurationDir, userConfiguration);
 	
 			commandFactory = new ServiceCommandFactory();
-			storageFactory = new DefaultElfinderStorageFactory();
 			
 			while(true) {
-	
+
 				reconfigureStorage();
 				
 				if (configuration.mdns().getBoolean(Constants.ANNOUNCE_KEY)) {
@@ -205,52 +202,14 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 	}
 
 	private void reconfigureStorage() {
-		var bldr = new DefaultElfinderStorage.Builder();
-		var mountCount = new AtomicInteger();
-
-		/* Mounts from config files */
 		
-		configuration.mounts().forEach(mnt -> {
-			var hostname = Net.parseAddress(mnt.get(Constants.HOSTNAME_KEY)).getHostAddress();
-			var port = mnt.getInt(Constants.PORT_KEY);
-			var secure = mnt.getBoolean(Constants.SECURE_KEY);
-			var path = mnt.get(Constants.PATH_KEY);
-			var name = mnt.getOr(Constants.NAME_KEY).orElseGet(() -> {
-				if (port != TNFS.DEFAULT_PORT) {
-					return "{hostname}:{port}{path}";
-				}
-				else {
-					return "{hostname}:{path}";
-				}
-			}).replace("{hostname}", hostname)
-				.replace("{port}", String.valueOf(port))
-				.replace("{path}", String.valueOf(path));
-
-			try {
-				var clnt = new TNFSClient.Builder().withAddress(hostname, port).build();
-				
-				var tnfsmnt = secure
-						? clnt.extension(SecureMount.class).mount(path).build()
-						: clnt.mount(path).build();
-				
-				var vol = new TNFSMountVolume(tnfsmnt, name);
-				var ref = new DefaultVolumeRef( String.valueOf(Integer.toUnsignedLong(name.hashCode())), vol);
-				
-				bldr.addVolumes(ref);
-				log.info("Mounted {} [{}] to {} @ {} [{}]", name, ref.getId(), path, hostname, tnfsmnt.serverVersion());
-				mountCount.addAndGet(1);
-
-			} catch (IOException ioe) {
-				if(log.isDebugEnabled())
-					log.error(MessageFormat.format("Failed to mount TNFS resource {0} @ {1}.", hostname, path), ioe);
-				else
-					log.error(MessageFormat.format("Failed to mount TNFS resource {0} @ {1}. {2}", hostname, path, ioe.getMessage()));
-			}
-		});
+		if(mountManager != null) {
+			mountManager.close();
+		}
 		
 		/* Setup mDNS if needed */
 		
-		if(configuration.mountConfiguration().getBoolean(Constants.DISCOVER_KEY) ||
+		if(mountConfiguration.mountConfiguration().getBoolean(MountConstants.DISCOVER_KEY) ||
 		   configuration.mdns().getBoolean(Constants.ANNOUNCE_KEY)) {
 			try {
 				
@@ -287,61 +246,15 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 			mdns = Optional.empty();
 		}
 		
-		try {
-
-			/* Discover other mounts */
-			
-			if(configuration.mountConfiguration().getBoolean(Constants.DISCOVER_KEY)) {
-				for(var srv : mdns.get().list("_tnfs._tcp.local.")) {
-					try {
-						for(var addr : srv.getHostAddresses()) {
-
-							var clnt = new TNFSClient.Builder().
-									withHostname(addr).
-									withPort(srv.getPort()).
-									build();
-							
-							for(var path : parseArray(srv.getPropertyString("path"))) {
-								try {
-									var name = path + " on " + addr;
-									log.info("Mounting {} to {} @ {}", name, addr, path);
-									var tnfsmnt = clnt.mount(path).build();
-									var vol = new TNFSMountVolume(tnfsmnt, srv.getName());
-									bldr.addVolumes(new DefaultVolumeRef(name, vol));
-									log.info("Mounted {} to {} @ {}", name, addr, path);
-									mountCount.addAndGet(1);	
-								}
-								catch(IOException | TNFSException ioe) {
-									log.warn("Failed to connect to mDNS advertised mount {} on {}", path, addr);
-								}
-							}
-								
-						}
-					}
-					catch(IOException ioe) {
-						log.warn("Failed to connect to mDNS advertised server {}", srv);
-					}
-				}
-			}
-
-			if (mountCount.get() == 0)
-				throw new IllegalStateException("No valid mounts defined in configuration.");
-
-			var storage = bldr.build();
-
-			storageFactory.setElfinderStorage(storage);
-		}
-		catch(RuntimeException re) {
-			mdns.ifPresent(dns -> { 
-				dns.unregisterAllServices();
-				try {
-					dns.close();
-				} catch (IOException e) {
-				}
-			});
-			throw re;
-		}
+		var mgrBldr = new MountManager.Builder(mountConfiguration);
+		mdns.ifPresent(mgrBldr::withMDNS);
+		mountManager = mgrBldr.build();
+		
+		storageFactory = new TNFSStorageFactory(configuration, mountManager);
+		
+		mountManager.start();
 	}
+		
 
 	@Override
 	public CommandSpec spec() {
@@ -491,13 +404,5 @@ public final class TNFSWeb implements Callable<Integer>, ExceptionHandlerHost {
 					}
 				});
 		;
-	}
-	
-	private final static String[] parseArray(String arrStr) {
-		if(arrStr.startsWith("[") && arrStr.endsWith("]")) {
-			return Arrays.asList(arrStr.substring(1, arrStr.length() - 1).split(",")).stream().map(String::trim).toList().toArray(new String[0]);
-		}
-		else
-			throw new IllegalArgumentException("Not array string.");
 	}
 }

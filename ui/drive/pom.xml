@@ -49,10 +49,10 @@
 
 	</properties>
 	<dependencies>
-
-
-		<!-- <dependency> <groupId>com.gluonhq</groupId> <artifactId>gluonfx-maven-plugin</artifactId> 
-			<version>${gluonfx.maven.plugin.version}</version> </dependency> -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+		</dependency>
  		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>tnfs-java-mountlib</artifactId>
@@ -71,6 +71,11 @@
 			<groupId>uk.co.bithatch</groupId>
 			<artifactId>native-image-annotations</artifactId>
 			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.openjfx</groupId>
+			<artifactId>javafx-base</artifactId>
+			<version>${javafx.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openjfx</groupId>
@@ -361,62 +366,73 @@
 			</properties>
 		</profile>
 		
-		<!-- Graal Native Image -->
 		<profile>
-			<id>ZZZZZZinstaller</id>
-			
+			<id>native-image-experiment</id>
+			<activation>
+			 	<property>
+			 	 	<name>build.native.drive</name>
+			 	 	<value>true</value>
+			 	</property>
+			</activation>
 			<build>
 				<plugins>
-				
 					<plugin>
-					    <artifactId>maven-jlink-plugin</artifactId>
-				        <version>3.2.0</version>
-				        <extensions>true</extensions>
+						<groupId>org.graalvm.buildtools</groupId>
+						<artifactId>native-maven-plugin</artifactId>
 						<executions>
 							<execution>
-								<id>build-drive-jlink</id>
-								<phase>package</phase>
+								<id>tnfscp-native-image</id>
 								<goals>
-									<goal>jlink</goal>
+									<goal>build</goal>
 								</goals>
+								<phase>package</phase>
+								<configuration>
+									<mainClass>uk.co.bithatch.tnfs.drive.Drive</mainClass>
+									<skip>false</skip>
+									<imageName>tnfs-drive</imageName>
+									<buildArgs>
+									    <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
+                                        <buildArg>--enable-native-access=org.cryptomator.jfuse.linux.amd64</buildArg>
+                                        <buildArg>--enable-native-access=javafx.graphics</buildArg>
+										<buildArg>--install-exit-handlers</buildArg>
+                                        <buildArg>-march=compatibility</buildArg>
+									</buildArgs>
+								</configuration>
 							</execution>
 						</executions>
-					    <configuration>
-					    </configuration>
-					</plugin>
-					
-				    <plugin>
-					    <groupId>org.panteleyev</groupId>
-					    <artifactId>jpackage-maven-plugin</artifactId>
-						<version>1.7.1</version>
-						<executions>
-							<!--<execution>
-								<id>build-drive-jpackage</id>
-								<phase>package</phase>
-								<goals>
-									<goal>jpackage</goal>
-								</goals>
-							</execution>-->
-						</executions>
-					    <configuration>
-					        <name>Drive</name>
-					        <appVersion>${project.version}</appVersion>
-					        <vendor>Bithatch</vendor>
-					        <!-- Entire JDK is used as runtime image -->
-					        <runtimeImage>${java.home}</runtimeImage>
-					        <module>uk.co.bithatch.tnfs.drive/${main.class}</module>
-					        <!--<modulePaths>
-					            <modulePath>${project.build.directory}/mods</modulePath>
-					        </modulePaths>-->
-					        <destination>${project.build.directory}/dist</destination>
-					        <removeDestination>true</removeDestination>
-					    </configuration>
 					</plugin>
 				</plugins>
 			</build>
 		</profile>
 		
-
+		<profile>
+			<id>jlink</id>
+			<build>
+				<plugins>
+					<plugin>
+					  <groupId>com.igormaznitsa</groupId>
+					  <artifactId>mvn-jlink-wrapper</artifactId>
+					  <version>1.2.5</version>
+					  <executions>
+					        <execution>
+					            <id>call-jdeps</id>
+					            <goals>
+					                <goal>jdeps</goal>
+					            </goals>
+					            <phase>package</phase>
+					            <configuration>
+					                <output>${project.build.directory}${file.separator}jdeps.out</output>
+					                <options>
+					                    <option>${project.build.directory}${file.separator}${project.build.finalName}.jar</option>
+					                </options>
+					            </configuration>
+					        </execution>
+					    </executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		
 		<!-- Flatpak -->
 		<profile>
 			<id>flatpak</id>
@@ -442,7 +458,7 @@
                                         <runtimeVersion>24.08</runtimeVersion>
 										<sdkExtensions>
 											<sdkExtension>
-												org.freedesktop.Sdk.Extension.openjdk21</sdkExtension>
+												org.freedesktop.Sdk.Extension.openjdk25</sdkExtension>
 										</sdkExtensions>
 										<finishArgs>
 											<finishArg>--socket=x11</finishArg>

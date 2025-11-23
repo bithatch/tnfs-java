@@ -154,7 +154,7 @@ Section "TNFSJ Server (Service)" TNFSJ_Server
   ExecShellWait "" "$INSTDIR\tnfsjd-service.exe" "start" SW_HIDE
 SectionEnd
 
-Section "TNFSJ Web Basd File Browser (Service)" TNFSJ_Web
+Section "TNFSJ Web Based File Browser (Service)" TNFSJ_Web
   ExecShellWait "" "$INSTDIR\tnfsjd-web-service.exe" "stopwait" SW_HIDE
 
   SetOutPath "$INSTDIR\sbin"

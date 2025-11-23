@@ -31,7 +31,6 @@
  */
 package uk.co.bithatch.tnfs.web.elfinder.command;
 
-import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.nio.channels.Channels;

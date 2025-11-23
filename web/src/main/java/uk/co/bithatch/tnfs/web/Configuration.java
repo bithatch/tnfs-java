@@ -29,32 +29,32 @@ import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Optional;
-import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.sshtools.jini.INI;
 import com.sshtools.jini.INI.Section;
+import com.sshtools.jini.INIReader;
 import com.sshtools.jini.INIReader.DuplicateAction;
 import com.sshtools.jini.INIReader.MultiValueMode;
-import com.sshtools.jini.INIReader;
 import com.sshtools.jini.INIWriter;
-import com.sshtools.jini.Interpolation;
 import com.sshtools.jini.config.INISet;
 import com.sshtools.jini.config.INISet.CreateDefaultsMode;
 import com.sshtools.jini.config.INISet.Scope;
 import com.sshtools.jini.config.Monitor;
 
 public final class Configuration {
+	public static final String TNFSJD_WEB = "tnfsjd-web";
+
 	static Logger LOG = LoggerFactory.getLogger(Configuration.class);
 
 	private final INISet iniSet;
 	private final INI ini;
 
 	public Configuration(Monitor monitor, Optional<Path> configDir, Optional<Path> userConfigDir) {
-		var bldr =  new INISet.Builder("tnfsjd-web").
-				withApp("tnfsjd-web").
+		var bldr =  new INISet.Builder(TNFSJD_WEB).
+				withApp(TNFSJD_WEB).
 				withWriterFactory(() -> new INIWriter.Builder().withMultiValueMode(MultiValueMode.REPEATED_KEY)).
 				withReaderFactory(() ->
 					new INIReader.Builder().
@@ -137,14 +137,6 @@ public final class Configuration {
 		return ini;
 	}
 	
-	public Section mountConfiguration() {
-		return ini.obtainSection(Constants.MOUNTS_SECTION);
-	}
-	
-	public Set<Section> mounts() {
-		return Set.of(ini.allSectionsOr(Constants.MOUNT_SECTION).orElse(new Section[0]));
-	}
-
 	public Section server() {
 		return ini.section(Constants.SERVER_SECTION);
 	}

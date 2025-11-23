@@ -152,6 +152,20 @@
 				<groupId>org.asciidoctor</groupId>
 				<artifactId>asciidoctor-maven-plugin</artifactId>
 			</plugin>
+            <plugin>
+                <groupId>com.sshtools</groupId>
+                <artifactId>jini-maven-plugin</artifactId>
+                <version>0.6.4-SNAPSHOT</version>
+                <executions>	
+                	<execution>
+                		<id>generate-config-files</id>
+                		<phase>compile</phase>
+                		<goals>
+                			<goal>generate-defaults</goal>
+                		</goals>
+                	</execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
     

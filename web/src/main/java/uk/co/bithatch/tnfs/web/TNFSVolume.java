@@ -47,15 +47,16 @@ import uk.co.bithatch.tnfs.lib.DirSortFlag;
 import uk.co.bithatch.tnfs.lib.OpenFlag;
 import uk.co.bithatch.tnfs.lib.TNFS;
 import uk.co.bithatch.tnfs.lib.Util;
+import uk.co.bithatch.tnfs.mountlib.MountManager.Mountable;
 import uk.co.bithatch.tnfs.web.elfinder.core.Target;
 import uk.co.bithatch.tnfs.web.elfinder.core.Volume;
 import uk.co.bithatch.tnfs.web.elfinder.support.content.detect.DefaultFileTypeDetector;
 import uk.co.bithatch.tnfs.web.elfinder.support.content.detect.Detector;
 
-public class TNFSMountVolume implements Volume {
+public class TNFSVolume implements Volume {
 	
 	private final static class Lazy {
-		static Logger LOG = LoggerFactory.getLogger(TNFSMountVolume.class);
+		static Logger LOG = LoggerFactory.getLogger(TNFSVolume.class);
 	}
 	
 	interface TNFSTarget extends Target {
@@ -75,15 +76,15 @@ public class TNFSMountVolume implements Volume {
 
 	private abstract static class AbstractTNFSTarget implements TNFSTarget {
 
-		protected final TNFSMountVolume volume;
+		protected final TNFSVolume volume;
 		protected final String path;
 		protected final Supplier<Target> parent;
 		
-		protected AbstractTNFSTarget(TNFSMountVolume volume, String path) {
+		protected AbstractTNFSTarget(TNFSVolume volume, String path) {
 			this(volume, null, path);
 		}
 		
-		protected AbstractTNFSTarget(TNFSMountVolume volume, Supplier<Target> parent, String path) {
+		protected AbstractTNFSTarget(TNFSVolume volume, Supplier<Target> parent, String path) {
 			this.volume = volume;
 			this.path = path;
 			this.parent = parent;
@@ -140,15 +141,15 @@ public class TNFSMountVolume implements Volume {
 		private Boolean dir;
 		private Boolean exists;
 		
-		private StatTNFSTarget(TNFSMountVolume volume, String path) {
+		private StatTNFSTarget(TNFSVolume volume, String path) {
 			super(volume, path);
 		}
 		
-		private StatTNFSTarget(TNFSMountVolume volume, Supplier<Target> parent, String path) {
+		private StatTNFSTarget(TNFSVolume volume, Supplier<Target> parent, String path) {
 			super(volume, parent, path);
 		}
 		
-		private StatTNFSTarget(TNFSMountVolume volume, TNFSTarget parent, String path) {
+		private StatTNFSTarget(TNFSVolume volume, TNFSTarget parent, String path) {
 			super(volume, () -> parent, path);
 		}
 
@@ -188,7 +189,7 @@ public class TNFSMountVolume implements Volume {
 		private StatResult stat() throws IOException {
 			if(stat == null) {
 				try {
-					stat = volume.mount.stat(path);
+					stat = volume.mount().stat(path);
 					exists = true;
 					dir = stat.isDirectory();
 				}
@@ -206,7 +207,7 @@ public class TNFSMountVolume implements Volume {
 		
 		private final Entry entry;
 		
-		private EntryTNFSTarget(TNFSMountVolume volume, TNFSTarget parent, Entry entry) {
+		private EntryTNFSTarget(TNFSVolume volume, TNFSTarget parent, Entry entry) {
 			super(volume, () -> parent, Util.concatenatePaths(parent.getPath(), entry.name(), TNFS.UNIX_SEPARATOR));
 			this.entry = entry;
 		}
@@ -232,16 +233,33 @@ public class TNFSMountVolume implements Volume {
 		}
 	}
 	
-	private final TNFSMount mount;
 	private final Detector<String> detector;
-	private final String alias;
 	private final StatTNFSTarget root;
+	private final Mountable mountable;
+	private final String id;
+	
+	private TNFSMount mount;
 
-	public  TNFSMountVolume(TNFSMount mount, String alias) {
-		this.mount = mount;
-		this.alias = alias;
+	public  TNFSVolume(Mountable mountable) {
+		this.mountable = mountable;
         this.detector = new DefaultFileTypeDetector();
         this.root = new StatTNFSTarget(this, "/");
+        this.id = String.valueOf(Integer.toUnsignedLong(mountable.key().hashCode()));
+	}
+	
+	public String id() {
+		return id;
+	}
+	
+	public Mountable mountable() {
+		return mountable;
+	}
+	
+	private TNFSMount mount() throws IOException {
+		if(mount == null) {
+			mount = mountable.createMount(mountable.client());
+		}
+		return mount;
 	}
 
 	@Override
@@ -249,7 +267,7 @@ public class TNFSMountVolume implements Volume {
 		if(Lazy.LOG.isDebugEnabled()) {
 			Lazy.LOG.debug("Create new file {}", target);
 		}
-		mount.open(((TNFSTarget)target).getPath(), OpenFlag.WRITE, OpenFlag.EXCLUSIVE, OpenFlag.CREATE).close();
+		mount().open(((TNFSTarget)target).getPath(), OpenFlag.WRITE, OpenFlag.EXCLUSIVE, OpenFlag.CREATE).close();
 	}
 
 	@Override
@@ -257,7 +275,7 @@ public class TNFSMountVolume implements Volume {
 		if(Lazy.LOG.isDebugEnabled()) {
 			Lazy.LOG.debug("Create new folder {}", target);
 		}
-		mount.mkdir(((TNFSTarget)target).getPath());
+		mount().mkdir(((TNFSTarget)target).getPath());
 	}
 
 	@Override
@@ -265,7 +283,7 @@ public class TNFSMountVolume implements Volume {
 		if(Lazy.LOG.isDebugEnabled()) {
 			Lazy.LOG.debug("Delete file {}", target);
 		}
-		mount.unlink(((TNFSTarget)target).getPath());
+		mount().unlink(((TNFSTarget)target).getPath());
 	}
 
 	@Override
@@ -273,7 +291,7 @@ public class TNFSMountVolume implements Volume {
 		if(Lazy.LOG.isDebugEnabled()) {
 			Lazy.LOG.debug("Delete folder {}", target);
 		}
-		mount.rmdir(((TNFSTarget)target).getPath());
+		mount().rmdir(((TNFSTarget)target).getPath());
 	}
 
 	@Override
@@ -318,7 +336,7 @@ public class TNFSMountVolume implements Volume {
 
 	@Override
 	public String getAlias() {
-		return alias;
+		return mountable.name();
 	}
 
 	@Override
@@ -368,7 +386,7 @@ public class TNFSMountVolume implements Volume {
 
 	@Override
 	public Target[] listChildren(Target target) throws IOException {
-		try(var dir = mount.directory(0, ((TNFSTarget)target).getPath(), "", new DirOptionFlag[] { DirOptionFlag.NO_SKIPHIDDEN }, new DirSortFlag[] {})) {
+		try(var dir = mount().directory(0, ((TNFSTarget)target).getPath(), "", new DirOptionFlag[] { DirOptionFlag.NO_SKIPHIDDEN }, new DirSortFlag[] {})) {
 			return dir.stream().
 					filter(f -> !f.name().equals(".") && !f.name().equals("..")).
 					map(f -> new EntryTNFSTarget(this, (TNFSTarget)target, f)).toList().toArray(new Target[0]);	
@@ -380,7 +398,7 @@ public class TNFSMountVolume implements Volume {
 		if(Lazy.LOG.isDebugEnabled()) {
 			Lazy.LOG.debug("Open input stream {}", target);
 		}
-		return Channels.newInputStream(mount.open(((TNFSTarget)target).getPath(), OpenFlag.READ));
+		return Channels.newInputStream(mount().open(((TNFSTarget)target).getPath(), OpenFlag.READ));
 	}
 
 	@Override
@@ -388,12 +406,12 @@ public class TNFSMountVolume implements Volume {
 		if(Lazy.LOG.isDebugEnabled()) {
 			Lazy.LOG.debug("Open output stream {}", target);
 		}
-		return Channels.newOutputStream(mount.open(((TNFSTarget)target).getPath(), OpenFlag.WRITE, OpenFlag.TRUNCATE));
+		return Channels.newOutputStream(mount().open(((TNFSTarget)target).getPath(), OpenFlag.WRITE, OpenFlag.TRUNCATE));
 	}
 
 	@Override
 	public SeekableByteChannel openChannel(Target target, OpenOption... options) throws IOException {
-		return mount.open(((TNFSTarget)target).getPath(), OpenFlag.decodeOptions(options));
+		return mount().open(((TNFSTarget)target).getPath(), OpenFlag.decodeOptions(options));
 	}
 
 	@Override
@@ -401,7 +419,7 @@ public class TNFSMountVolume implements Volume {
 		if(Lazy.LOG.isDebugEnabled()) {
 			Lazy.LOG.debug("Rename {} to {}", origin, destination);
 		}
-		mount.rename(((TNFSTarget)origin).getPath(), ((TNFSTarget)destination).getPath());
+		mount().rename(((TNFSTarget)origin).getPath(), ((TNFSTarget)destination).getPath());
 	}
 
 	@Override

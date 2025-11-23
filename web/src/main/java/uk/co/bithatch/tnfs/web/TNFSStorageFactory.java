@@ -20,25 +20,33 @@
  */
 package uk.co.bithatch.tnfs.web;
 
-public class Constants {
+import java.time.Duration;
 
-	public static final String SERVER_SECTION = "server";
-	public static final String HTTPS_SECTION = "https";
-	public static final String NCSA_SECTION = "ncsa";
-	public static final String TUNING_SECTION = "tuning";
-	public static final String HTTP_SECTION = "http";
-	public static final String MDNS_SECTION = "mdns";
+import uk.co.bithatch.tnfs.mountlib.MountManager;
+import uk.co.bithatch.tnfs.web.elfinder.service.ElfinderStorage;
+import uk.co.bithatch.tnfs.web.elfinder.service.ElfinderStorageFactory;
 
-	public static final String SESSION_TIMEOUT_MINS_KEY = "session-timeout-mins";
-	public static final String ANNOUNCE_KEY = "announce";
-	public static final String UPNP_KEY = "upnp";
-	public static final String KEYSTORE_TYPE_KEY = "keystore-type";
-	public static final String KEYSTORE_PASSWORD_KEY = "keystore-password";
-	public static final String KEYSTORE_FILE_KEY = "keystore-file";
-	public static final String KEY_PASSWORD_KEY = "key-password";
-	public static final String ADDRESS_KEY = "address";
-	public static final String PORT_KEY = "port";
-	public static final String COMPRESSION_KEY = "compression";
-	public static final String ENABLED_KEY = "enabled";
+public class TNFSStorageFactory  implements ElfinderStorageFactory {
+	
+	private final static String STORAGE = "tnfsStorage";
+	
+	private final MountManager mountManager;
+	private final Configuration configuration;
+	
+	TNFSStorageFactory(Configuration configuration, MountManager mountManager) {
+		this.mountManager = mountManager;
+		this.configuration = configuration;
+	}
+
+	@Override
+	public ElfinderStorage getVolumeSource() {
+		var ws = WebState.get();
+		return ws.get(STORAGE, () -> {
+			var tnfsStorage = new TNFSStorage(mountManager);
+			ws.timeout(Duration.ofMinutes(configuration.server().getInt(Constants.SESSION_TIMEOUT_MINS_KEY)));
+			ws.set(STORAGE, tnfsStorage);
+			return tnfsStorage;
+		});
+	}
 
 }

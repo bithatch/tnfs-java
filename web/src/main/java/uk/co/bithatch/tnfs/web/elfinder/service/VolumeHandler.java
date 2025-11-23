@@ -39,7 +39,6 @@ import java.nio.file.OpenOption;
 import java.util.ArrayList;
 import java.util.List;
 
-import uk.co.bithatch.tnfs.lib.OpenFlag;
 import uk.co.bithatch.tnfs.web.elfinder.ElFinderConstants;
 import uk.co.bithatch.tnfs.web.elfinder.core.Target;
 import uk.co.bithatch.tnfs.web.elfinder.core.Volume;

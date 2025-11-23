@@ -1,47 +1,39 @@
 /*
- * #%L
- * %%
- * Copyright (C) 2015 Trustsystems Desenvolvimento de Sistemas, LTDA.
- * %%
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
+ * Copyright © 2025 Bithatch (brett@bithatch.co.uk)
  *
- * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this
+ * software and associated documentation files (the “Software”), to deal in the Software
+ * without restriction, including without limitation the rights to use, copy, modify,
+ * merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the following
+ * conditions:
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
+ * The above copyright notice and this permission notice shall be included in all copies
+ * or substantial portions of the Software.
  *
- * 3. Neither the name of the Trustsystems Desenvolvimento de Sistemas, LTDA. nor the names of its contributors
- *    may be used to endorse or promote products derived from this software without
- *    specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
- * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
- * #L%
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+ * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package uk.co.bithatch.tnfs.web.elfinder.service.impl;
+package uk.co.bithatch.tnfs.web;
 
+import java.io.Closeable;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Pattern;
 
+import uk.co.bithatch.tnfs.mountlib.MountManager;
+import uk.co.bithatch.tnfs.mountlib.MountManager.MountListener;
+import uk.co.bithatch.tnfs.mountlib.MountManager.Mountable;
 import uk.co.bithatch.tnfs.web.elfinder.ElFinderConstants;
 import uk.co.bithatch.tnfs.web.elfinder.core.Target;
 import uk.co.bithatch.tnfs.web.elfinder.core.Volume;
@@ -50,68 +42,42 @@ import uk.co.bithatch.tnfs.web.elfinder.core.impl.SecurityConstraint;
 import uk.co.bithatch.tnfs.web.elfinder.service.ElfinderStorage;
 import uk.co.bithatch.tnfs.web.elfinder.service.ThumbnailWidth;
 
-public class DefaultElfinderStorage implements ElfinderStorage {
-
-	public final static class Builder {
-
-	    private final List<DefaultVolumeRef> volumes = new ArrayList<>();
-	    private final List<VolumeSecurity> volumeSecurities = new ArrayList<>();
-		private ThumbnailWidth thumbnailWidth;
-
-	    {
-	    	withThumbnailWidth(80);
-	    }
-
-		public Builder withThumbnailWidth(int thumbnailWidth) {
-			return withThumbnailWidth(() -> thumbnailWidth);
-		}
-
-		public Builder withThumbnailWidth(ThumbnailWidth thumbnailWidth) {
-			this.thumbnailWidth = thumbnailWidth;
-			return this;
-		}
-
-	    public Builder addVolumes(DefaultVolumeRef... refs) {
-	    	return addVolumes(Arrays.asList(refs));
-	    }
-
-	    public Builder addVolumes(List<DefaultVolumeRef> refs) {
-	    	volumes.addAll(refs);
-	    	return this;
-	    }
-
-	    public Builder addSecurities(VolumeSecurity... refs) {
-	    	return addSecurities(Arrays.asList(refs));
-	    }
-
-	    public Builder addSecurities(List<VolumeSecurity> refs) {
-	    	volumeSecurities.addAll(refs);
-	    	return this;
-	    }
-
-	    public DefaultElfinderStorage build() {
-	    	return new DefaultElfinderStorage(this);
-	    }
-	}
-
+public class TNFSStorage implements ElfinderStorage, Closeable, MountListener {
+	
     private static final String[][] ESCAPES = {{"+", "_P"}, {"-", "_M"}, {"/", "_S"}, {".", "_D"}, {"=", "_E"}};
 
-    private final List<Volume> volumes;
-    private final List<VolumeSecurity> volumeSecurities;
-    private final ThumbnailWidth thumbnailWidth;
+
+	private MountManager mountManager;
+	private ThumbnailWidth thumbnailWidth = () -> 80;
     private final Map<Volume, Locale> volumeLocales = new ConcurrentHashMap<>();
     private final Map<Volume, String> volumeIds = new ConcurrentHashMap<>();
+	private final List<TNFSVolume> volumes;
 
-    private DefaultElfinderStorage(Builder builder) {
-    	this.volumes = builder.volumes.stream().map(DefaultVolumeRef::getVolume).toList();
-    	builder.volumes.forEach((v) -> {
-    		volumeIds.put(v.getVolume(), encodeStr(v.getId()));
-    		volumeLocales.put(v.getVolume(), v.getLocale().orElseGet(Locale::getDefault));
-    	});
-    	this.thumbnailWidth = builder.thumbnailWidth;
-    	this.volumeSecurities = Collections.unmodifiableList(new ArrayList<>(builder.volumeSecurities));
+	TNFSStorage(MountManager mountManager) {
+		this.mountManager = mountManager;
+		volumes = new CopyOnWriteArrayList<>(mountManager.mounts().stream().map(TNFSVolume::new).peek(v -> {
+    		indexVolume(v);
+		}).toList());
+		mountManager.addListener(this);
 	}
 
+	@Override
+	public void mountAdded(Mountable mountable) {
+		var vol = new TNFSVolume(mountable);
+		volumes.add(vol);
+		indexVolume(vol);
+	}
+
+	@Override
+	public void mountRemoved(Mountable mountable) {
+		var vol = volumes.stream().filter(v -> v.mountable().equals(mountable)).findFirst().orElse(null);
+		if(vol != null) {
+			volumes.remove(vol);
+			volumeIds.remove(vol);
+			volumeLocales.remove(vol);
+		}
+	}
+	
 	@Override
     public Target fromHash(String hash) {
         for (var v : volumes) {
@@ -144,15 +110,6 @@ public class DefaultElfinderStorage implements ElfinderStorage {
 
         return getVolumeId(target.getVolume()) + "_" + base;
     }
-
-	private String encodeStr(String relativePath) {
-		String base = new String(Base64.getEncoder().encode(relativePath.getBytes()));
-
-        for (String[] pair : ESCAPES) {
-            base = base.replace(pair[0], pair[1]);
-        }
-		return base;
-	}
 
     @Override
     public String getVolumeId(Volume volume) {
@@ -205,17 +162,35 @@ public class DefaultElfinderStorage implements ElfinderStorage {
 
     @Override
 	public List<VolumeSecurity> getVolumeSecurities() {
-        return volumeSecurities;
+        return Collections.emptyList();
     }
 
     @Override
 	public ThumbnailWidth getThumbnailWidth() {
-        return thumbnailWidth;
+        return thumbnailWidth ;
     }
 
-    @Override
+	@Override
 	public List<Volume> getVolumes() {
-        return volumes;
+        return volumes.stream().map(v->(Volume)v).toList();
     }
 
+	@Override
+	public void close() {
+		mountManager.removeListener(this);
+	}
+
+	private void indexVolume(TNFSVolume v) {
+		volumeIds.put(v, encodeStr(v.id()));
+		volumeLocales.put(v, Locale.getDefault());
+	}
+
+	private String encodeStr(String relativePath) {
+		String base = new String(Base64.getEncoder().encode(relativePath.getBytes()));
+
+        for (String[] pair : ESCAPES) {
+            base = base.replace(pair[0], pair[1]);
+        }
+		return base;
+	}
 }

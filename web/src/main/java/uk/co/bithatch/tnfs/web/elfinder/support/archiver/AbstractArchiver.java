@@ -31,6 +31,16 @@
  */
 package uk.co.bithatch.tnfs.web.elfinder.support.archiver;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
@@ -38,12 +48,6 @@ import org.apache.commons.compress.utils.IOUtils;
 
 import uk.co.bithatch.tnfs.web.elfinder.core.Target;
 import uk.co.bithatch.tnfs.web.elfinder.core.Volume;
-
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Abstract Archiver defines some archive behaviors and this class has some

@@ -57,14 +57,15 @@ import uk.co.bithatch.tnfs.lib.extensions.Extensions;
 
 public class MountManager implements Closeable {
 	
-	public enum MountSource {
-		MDNS, CONFIGURATION
+	static {
+//		System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "TRACE");
 	}
 	
 	public final static class Builder {
 		private final MountConfiguration configuration;
 		private Optional<MDNS> mdns = Optional.empty();
 		private Optional<ExecutorService> executor  = Optional.empty();
+		private boolean automount = true;
 		
 		public Builder(MountConfiguration configuration) {
 			this.configuration = configuration;
@@ -72,6 +73,11 @@ public class MountManager implements Closeable {
 		
 		public MountManager build() {
 			return new MountManager(this);
+		}
+
+		public Builder  withAutomount(boolean automount) {
+			this.automount = automount;
+			return this;
 		}
 		
 		public Builder withExecutor(ExecutorService executor) {
@@ -82,6 +88,10 @@ public class MountManager implements Closeable {
 		public Builder withMDNS(MDNS mdns) {
 			this.mdns = Optional.of(mdns);
 			return this;
+		}
+		
+		public Builder  withoutAutomount() {
+			return withAutomount(false);
 		}
 	}
 	
@@ -101,6 +111,13 @@ public class MountManager implements Closeable {
 			this.name = name;
 		}
 		
+		public TNFSClient client() throws IOException {
+			return new TNFSClient.Builder().
+					withAddress(key.hostname(), key.port()).
+					withProtocol(key.protocol()).
+					build();
+		}
+
 		@Override
 		public void close() throws IOException {
 			error = Optional.empty();
@@ -108,6 +125,10 @@ public class MountManager implements Closeable {
 			this.mount = Optional.empty();
 		}
 
+		public Optional<Section> configuration() {
+			return configuration;
+		}
+		
 		@Override
 		public boolean equals(Object obj) {
 			if (this == obj)
@@ -119,11 +140,60 @@ public class MountManager implements Closeable {
 			Mountable other = (Mountable) obj;
 			return Objects.equals(key, other.key);
 		}
+		
+		public TNFSMount createMount(TNFSClient clnt) throws IOException {
+			if(configuration.isPresent()) {
+				var mnt = configuration.get();
+
+				var secure = mnt.getBoolean(MountConstants.SECURE_KEY);
+				
+				TNFSMount tnfsmnt;
+				if (secure) {
+					var bldr = clnt.extension(SecureMount.class).mount(key.path());
+					mnt.getOr(MountConstants.USERNAME_KEY).ifPresent(un -> bldr.withUsername(un));
+					mnt.getOr(MountConstants.PASSWORD_KEY).ifPresent(un -> bldr.withPassword(un));
+					tnfsmnt = bldr.build();
+				} else {
+					var bldr = clnt.mount(key.path());
+					mnt.getOr(MountConstants.USERNAME_KEY).ifPresent(un -> bldr.withUsername(un));
+					mnt.getOr(MountConstants.PASSWORD_KEY).ifPresent(un -> bldr.withPassword(un));
+					tnfsmnt = bldr.build();
+				}
+
+				mnt.getIntOr(MountConstants.PACKET_SIZE).ifPresentOrElse(ps -> {
+					if(ps > 0) {
+						try {
+							clnt.size(clnt.sendMessage(tnfsmnt, Extensions.PKTSZ, Message.of(tnfsmnt.sessionId(),
+									Extensions.PKTSZ, new Extensions.PktSize(TNFS.LARGE_MESSAGE_SIZE))).size());
+						} catch(UnsupportedOperationException uoe) {
+							LOG.debug("Server does not support PKTSZ.", uoe);
+						} catch (Exception e) {
+							LOG.error("Failed to set custom packet, ignoring.", e);
+						}	
+					}
+				}, () -> {
+					try {
+						clnt.size(clnt.sendMessage(tnfsmnt, Extensions.PKTSZ, Message.of(tnfsmnt.sessionId(),
+								Extensions.PKTSZ, new Extensions.PktSize(TNFS.LARGE_MESSAGE_SIZE))).size());
+					} catch(UnsupportedOperationException uoe) {
+						LOG.debug("Server does not support PKTSZ.", uoe);
+					} catch (Exception e) {
+						LOG.error("Failed to set large packet size.", e);
+					}	
+				});
+				
+				return tnfsmnt;
+			}
+			else {
+				return clnt.mount(key.path()).build();
+			}
+			
+		}
 
 		public Exception error() {
 			return error.orElseThrow(() -> new IllegalStateException("There is no error."));
 		}
-		
+
 		private void error(Exception error) {
 
 			if(LOG.isDebugEnabled())
@@ -133,11 +203,11 @@ public class MountManager implements Closeable {
 			
 			this.error = Optional.of(error);
 		}
-
+		
 		public Optional<Exception> errorOr() {
 			return error;
 		}
-
+		
 		@Override
 		public int hashCode() {
 			return Objects.hash(key);
@@ -150,14 +220,6 @@ public class MountManager implements Closeable {
 		public boolean isMounted() {
 			return mount.isPresent();
 		}
-		
-		public MountSource source() {
-			return mountSource;
-		}
-		
-		public Optional<Section> configuration() {
-			return configuration;
-		}
 
 		public MountableKey key() {
 			return key;
@@ -165,6 +227,14 @@ public class MountManager implements Closeable {
 		
 		public TNFSMount mount() {
 			return mount.orElseThrow(() -> new IllegalStateException("Not mounted."));
+		}
+
+		public void createAndMount() throws IOException {
+			mount(client());
+		}
+
+		public void mount(TNFSClient client) throws IOException {
+			mount(createMount(client));
 		}
 		
 		private void mount(TNFSMount mount) {
@@ -181,7 +251,23 @@ public class MountManager implements Closeable {
 			return name;
 		}
 		
+		public MountSource source() {
+			return mountSource;
+		}
 		
+		
+	}
+	
+	public interface MountListener {
+		default void mountAdded(Mountable mountable) {}
+		default void mounted(Mountable mountable) {}
+		default void mountFailed(Mountable mountable, Exception error) {}
+		default void mountRemoved(Mountable mountable) {}
+		default void unmounted(Mountable mountable) {}
+	}
+	
+	public enum MountSource {
+		MDNS, CONFIGURATION
 	}
 	
 	public record MountableKey(String id, String hostname, String path, int port, Protocol protocol) {
@@ -204,14 +290,6 @@ public class MountManager implements Closeable {
 		public MountableKey withHostname(String hostname) {
 			return new MountableKey(id, hostname, path, port, protocol);
 		}
-	}
-	
-	public interface MountListener {
-		default void mountAdded(Mountable mountable) {}
-		default void mounted(Mountable mountable) {}
-		default void mountFailed(Mountable mountable, Exception error) {}
-		default void mountRemoved(Mountable mountable) {}
-		default void unmounted(Mountable mountable) {}
 	}
 	
 	private class MountServiceListener implements ServiceListener {
@@ -267,11 +345,8 @@ public class MountManager implements Closeable {
 		}
 	}
 	
-	static {
-//		System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "TRACE");
-	}
-	
 	private final static Logger LOG = LoggerFactory.getLogger(MountManager.class);
+	
 	public static void main(String[] args) throws Exception {
 		try(var monitor = new Monitor()) {
 			
@@ -284,6 +359,7 @@ public class MountManager implements Closeable {
 			}
 		}
 	}
+	
 	private final static String[] parseArray(String arrStr) {
 		if(arrStr.startsWith("[") && arrStr.endsWith("]")) {
 			return Arrays.asList(arrStr.substring(1, arrStr.length() - 1).split(",")).stream().map(String::trim).toList().toArray(new String[0]);
@@ -291,6 +367,7 @@ public class MountManager implements Closeable {
 		else
 			throw new IllegalArgumentException("Not array string.");
 	}
+	
 	private final MountConfiguration configuration;
 	private final Optional<MDNS> mdns;
 
@@ -300,10 +377,12 @@ public class MountManager implements Closeable {
 	private boolean createdExecutor;
 	private ExecutorService executor;
 	private ServiceListener serviceListener;
+	private final boolean automount;
 
 	private MountManager(Builder bldr) {
 		this.configuration = bldr.configuration;
 		this.mdns = bldr.mdns;
+		this.automount = bldr.automount;
 		
 		createdExecutor = bldr.executor.isEmpty();
 		executor = bldr.executor.orElseGet(() -> Executors.newSingleThreadExecutor());
@@ -401,21 +480,8 @@ public class MountManager implements Closeable {
 			configureFromConfig(mnt, mountableKey(mnt));
 		});
 		
-		if(configuration.mountConfiguration().getBoolean(MountConstants.DISCOVER_KEY)) {
-			mdns.ifPresentOrElse(md -> {
-				executor.submit(() -> {
-					discoverFromMDNS(MDNS.MDNS_TNFS_TCP_LOCAL);
-					discoverFromMDNS(MDNS.MDNS_TNFS_UDP_LOCAL);
-				});
-			}
-			, () -> {
-				LOG.warn("mDNS discovery was enabled in configuration, but no MDNS instance supplied. Will be ignored.");
-			});
-		}
-		
-		mdns.ifPresent(md -> md.addListener(serviceListener = new MountServiceListener()));
 	}
-
+	
 	public void addListener(MountListener listener) {
 		this.listeners.add(listener);
 	}
@@ -427,7 +493,7 @@ public class MountManager implements Closeable {
 		}
 		mdns.ifPresent(md -> md.removeListener(serviceListener));
 	}
-	
+
 	private void configureFromConfig(Section mnt, MountableKey mntblKey) {
 
 			LOG.info("Configuration mount {}, name = {}", mntblKey, mntblKey.id());
@@ -439,67 +505,13 @@ public class MountManager implements Closeable {
 
 			listeners.forEach(l -> l.mountAdded(mntbl));
 			
-			if(mnt.getBoolean(MountConstants.AUTOMOUNT)) {
+			if(automount && mnt.getBoolean(MountConstants.AUTOMOUNT)) {
 				LOG.info("Automount is ON, mounting ..");
 				mountFromConfig(mntbl);
 			}
 
 	}
 	
-	private void mountFromConfig(Mountable mntbl) {
-		try {
-			var mntblKey = mntbl.key();
-			var clnt = new TNFSClient.Builder().
-					withAddress(mntblKey.hostname(), mntblKey.port()).
-					build();
-			var mnt = mntbl.configuration().get();
-			var secure = mnt.getBoolean(MountConstants.SECURE_KEY);
-			
-			TNFSMount tnfsmnt;
-			if (secure) {
-				var bldr = clnt.extension(SecureMount.class).mount(mntblKey.path());
-				mnt.getOr(MountConstants.USERNAME_KEY).ifPresent(un -> bldr.withUsername(un));
-				mnt.getOr(MountConstants.PASSWORD_KEY).ifPresent(un -> bldr.withPassword(un));
-				tnfsmnt = bldr.build();
-			} else {
-				var bldr = clnt.mount(mntblKey.path());
-				mnt.getOr(MountConstants.USERNAME_KEY).ifPresent(un -> bldr.withUsername(un));
-				mnt.getOr(MountConstants.PASSWORD_KEY).ifPresent(un -> bldr.withPassword(un));
-				tnfsmnt = bldr.build();
-			}
-			
-			mntbl.mount(tnfsmnt);
-
-			mnt.getIntOr(MountConstants.PACKET_SIZE).ifPresentOrElse(ps -> {
-				if(ps > 0) {
-					try {
-						clnt.size(clnt.sendMessage(tnfsmnt, Extensions.PKTSZ, Message.of(tnfsmnt.sessionId(),
-								Extensions.PKTSZ, new Extensions.PktSize(TNFS.LARGE_MESSAGE_SIZE))).size());
-					} catch(UnsupportedOperationException uoe) {
-						LOG.debug("Server does not support PKTSZ.", uoe);
-					} catch (Exception e) {
-						LOG.error("Failed to set custom packet, ignoring.", e);
-					}	
-				}
-			}, () -> {
-				try {
-					clnt.size(clnt.sendMessage(tnfsmnt, Extensions.PKTSZ, Message.of(tnfsmnt.sessionId(),
-							Extensions.PKTSZ, new Extensions.PktSize(TNFS.LARGE_MESSAGE_SIZE))).size());
-				} catch(UnsupportedOperationException uoe) {
-					LOG.debug("Server does not support PKTSZ.", uoe);
-				} catch (Exception e) {
-					LOG.error("Failed to set large packet size.", e);
-				}	
-			});
-			
-			
-			listeners.forEach(l -> l.mounted(mntbl));
-		} catch (Exception ioe) {
-			mntbl.error(ioe);
-			listeners.forEach(l -> l.mountFailed(mntbl, ioe));
-		}
-	}
-
 	private void configureFromMDNS(MountableKey mntblKey, String name) throws IOException {
 		
 		LOG.info("mDNS mount {}, name = {}", mntblKey, name);
@@ -511,31 +523,9 @@ public class MountManager implements Closeable {
 
 		LOG.info("mDNS added {}, name = {}", mntblKey, name);
 		
-		if(configuration.mountConfiguration().getBoolean(MountConstants.AUTOMOUNT_DISCOVERED)) {
+		if(automount && configuration.mountConfiguration().getBoolean(MountConstants.AUTOMOUNT_DISCOVERED)) {
 			LOG.info("Automounting  ..");
 			mountFromMDNS(mntbl);
-		}
-	}
-	public void mountFromMDNS(Mountable mntbl) {
-		try {
-			var mntblKey = mntbl.key();
-			var bldr = new TNFSClient.Builder().
-					withHostname(mntblKey.hostname()).
-					withProtocol(mntblKey.protocol()).
-					withPort(mntblKey.port());
-			
-			var clnt = bldr.
-					build();
-			
-			var tnfsmnt = clnt.extension(SecureMount.class).
-					mount(mntblKey.path()).build();
-			
-			mntbl.mount(tnfsmnt);
-			
-			listeners.forEach(l -> l.mounted(mntbl));
-		} catch (Exception e) {
-			mntbl.error(e);
-			listeners.forEach(l -> l.mountFailed(mntbl, e));
 		}
 	}
 	
@@ -553,6 +543,19 @@ public class MountManager implements Closeable {
 			catch(IOException ioe) {
 				LOG.warn("Failed to connect to mDNS advertised server {}", srv);
 			}
+		}
+	}
+
+	public void mount(Mountable mount) {
+		switch(mount.source()) {
+		case CONFIGURATION:
+			mountFromConfig(mount);
+			break;
+		case MDNS:
+			mountFromMDNS(mount);
+			break;
+		default:
+			throw new IllegalArgumentException();
 		}
 	}
 	
@@ -576,33 +579,30 @@ public class MountManager implements Closeable {
 		return new MountableKey(name, hostname, path, port, protocol);
 	}
 	
-	public void mount(Mountable mount) {
-		switch(mount.source()) {
-		case CONFIGURATION:
-			mountFromConfig(mount);
-			break;
-		case MDNS:
-			mountFromMDNS(mount);
-			break;
-		default:
-			throw new IllegalArgumentException();
+	private void mountFromConfig(Mountable mntbl) {
+		try {
+			mntbl.createAndMount();
+			listeners.forEach(l -> l.mounted(mntbl));
+		} catch (Exception ioe) {
+			mntbl.error(ioe);
+			listeners.forEach(l -> l.mountFailed(mntbl, ioe));
 		}
 	}
 	
-	public void unmount(Mountable mnt) {
+	public void mountFromMDNS(Mountable mntbl) {
 		try {
-			mnt.close();
-		} catch (IOException ioe) {
-			LOG.trace("Failed to cleanup unmount, maybe server is now down.", ioe);
-		} finally {
-			listeners.forEach(l -> l.unmounted(mnt));
+			mntbl.createAndMount();
+			listeners.forEach(l -> l.mounted(mntbl));
+		} catch (Exception e) {
+			mntbl.error(e);
+			listeners.forEach(l -> l.mountFailed(mntbl, e));
 		}
 	}
 	
 	public List<Mountable> mounts() {
 		return mounts.values().stream().toList();
 	}
-
+	
 	private Protocol protocolFromSrvType(String srvType) {
 		Protocol protocol;
 		if(srvType.equals(MDNS.MDNS_TNFS_TCP_LOCAL)) {
@@ -619,6 +619,31 @@ public class MountManager implements Closeable {
 	
 	public void removeListener(MountListener listener) {
 		this.listeners.remove(listener);
+	}
+
+	public void start() {
+		if(configuration.mountConfiguration().getBoolean(MountConstants.DISCOVER_KEY)) {
+			mdns.ifPresentOrElse(md -> {
+				executor.submit(() -> {
+					discoverFromMDNS(MDNS.MDNS_TNFS_TCP_LOCAL);
+					discoverFromMDNS(MDNS.MDNS_TNFS_UDP_LOCAL);
+					md.addListener(serviceListener = new MountServiceListener());
+				});
+			}
+			, () -> {
+				LOG.warn("mDNS discovery was enabled in configuration, but no MDNS instance supplied. Will be ignored.");
+			});
+		}
+	}
+	
+	public void unmount(Mountable mnt) {
+		try {
+			mnt.close();
+		} catch (IOException ioe) {
+			LOG.trace("Failed to cleanup unmount, maybe server is now down.", ioe);
+		} finally {
+			listeners.forEach(l -> l.unmounted(mnt));
+		}
 	}
 	
 	private void unmountAndRemove(MountableKey key) {

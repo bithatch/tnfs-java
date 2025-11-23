@@ -31,6 +31,17 @@
  */
 package uk.co.bithatch.tnfs.web.elfinder.support.archiver;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Enumeration;
+import java.util.zip.CRC32;
+import java.util.zip.ZipEntry;
+
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
@@ -42,13 +53,6 @@ import org.apache.commons.compress.utils.IOUtils;
 
 import uk.co.bithatch.tnfs.web.elfinder.core.Target;
 import uk.co.bithatch.tnfs.web.elfinder.core.Volume;
-
-import java.io.*;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Enumeration;
-import java.util.zip.CRC32;
-import java.util.zip.ZipEntry;
 
 /**
  * Zip Archiver Implementation.

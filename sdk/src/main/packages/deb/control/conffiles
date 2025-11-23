@@ -4,3 +4,4 @@
 /etc/tnfsjd/server-key.b64
 /etc/tnfsjd/users.ini
 /etc/tnfsjd-web/tnfsjd-web.ini
+/etc/tnfsjd-web/mounts.ini

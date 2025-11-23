@@ -78,9 +78,8 @@ public class MountsPage extends AbstractTile<DriveApp> implements MountListener 
 		mgr.addListener(this);
 		mountList = FXCollections.observableArrayList(mgr.mounts());
 		mounts.setItems(mountList);
-		
 		mounts.getSelectionModel().selectedItemProperty().addListener((c,o,n) -> updateMenus());
-
+		mgr.start();
 		updateMenus();
 	}
 
