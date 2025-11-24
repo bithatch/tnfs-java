@@ -27,6 +27,7 @@ import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 
 import com.sshtools.jajafx.AbstractTile;
+import com.sshtools.jajafx.PageTransition;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -65,6 +66,8 @@ public class MountsPage extends AbstractTile<DriveApp> implements MountListener 
 	private MenuItem remove;
 	@FXML
 	private MenuItem open;
+	@FXML
+	private MenuItem edit;
 
 	private MountManager mgr;
 	private LocalFileSystemManager localMgr;
@@ -262,6 +265,11 @@ public class MountsPage extends AbstractTile<DriveApp> implements MountListener 
 	@FXML
 	private void mount(ActionEvent aevt) {
 		mgr.mount(mounts.getSelectionModel().getSelectedItem());
+	}
+	
+	@FXML
+	private void edit(ActionEvent aevt) {
+		getTiles().popup(EditPage.class, PageTransition.FROM_RIGHT).setup(mounts.getSelectionModel().getSelectedItem());
 	}
 	
 	@FXML

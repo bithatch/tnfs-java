@@ -143,6 +143,10 @@ public final class MountConfiguration {
 		return mountConfiguration;
 	}
 	
+	public Set<Section> mdnsMounts() {
+		return Set.of(ini.allSectionsOr(MountConstants.MDNS_MOUNT_SECTION).orElse(new Section[0]));
+	}
+	
 	public Set<Section> mounts() {
 		return Set.of(ini.allSectionsOr(MountConstants.MOUNT_SECTION).orElse(new Section[0]));
 	}

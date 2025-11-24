@@ -24,6 +24,7 @@ public class MountConstants {
 
 	public static final String MOUNTS_SECTION = "mounts";
 	public static final String MOUNT_SECTION = "mount";
+	public static final String MDNS_MOUNT_SECTION = "mdns-mount";
 	
 	public static final String NAME_KEY = "name";
 	public static final String SECURE_KEY = "secure";

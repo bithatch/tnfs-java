@@ -21,6 +21,7 @@
                       <MenuItem fx:id="mount" mnemonicParsing="false" text="%mount" onAction="#mount" />
                       <MenuItem fx:id="unmount" mnemonicParsing="false" text="%unmount"  onAction="#unmount"/>
                       <MenuItem fx:id="remove" mnemonicParsing="false" text="%remove"  onAction="#remove"/>
+                      <MenuItem fx:id="edit" mnemonicParsing="false" text="%edit" onAction="#edit"/>
                     </items>
                   </ContextMenu>
                </contextMenu></ListView>

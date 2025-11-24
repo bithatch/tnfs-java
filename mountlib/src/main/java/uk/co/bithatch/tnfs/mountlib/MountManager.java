@@ -401,7 +401,6 @@ public class MountManager implements Closeable {
 					var name = tempSection.get(MountConstants.NAME_KEY);
 					var mountSection = Arrays.asList(configuration.document().allSections(MountConstants.MOUNT_SECTION)).
 							stream().filter(s -> s.get(MountConstants.NAME_KEY).equals(name)).findFirst().get();
-//					var mountSection = tempSection;
 					
 					var key = mountableKey(mountSection);
 					LOG.info("SUK " + key);
@@ -428,7 +427,6 @@ public class MountManager implements Closeable {
 		});
 		
 		configuration.document().onValueUpdate(vu -> {
-			LOG.info("VU: " + vu);
 			executor.submit(() -> {
 				/* Handle updated mounts. Will unmount, then remount */
 				try {
@@ -436,7 +434,6 @@ public class MountManager implements Closeable {
 					if(tempMountSection.key().equals(MountConstants.MOUNT_SECTION)) {
 						var name = tempMountSection.get(MountConstants.NAME_KEY);
 						var mountSection = Arrays.asList(configuration.document().allSections(MountConstants.MOUNT_SECTION)).stream().filter(s -> s.get(MountConstants.NAME_KEY).equals(name)).findFirst().get();
-//						var mountSection = tempMountSection;
 						
 						var key = mountableKey(mountSection);
 						
@@ -493,6 +490,20 @@ public class MountManager implements Closeable {
 		}
 		mdns.ifPresent(md -> md.removeListener(serviceListener));
 	}
+	
+	public void mount(Mountable mntbl) {
+		try {
+			mntbl.createAndMount();
+			listeners.forEach(l -> l.mounted(mntbl));
+		} catch (Exception ioe) {
+			mntbl.error(ioe);
+			listeners.forEach(l -> l.mountFailed(mntbl, ioe));
+		}
+	}
+	
+	public List<Mountable> mounts() {
+		return mounts.values().stream().toList();
+	}
 
 	private void configureFromConfig(Section mnt, MountableKey mntblKey) {
 
@@ -507,7 +518,7 @@ public class MountManager implements Closeable {
 			
 			if(automount && mnt.getBoolean(MountConstants.AUTOMOUNT)) {
 				LOG.info("Automount is ON, mounting ..");
-				mountFromConfig(mntbl);
+				mount(mntbl);
 			}
 
 	}
@@ -516,7 +527,14 @@ public class MountManager implements Closeable {
 		
 		LOG.info("mDNS mount {}, name = {}", mntblKey, name);
 
-		var mntbl = new Mountable(mntblKey, MountSource.MDNS, name, Optional.empty());
+		var mntbl = new Mountable(
+			mntblKey, 
+			MountSource.MDNS, name, 
+			configuration.mdnsMounts().
+				stream().
+				filter(s -> s.get(MountConstants.NAME_KEY, "").equals(name)).
+				findFirst()
+		);
 		
 		mounts.put(mntblKey, mntbl);
 		listeners.forEach(l -> l.mountAdded(mntbl));
@@ -525,7 +543,7 @@ public class MountManager implements Closeable {
 		
 		if(automount && configuration.mountConfiguration().getBoolean(MountConstants.AUTOMOUNT_DISCOVERED)) {
 			LOG.info("Automounting  ..");
-			mountFromMDNS(mntbl);
+			mount(mntbl);
 		}
 	}
 	
@@ -546,19 +564,6 @@ public class MountManager implements Closeable {
 		}
 	}
 
-	public void mount(Mountable mount) {
-		switch(mount.source()) {
-		case CONFIGURATION:
-			mountFromConfig(mount);
-			break;
-		case MDNS:
-			mountFromMDNS(mount);
-			break;
-		default:
-			throw new IllegalArgumentException();
-		}
-	}
-	
 	private MountableKey mountableKey(Section mnt) {
 
 		var hostname = Net.tryAddress(mnt.get(MountConstants.HOSTNAME_KEY));
@@ -577,30 +582,6 @@ public class MountManager implements Closeable {
 			.replace("{path}", String.valueOf(path));
 		
 		return new MountableKey(name, hostname, path, port, protocol);
-	}
-	
-	private void mountFromConfig(Mountable mntbl) {
-		try {
-			mntbl.createAndMount();
-			listeners.forEach(l -> l.mounted(mntbl));
-		} catch (Exception ioe) {
-			mntbl.error(ioe);
-			listeners.forEach(l -> l.mountFailed(mntbl, ioe));
-		}
-	}
-	
-	public void mountFromMDNS(Mountable mntbl) {
-		try {
-			mntbl.createAndMount();
-			listeners.forEach(l -> l.mounted(mntbl));
-		} catch (Exception e) {
-			mntbl.error(e);
-			listeners.forEach(l -> l.mountFailed(mntbl, e));
-		}
-	}
-	
-	public List<Mountable> mounts() {
-		return mounts.values().stream().toList();
 	}
 	
 	private Protocol protocolFromSrvType(String srvType) {

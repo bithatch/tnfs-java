@@ -180,7 +180,9 @@ public final class TNFSSession implements Closeable {
 		
 		var newSize = Math.min(size, server.size());
 		if(newSize != this.size) {
-			LOG.info("Client changed packet size from {} to {} (originally requested {})", this.size, newSize, size);
+			if(LOG.isDebugEnabled()) {
+				LOG.debug("Client changed packet size from {} to {} (originally requested {})", this.size, newSize, size);
+			}
 			this.size = size;
 		}
 	}
