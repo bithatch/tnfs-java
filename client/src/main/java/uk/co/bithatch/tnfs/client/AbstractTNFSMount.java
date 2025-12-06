@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright © 2025 Bithatch (brett@bithatch.co.uk)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -633,6 +633,10 @@ public abstract class AbstractTNFSMount implements TNFSMount {
 		try {
 			client.sendMessage(this, Command.UMOUNT, Message.of(sessionId(), Command.UMOUNT, new Command.HeaderOnly()));
 		} catch(EOFException eofe) {
+		} catch(Exception e) {
+			if(LOG.isDebugEnabled()) {
+				LOG.debug("Close failed. ", e);
+			}	
 		} finally {
 			onClose();	
 		}

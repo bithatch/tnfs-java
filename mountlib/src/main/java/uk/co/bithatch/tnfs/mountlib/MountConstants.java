@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright © 2025 Bithatch (brett@bithatch.co.uk)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -27,6 +27,7 @@ public class MountConstants {
 	public static final String MDNS_MOUNT_SECTION = "mdns-mount";
 	
 	public static final String NAME_KEY = "name";
+	public static final String ID_KEY = "id";
 	public static final String SECURE_KEY = "secure";
 	public static final String PROTOCOL_KEY = "protocol";
 	public static final String HOSTNAME_KEY = "hostname";

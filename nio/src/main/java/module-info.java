@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright © 2025 Bithatch (brett@bithatch.co.uk)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -18,7 +18,6 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
 import java.nio.file.spi.FileSystemProvider;
 
 import uk.co.bithatch.tnfs.nio.TNFSFileSystemProvider;

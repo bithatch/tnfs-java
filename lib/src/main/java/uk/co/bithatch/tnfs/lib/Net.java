@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright © 2025 Bithatch (brett@bithatch.co.uk)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -33,9 +33,24 @@ import java.util.List;
 
 public class Net {
 
-	public static String tryAddress(String address) {
+	public static String tryHostname(String address) {
+		return tryHostname(address, "localhost");
+	}
+	
+	public static String tryHostname(String address, String defaultAddress) {
 		try {
-			return parseAddress(address).getHostAddress();
+			if("%".equals(address)) {
+				return getIpAddress().getHostName();
+			}
+			else if(address == null || address.equals("")) {
+				if(defaultAddress == null || defaultAddress.equals(""))
+					return InetAddress.getLoopbackAddress().getHostName();
+				else
+					return defaultAddress;
+			}
+			else {
+				return address;
+			}
 		}
 		catch(UncheckedIOException uhe) {
 			return address;

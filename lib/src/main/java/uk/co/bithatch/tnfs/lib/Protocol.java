@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright © 2025 Bithatch (brett@bithatch.co.uk)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -21,5 +21,16 @@
 package uk.co.bithatch.tnfs.lib;
 
 public enum Protocol {
-	TCP, UDP
+	TCP, UDP;
+	
+	public int defaultMessageSize() {
+		switch(this) {
+		case TCP:
+			return TNFS.DEFAULT_TCP_MESSAGE_SIZE;
+		case UDP:
+			return TNFS.DEFAULT_UDP_MESSAGE_SIZE;
+		default:
+			throw new UnsupportedOperationException();
+		}
+	}
 }

@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright © 2025 Bithatch (brett@bithatch.co.uk)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -97,18 +97,18 @@ public class MountManager implements Closeable {
 	
 	public final static class Mountable implements Closeable {
 		private final MountableKey key;
-		private final  String name;
+		private final String originalName;
 		private final MountSource mountSource;
-		private final Optional<Section> configuration;
+		private Optional<Section> configuration;
 		private Optional<TNFSMount> mount = Optional.empty();
 		private Optional<Exception> error = Optional.empty();
 		
-		public Mountable(MountableKey key, MountSource mountSource, String name, Optional<Section> configuration) {
+		public Mountable(MountableKey key, MountSource mountSource, String originalName, Optional<Section> configuration) {
 			super();
+			this.originalName = originalName;
 			this.configuration = configuration;
 			this.mountSource = mountSource;
 			this.key = key;
-			this.name = name;
 		}
 		
 		public TNFSClient client() throws IOException {
@@ -159,7 +159,7 @@ public class MountManager implements Closeable {
 					mnt.getOr(MountConstants.PASSWORD_KEY).ifPresent(un -> bldr.withPassword(un));
 					tnfsmnt = bldr.build();
 				}
-
+				
 				mnt.getIntOr(MountConstants.PACKET_SIZE).ifPresentOrElse(ps -> {
 					if(ps > 0) {
 						try {
@@ -248,11 +248,19 @@ public class MountManager implements Closeable {
 		}
 		
 		public String name() {
-			return name;
+			return configuration.map(cfg -> cfg.getOr(MountConstants.NAME_KEY).orElse(originalName)).orElse(originalName);
 		}
 		
 		public MountSource source() {
 			return mountSource;
+		}
+
+		public void configure(Section configuration) {
+			this.configuration = Optional.of(configuration);
+		}
+
+		public String originalName() {
+			return originalName;
 		}
 		
 		
@@ -504,12 +512,55 @@ public class MountManager implements Closeable {
 	public List<Mountable> mounts() {
 		return mounts.values().stream().toList();
 	}
+	
+	public void removeListener(MountListener listener) {
+		this.listeners.remove(listener);
+	}
+
+	public void start() {
+		if(configuration.mountConfiguration().getBoolean(MountConstants.DISCOVER_KEY)) {
+			mdns.ifPresentOrElse(md -> {
+				executor.submit(() -> {
+					discoverFromMDNS(MDNS.MDNS_TNFS_TCP_LOCAL);
+					discoverFromMDNS(MDNS.MDNS_TNFS_UDP_LOCAL);
+					md.addListener(serviceListener = new MountServiceListener());
+				});
+			}
+			, () -> {
+				LOG.warn("mDNS discovery was enabled in configuration, but no MDNS instance supplied. Will be ignored.");
+			});
+		}
+	}
+
+	public void remove(Mountable mnt) {
+		if(mnt.source() == MountSource.CONFIGURATION) {
+			mnt.configuration.get().remove();
+		}
+		else {
+			throw new IllegalArgumentException("Cannot remove mDNS mounts.");
+		}
+		
+	}
+	
+	public void unmount(Mountable mnt) {
+		try {
+			mnt.close();
+		} catch (IOException ioe) {
+			LOG.trace("Failed to cleanup unmount, maybe server is now down.", ioe);
+		} finally {
+			listeners.forEach(l -> l.unmounted(mnt));
+		}
+	}
 
 	private void configureFromConfig(Section mnt, MountableKey mntblKey) {
 
 			LOG.info("Configuration mount {}, name = {}", mntblKey, mntblKey.id());
 
-			var mntbl = new Mountable(mntblKey, MountSource.CONFIGURATION, mntblKey.id(), Optional.of(mnt));
+			var mntbl = new Mountable(mntblKey, 
+				MountSource.CONFIGURATION, 
+				mntblKey.id(),  
+				Optional.of(mnt)
+			);
 			mounts.put(mntblKey, mntbl);
 			
 			LOG.info("Configuration added {}, name = {}", mntblKey, mntblKey.id());
@@ -529,10 +580,11 @@ public class MountManager implements Closeable {
 
 		var mntbl = new Mountable(
 			mntblKey, 
-			MountSource.MDNS, name, 
+			MountSource.MDNS, 
+			name,  
 			configuration.mdnsMounts().
 				stream().
-				filter(s -> s.get(MountConstants.NAME_KEY, "").equals(name)).
+				filter(s -> s.get(MountConstants.ID_KEY, "").equals(mntblKey.id())).
 				findFirst()
 		);
 		
@@ -566,7 +618,7 @@ public class MountManager implements Closeable {
 
 	private MountableKey mountableKey(Section mnt) {
 
-		var hostname = Net.tryAddress(mnt.get(MountConstants.HOSTNAME_KEY));
+		var hostname = Net.tryHostname(mnt.get(MountConstants.HOSTNAME_KEY));
 		var port = mnt.getInt(MountConstants.PORT_KEY);
 		var path = mnt.get(MountConstants.PATH_KEY);
 		var protocol = mnt.getEnum(Protocol.class, MountConstants.PROTOCOL_KEY);
@@ -596,35 +648,6 @@ public class MountManager implements Closeable {
 			throw new IllegalStateException("Unexpected service type. " + srvType);
 		}
 		return protocol;
-	}
-	
-	public void removeListener(MountListener listener) {
-		this.listeners.remove(listener);
-	}
-
-	public void start() {
-		if(configuration.mountConfiguration().getBoolean(MountConstants.DISCOVER_KEY)) {
-			mdns.ifPresentOrElse(md -> {
-				executor.submit(() -> {
-					discoverFromMDNS(MDNS.MDNS_TNFS_TCP_LOCAL);
-					discoverFromMDNS(MDNS.MDNS_TNFS_UDP_LOCAL);
-					md.addListener(serviceListener = new MountServiceListener());
-				});
-			}
-			, () -> {
-				LOG.warn("mDNS discovery was enabled in configuration, but no MDNS instance supplied. Will be ignored.");
-			});
-		}
-	}
-	
-	public void unmount(Mountable mnt) {
-		try {
-			mnt.close();
-		} catch (IOException ioe) {
-			LOG.trace("Failed to cleanup unmount, maybe server is now down.", ioe);
-		} finally {
-			listeners.forEach(l -> l.unmounted(mnt));
-		}
 	}
 	
 	private void unmountAndRemove(MountableKey key) {

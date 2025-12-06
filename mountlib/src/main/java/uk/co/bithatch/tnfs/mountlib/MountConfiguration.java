@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright © 2025 Bithatch (brett@bithatch.co.uk)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -149,6 +149,18 @@ public final class MountConfiguration {
 	
 	public Set<Section> mounts() {
 		return Set.of(ini.allSectionsOr(MountConstants.MOUNT_SECTION).orElse(new Section[0]));
+	}
+
+	public Section newMDNSMount(String id) {
+		var mnt = document().create(MountConstants.MDNS_MOUNT_SECTION);
+		mnt.put(MountConstants.ID_KEY, id);
+		return mnt;
+	}
+
+	public Section newMount(String name) {
+		var mnt = document().create(MountConstants.MOUNT_SECTION);
+		mnt.put(MountConstants.NAME_KEY, name);
+		return mnt;
 	}
 
 }

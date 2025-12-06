@@ -20,17 +20,6 @@
       <AnchorPane>
          <children>
             <BorderPane AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-               <bottom>
-                  <HBox BorderPane.alignment="CENTER">
-                     <children>
-                        <Hyperlink onAction="#back" text="%back">
-                           <graphic>
-                              <FontIcon iconLiteral="fas-arrow-alt-circle-left" iconSize="24" styleClass="icon-accent" />
-                           </graphic>
-                        </Hyperlink>
-                     </children>
-                  </HBox>
-               </bottom>
                <center>
                   <VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" styleClass="spaced" BorderPane.alignment="TOP_LEFT">
                      <children>
@@ -80,6 +69,17 @@
                      </children>
                   </VBox>
                </center>
+               <bottom>
+                  <BorderPane BorderPane.alignment="CENTER">
+                     <right>
+                        <Hyperlink onAction="#back" text="%back" BorderPane.alignment="CENTER">
+                           <graphic>
+                              <FontIcon iconLiteral="fas-arrow-alt-circle-left" iconSize="24" styleClass="icon-accent" />
+                           </graphic>
+                        </Hyperlink>
+                     </right>
+                  </BorderPane>
+               </bottom>
             </BorderPane>
          </children>
       </AnchorPane>

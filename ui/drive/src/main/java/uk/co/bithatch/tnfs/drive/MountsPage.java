@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright © 2025 Bithatch (brett@bithatch.co.uk)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -21,6 +21,7 @@
 package uk.co.bithatch.tnfs.drive;
 
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.ResourceBundle;
 
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
@@ -36,6 +37,9 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -48,6 +52,7 @@ import javafx.scene.text.TextAlignment;
 import uk.co.bithatch.tnfs.client.TNFSMount.Flag;
 import uk.co.bithatch.tnfs.mountlib.MountManager;
 import uk.co.bithatch.tnfs.mountlib.MountManager.MountListener;
+import uk.co.bithatch.tnfs.mountlib.MountManager.MountSource;
 import uk.co.bithatch.tnfs.mountlib.MountManager.Mountable;
 
 public class MountsPage extends AbstractTile<DriveApp> implements MountListener {
@@ -154,9 +159,10 @@ public class MountsPage extends AbstractTile<DriveApp> implements MountListener 
 			AnchorPane.setRightAnchor(badge, 0d);
 			AnchorPane.setBottomAnchor(badge, 0d);
 
-			stack.getStyleClass().add("muted");
+//			stack.getStyleClass().add("muted");
 			stack.getChildren().add(icon);
 			stack.getChildren().add(badgeAnchor);
+			stack.setOpacity(0.25);
 			
 			view.setLeft(stack);
 			view.setCenter(textBox);
@@ -178,11 +184,12 @@ public class MountsPage extends AbstractTile<DriveApp> implements MountListener 
 //			versionCount.setVisible(count > 0);
 
 			name.setText(item.name());
-			id.setText(item.key().id());
+			id.setText(item.key().hostname());
 			proto.setText(String.format("%s %d", item.key().protocol(), item.key().port()));
 			item.mountOr().ifPresentOrElse(mnt -> {
-				icon.getStyleClass().add("icon-success");
-				stack.getStyleClass().remove("muted");
+
+				icon.getStyleClass().setAll("icon-success");
+				stack.setOpacity(1);
 				if(mnt.flags().contains(Flag.ENCRYPTED)) {
 					if(mnt.flags().contains(Flag.AUTHENTICATED)) {
 						badge.setIconCode(FontAwesomeSolid.USER_SHIELD);
@@ -201,20 +208,22 @@ public class MountsPage extends AbstractTile<DriveApp> implements MountListener 
 						badge.setVisible(false);
 					}
 				}
+				
 			}, () -> {
-				icon.getStyleClass().remove("icon-success");
-				stack.getStyleClass().add("muted");
-				badge.setVisible(false);
-			});
-			item.errorOr().ifPresentOrElse(err -> {
-				path.setText(item.key().path() + " - "+ err.getMessage());
-				icon.getStyleClass().remove("icon-success");
-				icon.getStyleClass().add("icon-danger");
-				badge.setIconCode(FontAwesomeSolid.EXCLAMATION_CIRCLE);
-				badge.setVisible(true);
-			}, () -> {
-				path.setText(item.key().path());
-				icon.getStyleClass().remove("icon-danger");
+				
+				item.errorOr().ifPresentOrElse(err -> {
+					path.setText(item.key().path() + " - "+ err.getMessage());
+					icon.getStyleClass().setAll("icon-danger");
+					badge.setIconCode(FontAwesomeSolid.EXCLAMATION_CIRCLE);
+					badge.setVisible(true);
+					stack.setOpacity(1);
+				}, () -> {
+					path.setText(item.key().path());
+					icon.getStyleClass().setAll();
+					badge.setVisible(false);
+					stack.setOpacity(0.25);
+				});
+				
 			});
 			
 
@@ -262,9 +271,17 @@ public class MountsPage extends AbstractTile<DriveApp> implements MountListener 
 		});
 	}
 	
+	@Override
+	public void shown() {
+		mounts.refresh();
+		updateMenus();
+	}
+
 	@FXML
 	private void mount(ActionEvent aevt) {
-		mgr.mount(mounts.getSelectionModel().getSelectedItem());
+		getContext().getContainer().getScheduler().submit(() -> {
+			mgr.mount(mounts.getSelectionModel().getSelectedItem());
+		});
 	}
 	
 	@FXML
@@ -274,12 +291,25 @@ public class MountsPage extends AbstractTile<DriveApp> implements MountListener 
 	
 	@FXML
 	private void unmount(ActionEvent aevt) throws IOException {
-		mgr.unmount(mounts.getSelectionModel().getSelectedItem());
+		getContext().getContainer().getScheduler().submit(() -> {
+			mgr.unmount(mounts.getSelectionModel().getSelectedItem());
+		});
 	}
 	
 	@FXML
 	private void remove(ActionEvent aevt) {
-		
+		var sel = mounts.getSelectionModel().getSelectedItem();
+		var alert = new Alert(AlertType.CONFIRMATION);
+		alert.initOwner(getScene().getWindow());
+		alert.setTitle(RESOURCES.getString("confirmRemove.title"));
+		alert.setContentText(MessageFormat.format(RESOURCES.getString("confirmRemove.content"), sel.name()));
+		alert.setHeaderText(RESOURCES.getString("confirmRemove.header"));
+		var res = alert.showAndWait();
+		if (res.isPresent() && res.get() == ButtonType.OK) {
+			getContext().getContainer().getScheduler().submit(() -> {
+				mgr.remove(sel);
+			});
+		} 
 	}
 	
 	@FXML
@@ -292,6 +322,6 @@ public class MountsPage extends AbstractTile<DriveApp> implements MountListener 
 		open.setDisable(sel == null || !sel.isMounted());
 		mount.setDisable(sel == null || sel.isMounted());
 		unmount.setDisable(sel == null || !sel.isMounted());
-		remove.setDisable(sel == null);
+		remove.setDisable(sel == null || sel.source() == MountSource.MDNS);
 	}
 }

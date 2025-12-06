@@ -26,7 +26,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>uk.co.bithatch</groupId>
 	<artifactId>tnfs-java</artifactId>
-	<version>0.9.0-SNAPSHOT</version>
+	<version>0.9.0</version>
 	<name>Java TNFS</name>
 	<packaging>pom</packaging>
 	<properties>
@@ -83,7 +83,7 @@
 			<dependency>
 				<groupId>com.sshtools</groupId>
 				<artifactId>jini-config</artifactId>
-				<version>0.6.5</version>
+				<version>0.6.6</version>
 			</dependency>
 			<dependency>
 				<groupId>info.picocli</groupId>
@@ -205,6 +205,11 @@
 		</plugins>
 		<pluginManagement>
 			<plugins>
+	            <plugin>
+	                <groupId>com.sshtools</groupId>
+	                <artifactId>jini-maven-plugin</artifactId>
+	                <version>0.6.6</version>
+	            </plugin>
 				<plugin>
 					<artifactId>maven-deploy-plugin</artifactId>
 					<version>3.1.4</version>

@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright © 2025 Bithatch (brett@bithatch.co.uk)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -249,8 +249,10 @@ public final class TNFSClient implements Closeable {
 			
 			if(channel instanceof DatagramChannel dchannel) {
 				
-				var wrtn = dchannel.send(buf, address);
-				
+				dchannel.send(buf, address);
+				if(buf.hasRemaining()) {
+					LOG.warn("{} bytes of unset data remanining in buffer!",buf.remaining());
+				}
 				
 				buf.clear();
 				
