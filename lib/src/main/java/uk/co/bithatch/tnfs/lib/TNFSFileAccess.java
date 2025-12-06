@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright © 2025 Bithatch (brett@bithatch.co.uk)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -119,7 +119,6 @@ public interface TNFSFileAccess extends Closeable {
 	 * returned, entries may be read, and the position of the next read may be
 	 * queries and changed.
 	 * 
-	 * @param path        absolute path or path relative to the root of the mount
 	 * @return directory handle
 	 * @throws IOException on any error
 	 */

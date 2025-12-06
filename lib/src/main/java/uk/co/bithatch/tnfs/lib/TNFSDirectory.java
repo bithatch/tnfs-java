@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright © 2025 Bithatch (brett@bithatch.co.uk)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -36,8 +36,7 @@ public interface TNFSDirectory extends Closeable {
 	Stream<Entry> stream();
 	
 	/**
-	 * Set the position within the currently active directory listing, i.e. while
-	 * processing the stream returned by {@link TNFSMount#entries()}.
+	 * Set the position within the currently active directory listing.
 	 * 
 	 * @param position position in directory listing
 	 * @throws IOException
@@ -47,8 +46,7 @@ public interface TNFSDirectory extends Closeable {
 	void seek(long position) throws IOException;
 
 	/**
-	 * Get the current position within the currently active directory listing, i.e.
-	 * while processing the stream returned by {@link TNFSMount#entries()}.
+	 * Get the current position within the currently active directory listing.
 	 * 
 	 * @return position in directory listing
 	 * @throws IOException

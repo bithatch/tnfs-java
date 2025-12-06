@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright © 2025 Bithatch (brett@bithatch.co.uk)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -111,7 +111,6 @@ public class Util {
 	 *   "/dir1/dir2/../../../../../" -> "/"
 	 *   
 	 *   @param path path to normalise
-	 *   @param sep separator
 	 */
 	public static String normalUnixPath(String path) {
 		return normalPath(path, '/');

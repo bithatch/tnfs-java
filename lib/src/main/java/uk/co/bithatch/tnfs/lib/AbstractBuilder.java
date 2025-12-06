@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright © 2025 Bithatch (brett@bithatch.co.uk)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
@@ -123,7 +123,7 @@ public class AbstractBuilder<BLDR extends AbstractBuilder<BLDR>> {
 	 * Set the <strong>hostname</strong> to use. This must be either a valid
 	 * hostname or IP address. If not provided, <code>localhost</code> will be used.
 	 * 
-	 * @param SshClientContext sshContext
+	 * @param hostname hostname
 	 * @return this for chaining
 	 */
 	@SuppressWarnings("unchecked")
