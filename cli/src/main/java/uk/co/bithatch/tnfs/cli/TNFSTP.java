@@ -32,6 +32,7 @@ import java.util.concurrent.Callable;
 
 import org.jline.builtins.Completers;
 import org.jline.builtins.Styles;
+import org.jline.console.CommandRegistry.CommandSession;
 import org.jline.console.impl.SystemRegistryImpl;
 import org.jline.keymap.KeyMap;
 import org.jline.reader.Candidate;
@@ -58,6 +59,8 @@ import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Spec;
 import picocli.shell.jline3.PicocliCommands;
 import picocli.shell.jline3.PicocliCommands.PicocliCommandsFactory;
+import uk.co.bithatch.tnfs.cli.TNFSTP.CompletionMode;
+import uk.co.bithatch.tnfs.cli.TNFSTP.RemoteFileNameCompleter;
 import uk.co.bithatch.tnfs.cli.commands.Bye;
 import uk.co.bithatch.tnfs.cli.commands.Cd;
 import uk.co.bithatch.tnfs.cli.commands.ChkSum;

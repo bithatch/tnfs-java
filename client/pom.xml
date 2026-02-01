@@ -27,7 +27,7 @@
 	<parent>
 		<groupId>uk.co.bithatch</groupId>
 		<artifactId>tnfs-java</artifactId>
-		<version>0.9.0</version>
+		<version>0.9.0-SNAPSHOT</version>
 		<relativePath>../</relativePath>
 	</parent>
 	<artifactId>tnfs-java-client</artifactId>
@@ -39,4 +39,17 @@
 			<version>${project.version}</version>
 		</dependency>
 	</dependencies>
+	<description>This library contains the basic TNFS client. If you intend to write your own TNFS based client in Java, start with here.</description>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<release>${tnfs.api.jdk.version}</release>
+					<testRelease>${tnfs.api.jdk.version}</testRelease>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
 </project>

@@ -27,7 +27,7 @@
 	<parent>
 		<groupId>uk.co.bithatch</groupId>
 		<artifactId>tnfs-java</artifactId>
-		<version>0.9.0</version>
+		<version>0.9.0-SNAPSHOT</version>
 		<relativePath>../</relativePath>
 	</parent>
 	<artifactId>tnfs-java-server</artifactId>
@@ -45,8 +45,8 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<configuration>
-					<release>17</release>
-					<testRelease>17</testRelease>
+					<release>${tnfs.api.jdk.version}</release>
+					<testRelease>${tnfs.api.jdk.version}</testRelease>
 				</configuration>
 			</plugin>
 		</plugins>

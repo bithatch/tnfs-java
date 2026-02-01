@@ -27,7 +27,7 @@
 	<parent>
 		<groupId>uk.co.bithatch</groupId>
 		<artifactId>tnfs-java</artifactId>
-		<version>0.9.0</version>
+		<version>0.9.0-SNAPSHOT</version>
 		<relativePath>../</relativePath>
 	</parent>
 	<artifactId>tnfs-java-daemonlib</artifactId>
@@ -42,4 +42,17 @@
 			<artifactId>slf4j-api</artifactId>
 		</dependency>
 	</dependencies>
+	<description>The two  server modules in the TNFS Java project both make use of mDNS. This library adds that dependency and common integration code.</description>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<release>${tnfs.api.jdk.version}</release>
+					<testRelease>${tnfs.api.jdk.version}</testRelease>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
 </project>
