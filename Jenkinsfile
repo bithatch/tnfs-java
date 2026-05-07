@@ -136,6 +136,10 @@ pipeline {
 					agent {
 						label 'macos && x86_64'
 					}
+					tools {
+                        maven 'Maven 3.9.11' 
+                        jdk 'Graal 25 Mac OS Intel EOL' 
+                    } 
 					steps {
                     
                         script {
